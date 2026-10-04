@@ -87,21 +87,20 @@ apps/api/src/
     │   │   └── assign-driver.dto.ts
     │   └── assignments.module.ts
     │
-    ├── location/                 # GPS Write-path & Polling Read-path
-    │   ├── location.controller.ts  # POST /location (publishes event), GET /tracking/:shipmentId
-    │   ├── location.service.ts     # Pub/Sub publisher + location query coordination
-    │   ├── location.repository.ts  # Reads from current_location & location_history
+    ├── location/                 # GPS Telemetry Ingestion & Tracking + ETA Read-path
+    │   ├── location.controller.ts  # POST /locations, GET /shipments/:id/tracking
+    │   ├── location.service.ts     # Ingestion coordination + tracking & ETA calculation
+    │   ├── eta.service.ts          # Haversine distance & travel time estimation
+    │   ├── location.repository.ts  # Reads driver location and shipment destination
     │   ├── dto/
     │   │   ├── ingest-location.dto.ts
     │   │   └── tracking-response.dto.ts
     │   └── location.module.ts
     │
-    ├── eta/                      # ETA calculation service
-    │   ├── eta.controller.ts     # GET /shipments/:id/eta
-    │   ├── eta.service.ts        # Haversine distance & estimation logic
-    │   └── eta.module.ts
-    │
     └── notifications/            # Customer notifications
+        ├── notifications.controller.ts
+        ├── notifications.service.ts
+        └── notifications.module.ts
         ├── notifications.controller.ts
         ├── notifications.service.ts
         └── notifications.module.ts
@@ -158,8 +157,7 @@ apps/web/src/
 │   ├── auth/                     # Login / register / Firebase auth state
 │   ├── customer/                 # Shipment tracking & history view
 │   ├── driver/                   # Driver active order & GPS submission sender
-│   ├── dispatcher/               # Order dispatching & driver assignment view
-│   └── admin/                    # System stats & metrics dashboard
+│   └── dispatcher/               # Dispatching board, driver assignment & system tracking
 ├── hooks/                        # Custom hooks (e.g., usePollingTracking, useDriverLocation)
 ├── types/                        # Frontend TypeScript types
 └── utils/
