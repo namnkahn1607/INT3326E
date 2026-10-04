@@ -1,0 +1,19 @@
+# dependencies
+/node_modules
+
+# production build output
+/dist
+
+# build cache
+tsconfig.build.tsbuildinfo
+*.tsbuildinfo
+
+# logs & env
+*.log
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.DS_Store
