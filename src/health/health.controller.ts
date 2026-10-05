@@ -6,7 +6,7 @@ export class HealthController {
   check() {
     return {
       status: 'ok',
-      service: 'gps-worker',
+      service: 'parcelflow-gps-worker',
       timestamp: new Date().toISOString(),
     };
   }

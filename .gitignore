@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # dependencies
 /node_modules
 
@@ -14,15 +13,9 @@ tsconfig.build.tsbuildinfo
 .env
 .env.*
 !.env.example
+prompt.txt
 
-# IDE
+# IDE & Tooling
 .vscode/
 .DS_Store
-=======
 .aider*
-
-.vscode/
-
-.env
-prompt.txt
->>>>>>> origin/develop
