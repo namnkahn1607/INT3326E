@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "ParcelFlow Core Logistics API (MVP)",
-    "description": "Pragmatic REST API contract for the ParcelFlow Modular Monolith and Async Telemetry Ingestion MVP.\n\n### Core MVP Architectural Decisions:\n- **Roles:** `CUSTOMER`, `DRIVER`, `DISPATCHER` (the `ADMIN` role is pruned for the MVP).\n- **Explicit Action RPCs:** State mutations use sub-resource endpoints (`/assign`, `/pickup`, `/deliver`, `/fail`, `/cancel`) to enforce strict server-side state transitions.\n- **State Lifecycle:**\n  - `CREATED` -> `ASSIGNED` (by Dispatcher), `CANCELLED` (by Customer or Dispatcher)\n  - `ASSIGNED` -> `ASSIGNED` (Reassign by Dispatcher), `PICKED_UP` (by Driver), `CANCELLED` (by Dispatcher only)\n  - `PICKED_UP` -> `DELIVERED` (by Driver), `DELIVERY_FAILED` (by Driver only)\n  - `DELIVERED`, `DELIVERY_FAILED`, `CANCELLED` are terminal states.\n- **Natural Idempotency:** Transition actions are naturally idempotent for the same actor (e.g. repeated `/pickup` returns `200 OK` with the current state instead of `409 Conflict`). Reassigning to the currently assigned driver is a no-op returning `200 OK`.\n- **Creation Idempotency:** `POST /shipments` strictly requires an `Idempotency-Key` header (UUID v4) to prevent duplicate shipments on client network retries.\n- **Clock-Drift Safe Telemetry:** `POST /locations` uses a monotonic sequence number `seq` per driver session instead of relying on client wall clocks for out-of-order rejection. Returns `202 Accepted` immediately.\n- **Conditional ETA in Tracking:** `GET /shipments/{id}/tracking` returns both `pickupLocation` and `dropoffLocation`. The `eta` field is `null` during `ASSIGNED` (driver is en route to pickup) and only calculated once `PICKED_UP`.\n- **Keyset Pagination:** Shipments are ordered by `createdAt DESC, id DESC`. The `cursor` encodes the `(createdAt, id)` tuple of the last record.\n- **Client-Side Geocoding Delegation:** The client is responsible for geocoding and must supply valid `{ lat, lng }` coordinates. The server treats addresses strictly as display text.",
+    "description": "Pragmatic REST API contract for the ParcelFlow Modular Monolith and Async Telemetry Ingestion MVP.\n\n### Core MVP Architectural Decisions:\n- **Roles:** `CUSTOMER`, `DRIVER`, `DISPATCHER`.\n- **Order Creation:** Restricted strictly to `CUSTOMER` (eliminating ambiguity around customer identity in the MVP).\n- **Explicit Action RPCs:** State mutations use sub-resource endpoints (`/assign`, `/pickup`, `/deliver`, `/fail`, `/cancel`) to enforce strict server-side state transitions.\n- **State Lifecycle:**\n  - `CREATED` -> `ASSIGNED` (by Dispatcher), `CANCELLED` (by Customer or Dispatcher)\n  - `ASSIGNED` -> `ASSIGNED` (Reassign by Dispatcher), `PICKED_UP` (by Driver), `CANCELLED` (by Dispatcher only)\n  - `PICKED_UP` -> `DELIVERED` (by Driver), `DELIVERY_FAILED` (by Driver or Dispatcher)\n  - `DELIVERED`, `DELIVERY_FAILED`, `CANCELLED` are terminal states.\n- **Natural Idempotency:** Transition actions are naturally idempotent for the same actor (e.g. repeated `/pickup` returns `200 OK` with current state). Reassigning to the currently assigned driver returns `200 OK`.\n- **Creation Idempotency:** `POST /shipments` strictly requires an `Idempotency-Key` header (UUID v4) to prevent duplicate shipments on client network retries.\n- **Session-Scoped Monotonic Telemetry:** `POST /locations` requires `sessionId` (UUID v4) and monotonic sequence number `seq` (integer >= 1). The ingestion worker tracks `(driverId, sessionId, lastSeq)`: a new session always wins unconditionally, while identical sessions require `seq > lastSeq`. This prevents data loss across app restarts.\n- **Driver Location Privacy:** In `GET /shipments/{id}/tracking`, `currentDriverLocation` and `lastLocationUpdatedAt` are ONLY populated when shipment status is `ASSIGNED` or `PICKED_UP`. Once terminal, driver coordinates return `null`.\n- **Conditional ETA in Tracking:** The `eta` field in tracking is `null` during `CREATED` and `ASSIGNED` (driver is traveling to pickup), and is only computed once status is `PICKED_UP`.\n- **Keyset Pagination:** Shipments are ordered by `createdAt DESC, id DESC`. The `cursor` encodes the `(createdAt, id)` tuple of the last record.\n- **Deterministic Identifiers:** Resource IDs use prefixed Crockford Base32 ULIDs (`sh_...`, `usr_...`). Tracking numbers use date + 6-character Base32 random tokens (`PF-YYYYMMDD-XXXXXX`) with DB unique constraint + retry.",
     "version": "1.0.0"
   },
   "servers": [
@@ -29,8 +29,8 @@
     "/shipments": {
       "post": {
         "tags": ["Shipments"],
-        "summary": "Create a new shipment",
-        "description": "Creates a shipment in `CREATED` status. Requires `CUSTOMER` or `DISPATCHER` role.\n\nClients MUST provide an `Idempotency-Key` header to safely retry on transient network failures without creating duplicate orders.",
+        "summary": "Create a new shipment (Customer only)",
+        "description": "Creates a shipment in `CREATED` status. Requires `CUSTOMER` role.\n\nClients MUST provide an `Idempotency-Key` header to safely retry on transient network failures without creating duplicate orders.",
         "operationId": "createShipment",
         "parameters": [
           {
@@ -152,7 +152,7 @@
       "get": {
         "tags": ["Shipments"],
         "summary": "Get shipment details by ID",
-        "description": "Fetches complete shipment metadata including pickup/dropoff coordinates, current status, notes, and failure/cancellation reasons.",
+        "description": "Fetches complete shipment metadata including pickup/dropoff coordinates, current status, notes, failure actor/reason, and cancellation reasons.",
         "operationId": "getShipmentById",
         "parameters": [
           {
@@ -259,7 +259,7 @@
       "post": {
         "tags": ["Shipments"],
         "summary": "Driver confirms pickup",
-        "description": "Transitions state from `ASSIGNED` to `PICKED_UP`.\n\n**Authorized Roles:** `DRIVER` (must be assigned driver).\n\n**Natural Idempotency:** If the assigned driver retries `/pickup` when the shipment is already `PICKED_UP`, the server returns `200 OK` with the current state instead of `409 Conflict`.",
+        "description": "Transitions state from `ASSIGNED` to `PICKED_UP`.\n\n**Authorized Roles:** `DRIVER` (must be assigned driver).\n\n**Natural Idempotency:** If the assigned driver retries `/pickup` when the shipment is already `PICKED_UP`, the server returns `200 OK` with current state instead of `409 Conflict`.",
         "operationId": "pickupShipment",
         "parameters": [
           {
@@ -358,8 +358,8 @@
     "/shipments/{id}/fail": {
       "post": {
         "tags": ["Shipments"],
-        "summary": "Report shipment delivery failure (Driver only)",
-        "description": "Transitions state from `PICKED_UP` to `DELIVERY_FAILED` (terminal state).\n\n**Authorized Roles:** `DRIVER` (must be assigned driver).\n\n**Invariant:** Delivery failure is only valid after the shipment has been `PICKED_UP`. If a driver cannot collect an item before pickup, the dispatcher must reassign another driver or cancel the shipment.\n\n**Natural Idempotency:** If the assigned driver retries `/fail` on an already failed shipment, returns `200 OK`.",
+        "summary": "Report shipment delivery failure (Driver or Dispatcher)",
+        "description": "Transitions state from `PICKED_UP` to `DELIVERY_FAILED` (terminal state).\n\n**Authorized Roles:** `DRIVER` (assigned driver) or `DISPATCHER`.\n\n**Invariant:** Delivery failure is strictly valid *only* after `PICKED_UP`. If a driver cannot collect an item before pickup, the dispatcher reassigns another driver or cancels the order.\n\n**Audit Trail:** The server records `failedByRole` (`DRIVER` or `DISPATCHER`) and `failedByUserId` to preserve provenance if a dispatcher steps in after a driver vanishes.\n\n**Natural Idempotency:** Retrying `/fail` on an already failed shipment returns `200 OK`.",
         "operationId": "failShipment",
         "parameters": [
           {
@@ -472,7 +472,7 @@
       "post": {
         "tags": ["Tracking & Location"],
         "summary": "Submit driver location coordinates (High throughput - Async)",
-        "description": "**Asynchronous Write Path:**\nDriver client submits periodic telemetry (e.g. every ~8 seconds). The API validates the payload, queues/buffers it for background processing, and immediately returns `202 Accepted`.\n\n**Clock-Drift Safe:** Uses a monotonic `seq` counter generated by the driver device session to handle out-of-order rejection in the background processor, avoiding client wall-clock drift issues.\n\n**Authorized Roles:** `DRIVER`.",
+        "description": "**Asynchronous Write Path:**\nDriver client submits periodic telemetry (e.g. every ~8 seconds). The API validates the payload, queues/buffers it for background processing, and immediately returns `202 Accepted`.\n\n**Session-Scoped Monotonic Sequence:**\nDriver clients generate a `sessionId` (UUID v4) on application startup/session start, and a monotonic counter `seq` (>= 1). The ingestion worker tracks `(driverId, sessionId, lastSeq)`:\n- If `sessionId` changes, the new session wins unconditionally, resetting the sequence.\n- If `sessionId` matches, packets are accepted only if `seq > lastSeq`.\nThis completely prevents silent data loss when a mobile client crashes, restarts, and resets its counter.\n\n**Authorized Roles:** `DRIVER`.",
         "operationId": "submitLocation",
         "requestBody": {
           "required": true,
@@ -525,7 +525,7 @@
       "get": {
         "tags": ["Tracking & Location"],
         "summary": "Get real-time tracking and ETA data for a shipment",
-        "description": "**Consolidated Read Path (Polling):**\nClients poll this endpoint periodically (every 5-10s). Returns both `pickupLocation` and `dropoffLocation`, current driver coordinates, and real-time ETA.\n\n**Conditional ETA Rule:**\nThe `eta` field is `null` during `CREATED` and `ASSIGNED` states. ETA is only calculated once status is `PICKED_UP` and driver coordinates are available.\n\n**Authorized Roles:** `CUSTOMER` (owner), `DISPATCHER`, `DRIVER` (assigned).",
+        "description": "**Consolidated Read Path (Polling):**\nClients poll this endpoint periodically (every 5-10s). Returns `pickupLocation`, `dropoffLocation`, current driver coordinates, and real-time ETA.\n\n**Driver Privacy Invariant:**\nTo prevent exposing driver movements outside of active fulfillment, `currentDriverLocation` and `lastLocationUpdatedAt` are **strictly `null`** unless shipment status is `ASSIGNED` or `PICKED_UP`. In `CREATED`, `DELIVERED`, `DELIVERY_FAILED`, or `CANCELLED`, driver coordinates return `null`.\n\n**Conditional ETA Rule:**\nThe `eta` field is `null` during `CREATED` and `ASSIGNED` states (driver is en route to pickup). It is calculated only when status is `PICKED_UP` and driver coordinates are available.\n\n**Authorized Roles:** `CUSTOMER` (owner), `DISPATCHER`, `DRIVER` (assigned).",
         "operationId": "getShipmentTracking",
         "parameters": [
           {
@@ -581,9 +581,10 @@
         "name": "id",
         "in": "path",
         "required": true,
-        "description": "Unique identifier of the shipment (UUID v4 or prefixed ID like `sh_01J7...`).",
+        "description": "Prefixed ULID identifier of the shipment (e.g. `sh_01J7Z8K9M3Q4T5V6W7X8Y9Z012`).",
         "schema": {
           "type": "string",
+          "pattern": "^sh_[0-9A-HJKMNP-TV-Z]{26}$",
           "example": "sh_01J7Z8K9M3Q4T5V6W7X8Y9Z012"
         }
       },
@@ -698,7 +699,7 @@
       "Coordinates": {
         "type": "object",
         "required": ["lat", "lng"],
-        "description": "Geographic coordinates. Geocoding is handled client-side.",
+        "description": "Geographic coordinates. Geocoding is delegated entirely to the client.",
         "properties": {
           "lat": {
             "type": "number",
@@ -769,8 +770,9 @@
         "properties": {
           "driverId": {
             "type": "string",
-            "description": "User ID of the driver. Must exist and possess the DRIVER role.",
-            "example": "usr_drv_987654321"
+            "pattern": "^usr_[0-9A-HJKMNP-TV-Z]{26}$",
+            "description": "Prefixed ULID of the target driver. Must exist and hold the DRIVER role.",
+            "example": "usr_01J7Z8K9M3Q4T5V6W7X8Y9Z012"
           }
         }
       },
@@ -822,6 +824,8 @@
           "notes",
           "cancellationReason",
           "failureReason",
+          "failedByRole",
+          "failedByUserId",
           "proofOfDeliveryNotes",
           "createdAt",
           "updatedAt"
@@ -829,20 +833,25 @@
         "properties": {
           "id": {
             "type": "string",
+            "pattern": "^sh_[0-9A-HJKMNP-TV-Z]{26}$",
             "example": "sh_01J7Z8K9M3Q4T5V6W7X8Y9Z012"
           },
           "trackingNumber": {
             "type": "string",
-            "example": "PF-20261004-9842"
+            "pattern": "^PF-[0-9]{8}-[0-9A-HJKMNP-TV-Z]{6}$",
+            "description": "Unique tracking number with 8 date digits and 6 Crockford Base32 characters (>1 billion daily entropy).",
+            "example": "PF-20261005-7K9M3Q"
           },
           "customerId": {
             "type": "string",
-            "example": "usr_cst_123456789"
+            "pattern": "^usr_[0-9A-HJKMNP-TV-Z]{26}$",
+            "example": "usr_01J7Z8K9M3Q4T5V6W7X8Y9A001"
           },
           "driverId": {
             "type": "string",
             "nullable": true,
-            "example": "usr_drv_987654321"
+            "pattern": "^usr_[0-9A-HJKMNP-TV-Z]{26}$",
+            "example": "usr_01J7Z8K9M3Q4T5V6W7X8Y9D002"
           },
           "status": {
             "$ref": "#/components/schemas/ShipmentStatus"
@@ -884,6 +893,20 @@
             "nullable": true,
             "example": null
           },
+          "failedByRole": {
+            "type": "string",
+            "enum": ["DRIVER", "DISPATCHER"],
+            "nullable": true,
+            "description": "Audit record of who declared delivery failure.",
+            "example": null
+          },
+          "failedByUserId": {
+            "type": "string",
+            "pattern": "^usr_[0-9A-HJKMNP-TV-Z]{26}$",
+            "nullable": true,
+            "description": "User ID of the actor who declared delivery failure.",
+            "example": null
+          },
           "proofOfDeliveryNotes": {
             "type": "string",
             "nullable": true,
@@ -892,12 +915,12 @@
           "createdAt": {
             "type": "string",
             "format": "date-time",
-            "example": "2026-10-04T08:30:00Z"
+            "example": "2026-10-05T08:30:00Z"
           },
           "updatedAt": {
             "type": "string",
             "format": "date-time",
-            "example": "2026-10-04T08:35:00Z"
+            "example": "2026-10-05T08:35:00Z"
           }
         }
       },
@@ -927,7 +950,7 @@
                 "type": "string",
                 "nullable": true,
                 "description": "Opaque cursor representing (createdAt, id) of the last record. Null if no more records.",
-                "example": "eyJjcmVhdGVkQXQiOiIyMDI2LTEwLTA0VDA4OjMwOjAwWiIsImlkIjoic2hfMDEifQ=="
+                "example": "eyJjcmVhdGVkQXQiOiIyMDI2LTEwLTA1VDA4OjMwOjAwWiIsImlkIjoic2hfMDEifQ=="
               }
             }
           }
@@ -935,9 +958,21 @@
       },
       "SubmitLocationRequest": {
         "type": "object",
-        "required": ["lat", "lng", "seq"],
+        "required": ["sessionId", "seq", "lat", "lng"],
         "description": "Periodic location telemetry sent by driver mobile client.",
         "properties": {
+          "sessionId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique UUID v4 generated on driver mobile app startup. A new session ID resets the sequence counter on the server, preventing silent drops after app crashes.",
+            "example": "b18f08f2-89b2-4d2d-9653-535d2d53e7f1"
+          },
+          "seq": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Monotonically increasing sequence number within the current sessionId.",
+            "example": 142
+          },
           "lat": {
             "type": "number",
             "format": "double",
@@ -951,18 +986,6 @@
             "minimum": -180.0,
             "maximum": 180.0,
             "example": 105.7829
-          },
-          "seq": {
-            "type": "integer",
-            "minimum": 1,
-            "description": "Monotonically increasing sequence number per driver session/shift. Immune to client wall-clock drift.",
-            "example": 142
-          },
-          "clientTimestamp": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Informational timestamp recorded by client device in UTC ISO-8601.",
-            "example": "2026-10-04T11:32:56.120Z"
           }
         }
       },
@@ -982,7 +1005,8 @@
           "receivedAt": {
             "type": "string",
             "format": "date-time",
-            "example": "2026-10-04T11:32:57.010Z"
+            "description": "Server UTC timestamp when the telemetry packet was accepted.",
+            "example": "2026-10-05T09:30:00.120Z"
           }
         }
       },
@@ -1003,7 +1027,7 @@
           "estimatedArrivalAt": {
             "type": "string",
             "format": "date-time",
-            "example": "2026-10-04T11:45:00Z"
+            "example": "2026-10-05T09:45:00Z"
           }
         }
       },
@@ -1018,6 +1042,7 @@
         "properties": {
           "shipmentId": {
             "type": "string",
+            "pattern": "^sh_[0-9A-HJKMNP-TV-Z]{26}$",
             "example": "sh_01J7Z8K9M3Q4T5V6W7X8Y9Z012"
           },
           "status": {
@@ -1026,7 +1051,8 @@
           "driverId": {
             "type": "string",
             "nullable": true,
-            "example": "usr_drv_987654321"
+            "pattern": "^usr_[0-9A-HJKMNP-TV-Z]{26}$",
+            "example": "usr_01J7Z8K9M3Q4T5V6W7X8Y9D002"
           },
           "pickupLocation": {
             "$ref": "#/components/schemas/Coordinates"
@@ -1041,13 +1067,14 @@
               }
             ],
             "nullable": true,
-            "description": "Latest known driver coordinates. Null if not yet assigned or no telemetry received."
+            "description": "Latest driver coordinates. STRICT PRIVACY INVARIANT: only populated when status is ASSIGNED or PICKED_UP. In CREATED, DELIVERED, DELIVERY_FAILED, or CANCELLED, this is strictly null."
           },
           "lastLocationUpdatedAt": {
             "type": "string",
             "format": "date-time",
             "nullable": true,
-            "example": "2026-10-04T11:32:56.120Z"
+            "description": "Server UTC reception timestamp (receivedAt) of the latest accepted telemetry packet. Strictly null if location is hidden or no telemetry received.",
+            "example": "2026-10-05T09:30:00.120Z"
           },
           "eta": {
             "allOf": [
@@ -1056,7 +1083,7 @@
               }
             ],
             "nullable": true,
-            "description": "Estimated arrival at dropoff. NULL during CREATED and ASSIGNED states; only calculated once PICKED_UP."
+            "description": "Estimated arrival at dropoff. NULL during CREATED, ASSIGNED, and all terminal states; only calculated once status is PICKED_UP."
           }
         }
       },
@@ -1112,7 +1139,7 @@
             "type": "string",
             "format": "date-time",
             "description": "Timestamp in UTC ISO-8601 when error occurred.",
-            "example": "2026-10-04T11:33:00.123Z"
+            "example": "2026-10-05T09:30:00.123Z"
           },
           "errors": {
             "type": "array",

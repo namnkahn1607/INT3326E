@@ -18,6 +18,9 @@ parcelflow/
 │   ├── types/                    # Shared DTOs, interfaces & event schemas
 │   └── config/                   # Shared ESLint, Prettier, TypeScript configs
 │
+├── docs/                         # API contracts & technical documentation
+│   └── openapi.json
+│
 ├── infra/                        # Infrastructure and local development setup
 │   ├── docker-compose.yml        # Local PostgreSQL & Pub/Sub emulator
 │   └── pubsub/                   # Topic and subscription bootstrap scripts
