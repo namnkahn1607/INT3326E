@@ -17,16 +17,12 @@ import {
 // Feature Admin
 import {
   AdminAccountsPage,
+  AdminAssignmentPage,
   AdminDriversPage,
   AdminLiveMapPage,
   AdminOverviewPage,
-} from './features/admin'
-
-// Feature Dispatcher
-import {
-  AdminAssignmentPage,
   AdminShipmentsPage,
-} from './features/dispatcher'
+} from './features/admin'
 
 // Feature Driver
 import { DriverPlaceholderPage } from './features/driver'
