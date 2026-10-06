@@ -18,6 +18,7 @@ import {
 import {
   AdminAccountsPage,
   AdminDriversPage,
+  AdminLiveMapPage,
   AdminOverviewPage,
 } from './features/admin'
 
@@ -51,6 +52,7 @@ export default function App() {
         <Route index element={<AdminOverviewPage />} />
         <Route path="shipments" element={<AdminShipmentsPage />} />
         <Route path="assignment" element={<AdminAssignmentPage />} />
+        <Route path="live-map" element={<AdminLiveMapPage />} />
         <Route path="drivers" element={<AdminDriversPage />} />
         <Route path="accounts" element={<AdminAccountsPage />} />
         <Route path="*" element={<NotFoundPage />} />

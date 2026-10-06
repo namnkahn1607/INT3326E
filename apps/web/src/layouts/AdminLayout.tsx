@@ -5,6 +5,7 @@ const adminNavItems: NavigationItem[] = [
   { path: '/admin', label: 'Tổng quan' },
   { path: '/admin/shipments', label: 'Đơn hàng' },
   { path: '/admin/assignment', label: 'Phân công', badge: 3 },
+  { path: '/admin/live-map', label: 'Bản đồ trực tiếp' },
   { path: '/admin/drivers', label: 'Tài xế' },
   { path: '/admin/accounts', label: 'Tài khoản' },
 ]
