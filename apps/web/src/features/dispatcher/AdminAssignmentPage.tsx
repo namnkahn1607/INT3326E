@@ -45,7 +45,7 @@ const mockUnassignedList: UnassignedShipment[] = [
 const mockDrivers: AvailableDriver[] = [
   {
     id: 'd-1',
-    name: 'Nguyễn Văn Hùng (Driver #2)',
+    name: 'Nguyễn Văn Hùng',
     phone: '0981.234.567',
     vehicle: 'Xe máy Honda Wave - 29V1-12345',
     currentActiveOrders: 1,
@@ -53,7 +53,7 @@ const mockDrivers: AvailableDriver[] = [
   },
   {
     id: 'd-2',
-    name: 'Trần Văn Nam (Driver #3)',
+    name: 'Trần Văn Nam',
     phone: '0912.345.678',
     vehicle: 'Xe máy Yamaha Grande - 29X2-54321',
     currentActiveOrders: 0,
@@ -61,7 +61,7 @@ const mockDrivers: AvailableDriver[] = [
   },
   {
     id: 'd-3',
-    name: 'Lê Văn Tài (Driver #4)',
+    name: 'Lê Văn Tài',
     phone: '0977.889.900',
     vehicle: 'Xe tải nhẹ 500kg - 29C-99881',
     currentActiveOrders: 2,
@@ -79,7 +79,7 @@ export function AdminAssignmentPage() {
     const d = mockDrivers.find((x) => x.id === selectedDriver)
     if (s && d) {
       setAssignSuccess(
-        `Đã phân công thành công đơn [${s.code}] cho tài xế [${d.name}]! (Mô phỏng hành động Tuần 3)`,
+        `Đã phân công đơn ${s.code} cho tài xế ${d.name}.`,
       )
       setTimeout(() => setAssignSuccess(null), 5000)
     }
@@ -89,15 +89,12 @@ export function AdminAssignmentPage() {
     <div className="admin-page">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Phân công tài xế (Dispatcher)</h1>
+          <span className="admin-page-kicker">ĐIỀU PHỐI</span>
+          <h1 className="page-title">Phân công tài xế</h1>
           <p className="page-subtitle">
-            Gán đơn hàng vừa tạo (CREATED) cho tài xế phù hợp để chuyển sang trạng thái ASSIGNED.
+            Ghép đơn hàng đang chờ với tài xế phù hợp và sẵn sàng.
           </p>
         </div>
-      </div>
-
-      <div className="alert-box alert-info">
-        <strong>Trọng tâm Tuần 3 của Tuấn:</strong> Đây là giao diện điều phối chính. Ở Tuần 3, màn hình này sẽ gọi API backend NestJS <code>POST /shipments/:id/assign</code> để cập nhật trạng thái đơn sang <code>ASSIGNED</code> và thông báo cho Driver.
       </div>
 
       {assignSuccess && (
@@ -110,7 +107,7 @@ export function AdminAssignmentPage() {
         <div className="assignment-col">
           <div className="col-header">
             <h3>1. Chọn đơn chờ gán ({mockUnassignedList.length})</h3>
-            <span className="badge-count">Trạng thái: CREATED</span>
+            <span className="badge-count">{mockUnassignedList.length} đơn</span>
           </div>
 
           <div className="assignment-cards-list">

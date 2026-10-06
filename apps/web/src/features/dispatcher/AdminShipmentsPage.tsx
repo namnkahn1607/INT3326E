@@ -35,7 +35,7 @@ const mockAdminShipments: AdminShipmentItem[] = [
     pickupAddress: 'Duy Tân, Cầu Giấy',
     dropoffAddress: 'Trần Phú, Hà Đông',
     status: 'PICKED_UP',
-    driver: 'Nguyễn Văn Hùng (Driver #2)',
+    driver: 'Nguyễn Văn Hùng',
     time: '10:30 05/10/2026',
   },
   {
@@ -46,7 +46,7 @@ const mockAdminShipments: AdminShipmentItem[] = [
     pickupAddress: 'Phạm Văn Đồng, Bắc Từ Liêm',
     dropoffAddress: 'Giải Phóng, Hoàng Mai',
     status: 'ASSIGNED',
-    driver: 'Trần Văn Nam (Driver #3)',
+    driver: 'Trần Văn Nam',
     time: '09:50 05/10/2026',
   },
   {
@@ -57,7 +57,7 @@ const mockAdminShipments: AdminShipmentItem[] = [
     pickupAddress: 'Liễu Giai, Ba Đình',
     dropoffAddress: 'Hoàng Đạo Thúy, Cầu Giấy',
     status: 'DELIVERED',
-    driver: 'Lê Văn Tài (Driver #4)',
+    driver: 'Lê Văn Tài',
     time: '08:15 05/10/2026',
   },
   {
@@ -68,7 +68,7 @@ const mockAdminShipments: AdminShipmentItem[] = [
     pickupAddress: 'Bát Tràng, Gia Lâm',
     dropoffAddress: 'Hoàn Kiếm, Hà Nội',
     status: 'DELIVERY_FAILED',
-    driver: 'Phạm Văn Nam (Driver #5)',
+    driver: 'Phạm Văn Nam',
     time: '07:30 05/10/2026',
   },
 ]
@@ -90,9 +90,10 @@ export function AdminShipmentsPage() {
     <div className="admin-page">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Quản lý danh sách đơn hàng</h1>
+          <span className="admin-page-kicker">VẬN HÀNH</span>
+          <h1 className="page-title">Đơn hàng</h1>
           <p className="page-subtitle">
-            Theo dõi tình trạng xử lý của toàn bộ đơn hàng trong hệ thống ParcelFlow.
+            Tìm kiếm, lọc và theo dõi toàn bộ đơn giao nhận.
           </p>
         </div>
         <div>
@@ -124,31 +125,31 @@ export function AdminShipmentsPage() {
             className={`filter-chip ${activeTab === 'CREATED' ? 'active' : ''}`}
             onClick={() => setActiveTab('CREATED')}
           >
-            Chờ gán (CREATED)
+            Chờ phân công
           </button>
           <button
             className={`filter-chip ${activeTab === 'ASSIGNED' ? 'active' : ''}`}
             onClick={() => setActiveTab('ASSIGNED')}
           >
-            Đã gán (ASSIGNED)
+            Đã phân công
           </button>
           <button
             className={`filter-chip ${activeTab === 'PICKED_UP' ? 'active' : ''}`}
             onClick={() => setActiveTab('PICKED_UP')}
           >
-            Đang giao (PICKED_UP)
+            Đang giao
           </button>
           <button
             className={`filter-chip ${activeTab === 'DELIVERED' ? 'active' : ''}`}
             onClick={() => setActiveTab('DELIVERED')}
           >
-            Thành công (DELIVERED)
+            Thành công
           </button>
           <button
             className={`filter-chip ${activeTab === 'DELIVERY_FAILED' ? 'active' : ''}`}
             onClick={() => setActiveTab('DELIVERY_FAILED')}
           >
-            Thất bại (DELIVERY_FAILED)
+            Không thành công
           </button>
         </div>
       </div>
@@ -192,7 +193,7 @@ export function AdminShipmentsPage() {
                         type="button"
                         className="action-btn"
                         onClick={() =>
-                          alert(`Xem chi tiết đơn ${item.code}. Tính năng cập nhật trạng thái theo quyền sẽ được hoàn thiện ở Tuần 4!`)
+                          alert(`Đang mở thông tin chi tiết đơn ${item.code}.`)
                         }
                       >
                         Chi tiết
@@ -204,9 +205,6 @@ export function AdminShipmentsPage() {
             </tbody>
           </table>
         </div>
-        <p className="data-note">
-          * Giao diện khung Tuần 1. Quyền cập nhật trạng thái đơn hàng (Tuần 4) sẽ được phối hợp giữa Admin, Driver và Backend.
-        </p>
       </div>
     </div>
   )

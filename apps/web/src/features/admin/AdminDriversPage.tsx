@@ -2,11 +2,11 @@ export function AdminDriversPage() {
   const drivers = [
     {
       id: 'D01',
-      name: 'Lê Văn Tài (Thành viên 4)',
+      name: 'Lê Văn Tài',
       phone: '0981.112.233',
       vehicle: 'Xe máy Suzuki Raider',
       status: 'Đang hoạt động',
-      lastGpsTime: '20 giây trước (Pub/Sub)',
+      lastGpsTime: '20 giây trước',
       totalDelivered: 45,
     },
     {
@@ -15,7 +15,7 @@ export function AdminDriversPage() {
       phone: '0981.234.567',
       vehicle: 'Honda Wave Alpha',
       status: 'Đang hoạt động',
-      lastGpsTime: '8 giây trước (Pub/Sub)',
+      lastGpsTime: '8 giây trước',
       totalDelivered: 78,
     },
     {
@@ -42,9 +42,10 @@ export function AdminDriversPage() {
     <div className="admin-page">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Quản lý đội ngũ tài xế</h1>
+          <span className="admin-page-kicker">NHÂN SỰ VẬN HÀNH</span>
+          <h1 className="page-title">Đội ngũ tài xế</h1>
           <p className="page-subtitle">
-            Danh sách tài xế thuộc hệ thống ParcelFlow và trạng thái kết nối GPS thời gian thực.
+            Theo dõi trạng thái hoạt động và hiệu suất giao hàng.
           </p>
         </div>
       </div>
@@ -72,30 +73,19 @@ export function AdminDriversPage() {
                   <td>{d.vehicle}</td>
                   <td>
                     <span
-                      style={{
-                        padding: '3px 8px',
-                        borderRadius: '9999px',
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        backgroundColor:
-                          d.status === 'Đang hoạt động'
-                            ? '#dcfce7'
-                            : d.status === 'Sẵn sàng'
-                            ? '#eff6ff'
-                            : '#f1f5f9',
-                        color:
-                          d.status === 'Đang hoạt động'
-                            ? '#166534'
-                            : d.status === 'Sẵn sàng'
-                            ? '#1d4ed8'
-                            : '#64748b',
-                      }}
+                      className={`driver-state ${
+                        d.status === 'Đang hoạt động'
+                          ? 'active'
+                          : d.status === 'Sẵn sàng'
+                            ? 'ready'
+                            : 'offline'
+                      }`}
                     >
                       {d.status}
                     </span>
                   </td>
                   <td>
-                    <code>{d.lastGpsTime}</code>
+                    <span className="text-muted">{d.lastGpsTime}</span>
                   </td>
                   <td><strong>{d.totalDelivered}</strong> đơn</td>
                 </tr>
@@ -103,9 +93,6 @@ export function AdminDriversPage() {
             </tbody>
           </table>
         </div>
-        <p className="data-note">
-          * Khung quản lý tài xế Tuần 1. Dữ liệu GPS tài xế sẽ truyền bất đồng bộ qua Google Cloud Pub/Sub và lưu vào Postgres ở Tuần 4 & Tuần 5.
-        </p>
       </div>
     </div>
   )

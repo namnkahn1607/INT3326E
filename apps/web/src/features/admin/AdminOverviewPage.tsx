@@ -1,5 +1,4 @@
 import { Link } from 'react-router'
-import { StatCard } from '../../components/ui/StatCard'
 import { StatusBadge } from '../../components/ui/StatusBadge'
 
 export function AdminOverviewPage() {
@@ -7,55 +6,47 @@ export function AdminOverviewPage() {
     <div className="admin-page">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Tổng quan hệ thống điều phối</h1>
+          <span className="admin-page-kicker">TỔNG QUAN</span>
+          <h1 className="page-title">Chào buổi sáng, Quản trị viên</h1>
           <p className="page-subtitle">
-            Giám sát vận hành logistics theo thời gian thực và quản lý luồng đơn hàng.
+            Theo dõi nhanh hoạt động giao nhận trong ngày hôm nay.
           </p>
         </div>
         <div className="admin-header-actions">
-          <Link to="/admin/assignment" className="btn btn-warning">
-            Phân công tài xế (3 đơn chờ)
-          </Link>
-          <Link to="/admin/shipments" className="btn btn-primary">
-            Quản lý tất cả đơn
+          <Link to="/admin/assignment" className="btn btn-primary">
+            Phân công 3 đơn chờ
           </Link>
         </div>
       </div>
 
-      <div className="stats-grid">
-        <StatCard
-          title="Tổng đơn hôm nay"
-          value="128"
-          description="Đơn phát sinh trong 24 giờ qua"
-          trend="+12% so với hôm qua"
-          color="#0f172a"
-        />
-        <StatCard
-          title="Đơn chưa gán (CREATED)"
-          value="3"
-          description="Cần điều phối gán tài xế ngay"
-          color="#b45309"
-        />
-        <StatCard
-          title="Đang giao hàng (PICKED_UP)"
-          value="42"
-          description="Tài xế đang gửi GPS qua Pub/Sub"
-          color="#7c3aed"
-        />
-        <StatCard
-          title="Đơn thất bại / Trễ"
-          value="2"
-          description="Cần xử lý ngoại lệ theo mốc Tuần 6"
-          color="#dc2626"
-        />
+      <div className="admin-stat-grid">
+        <article className="admin-stat-card">
+          <span className="admin-stat-icon purple">▣</span>
+          <div><span>Tổng đơn hôm nay</span><strong>128</strong><small className="positive">↑ 12% so với hôm qua</small></div>
+        </article>
+        <article className="admin-stat-card">
+          <span className="admin-stat-icon amber">⌛</span>
+          <div><span>Chờ phân công</span><strong>3</strong><small>Cần xử lý sớm</small></div>
+        </article>
+        <article className="admin-stat-card">
+          <span className="admin-stat-icon blue">↗</span>
+          <div><span>Đang giao</span><strong>42</strong><small>32,8% tổng đơn</small></div>
+        </article>
+        <article className="admin-stat-card">
+          <span className="admin-stat-icon red">!</span>
+          <div><span>Cần chú ý</span><strong>2</strong><small>Đơn giao không thành công</small></div>
+        </article>
       </div>
 
-      <div className="admin-dashboard-split">
-        <div className="section-block flex-2">
+      <div className="admin-overview-grid">
+        <div className="admin-panel admin-orders-panel">
           <div className="section-header-row">
-            <h2 className="section-title">Đơn hàng cần chú ý gần đây</h2>
+            <div>
+              <h2 className="section-title">Đơn hàng cần xử lý</h2>
+              <p className="admin-panel-subtitle">Các đơn mới hoặc đang gặp vấn đề</p>
+            </div>
             <Link to="/admin/shipments" className="text-link">
-              Tất cả đơn →
+              Xem tất cả →
             </Link>
           </div>
 
@@ -75,7 +66,7 @@ export function AdminOverviewPage() {
                   <td><strong>#PF-89025</strong></td>
                   <td>ĐH Bách Khoa → ĐH Quốc Gia</td>
                   <td><StatusBadge status="CREATED" /></td>
-                  <td><span className="text-muted">Chưa gán</span></td>
+                  <td><span className="admin-unassigned">Chưa phân công</span></td>
                   <td>
                     <Link to="/admin/assignment" className="action-btn action-primary">
                       Gán tài xế
@@ -86,7 +77,7 @@ export function AdminOverviewPage() {
                   <td><strong>#PF-89024</strong></td>
                   <td>Cầu Giấy → Hà Đông</td>
                   <td><StatusBadge status="PICKED_UP" /></td>
-                  <td>Nguyễn Văn Hùng (Driver #2)</td>
+                  <td>Nguyễn Văn Hùng</td>
                   <td>
                     <Link to="/admin/shipments" className="action-btn">
                       Chi tiết
@@ -97,7 +88,7 @@ export function AdminOverviewPage() {
                   <td><strong>#PF-89020</strong></td>
                   <td>Hoàn Kiếm → Long Biên</td>
                   <td><StatusBadge status="DELIVERY_FAILED" /></td>
-                  <td>Phạm Văn Nam (Driver #5)</td>
+                  <td>Phạm Văn Nam</td>
                   <td>
                     <Link to="/admin/shipments" className="action-btn action-danger">
                       Xử lý lỗi
@@ -109,30 +100,38 @@ export function AdminOverviewPage() {
           </div>
         </div>
 
-        <div className="section-block flex-1">
-          <h2 className="section-title">Hạ tầng & NFR mục tiêu</h2>
-          <div className="system-health-panel">
-            <div className="health-row">
-              <span className="health-label">Kiến trúc:</span>
-              <span className="health-value">Modular Monolith (NestJS)</span>
-            </div>
-            <div className="health-row">
-              <span className="health-label">GPS Pipeline:</span>
-              <span className="health-value">Pub/Sub + GPS Worker</span>
-            </div>
-            <div className="health-row">
-              <span className="health-label">Database:</span>
-              <span className="health-value">Cloud SQL PostgreSQL</span>
-            </div>
-            <div className="health-row">
-              <span className="health-label">Target Latency:</span>
-              <span className="health-value">p95 &lt; 500ms (Create/Assign)</span>
-            </div>
-            <div className="health-row">
-              <span className="health-label">GPS Ack Latency:</span>
-              <span className="health-value">p95 &lt; 150ms (Pub/Sub)</span>
+        <aside className="admin-panel admin-progress-panel">
+          <div className="section-header-row">
+            <div>
+              <h2 className="section-title">Tiến độ hôm nay</h2>
+              <p className="admin-panel-subtitle">Tính đến 14:30</p>
             </div>
           </div>
+          <div className="delivery-rate">
+            <strong>92%</strong>
+            <span>Tỷ lệ giao thành công</span>
+          </div>
+          <div className="progress-track"><span style={{ width: '92%' }} /></div>
+          <div className="progress-summary">
+            <div><strong>83</strong><span>Đã hoàn tất</span></div>
+            <div><strong>42</strong><span>Đang giao</span></div>
+            <div><strong>3</strong><span>Chờ xử lý</span></div>
+          </div>
+          <Link to="/admin/shipments" className="admin-panel-link">Xem báo cáo đơn hàng →</Link>
+        </aside>
+      </div>
+
+      <div className="admin-panel admin-activity-panel">
+        <div className="section-header-row">
+          <div>
+            <h2 className="section-title">Hoạt động gần đây</h2>
+            <p className="admin-panel-subtitle">Cập nhật mới nhất trong hệ thống</p>
+          </div>
+        </div>
+        <div className="admin-activity-list">
+          <div><span className="activity-dot green" /><p><strong>#PF-89018</strong> đã giao thành công</p><time>5 phút trước</time></div>
+          <div><span className="activity-dot purple" /><p><strong>Trần Văn Nam</strong> đã nhận đơn #PF-89023</p><time>12 phút trước</time></div>
+          <div><span className="activity-dot amber" /><p><strong>#PF-89025</strong> đang chờ phân công tài xế</p><time>18 phút trước</time></div>
         </div>
       </div>
     </div>

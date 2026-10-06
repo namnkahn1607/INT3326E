@@ -2,50 +2,26 @@ import { NavLink, Outlet } from 'react-router'
 import { Navigation, type NavigationItem } from '../components/ui/Navigation'
 
 const adminNavItems: NavigationItem[] = [
-  { path: '/admin', label: 'Tổng quan hệ thống' },
-  { path: '/admin/shipments', label: 'Quản lý đơn hàng' },
-  { path: '/admin/assignment', label: 'Phân công tài xế', badge: 'Cần gán' },
-  { path: '/admin/drivers', label: 'Đội ngũ tài xế' },
-  { path: '/admin/accounts', label: 'Quản lý tài khoản' },
+  { path: '/admin', label: 'Tổng quan' },
+  { path: '/admin/shipments', label: 'Đơn hàng' },
+  { path: '/admin/assignment', label: 'Phân công', badge: 3 },
+  { path: '/admin/drivers', label: 'Tài xế' },
+  { path: '/admin/accounts', label: 'Tài khoản' },
 ]
 
 export function AdminLayout() {
   return (
     <div className="admin-layout">
-      {/* Vùng nội dung chính nằm bên trái */}
-      <div className="admin-body">
-        <header className="admin-topbar">
-          <div className="topbar-left">
-            <span className="system-title">Bảng điều phối logistics</span>
-            <span className="architecture-tag">REST & Pub/Sub Pipeline</span>
-          </div>
-
-          <div className="topbar-right">
-            <div className="admin-user-pill">
-              <span className="admin-avatar">AD</span>
-              <div className="admin-meta">
-                <span className="admin-name">Quản trị viên</span>
-                <span className="admin-role">Dispatcher / Admin</span>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        <main className="admin-content-area">
-          <Outlet />
-        </main>
-      </div>
-
-      {/* Thanh taskbar điều hướng quản trị chuyển sang bên phải */}
       <aside className="admin-sidebar admin-sidebar-right">
         <div className="sidebar-header">
           <NavLink to="/admin" className="brand-title admin-brand">
-            Parcel<span>Flow</span>
+            <span className="admin-brand-mark" aria-hidden="true">P</span>
+            <span>Parcel<strong>Flow</strong></span>
           </NavLink>
-          <span className="role-tag admin-tag">Admin & Dispatcher</span>
+          <span className="admin-console-label">Trung tâm vận hành</span>
         </div>
 
-        <div className="sidebar-section-title">CHỨC NĂNG ĐIỀU PHỐI</div>
+        <div className="sidebar-section-title">QUẢN LÝ</div>
         <Navigation
           items={adminNavItems}
           className="admin-nav"
@@ -53,13 +29,32 @@ export function AdminLayout() {
         />
 
         <div className="sidebar-footer">
-          <div className="env-badge">
-            <span className="live-indicator" />
-            <span>Cloud Run • Modular Monolith</span>
+          <div className="admin-sidebar-profile">
+            <span className="admin-avatar">AD</span>
+            <div className="admin-meta">
+              <span className="admin-name">Quản trị viên</span>
+              <span className="admin-role">Đang hoạt động</span>
+            </div>
           </div>
-          <small className="build-version">v0.1.0-purple-scaffold</small>
         </div>
       </aside>
+
+      <div className="admin-body">
+        <header className="admin-topbar">
+          <div className="topbar-left">
+            <span className="system-title">Bảng điều hành</span>
+            <span className="admin-date">Tổng quan hôm nay</span>
+          </div>
+
+          <div className="topbar-right">
+            <span className="admin-live-status"><i /> Hệ thống ổn định</span>
+          </div>
+        </header>
+
+        <main className="admin-content-area">
+          <Outlet />
+        </main>
+      </div>
     </div>
   )
 }

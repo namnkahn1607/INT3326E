@@ -12,16 +12,21 @@ const customerNavItems: NavigationItem[] = [
 export function CustomerLayout() {
   return (
     <div className="customer-layout">
+      <div className="customer-announcement">
+        <div className="customer-shell customer-announcement-inner">
+          <span>Giao nhận thông minh, theo dõi hành trình minh bạch</span>
+          <span className="customer-support">Hỗ trợ: 1900 0000</span>
+        </div>
+      </div>
       <header className="customer-header">
         <div className="customer-header-inner">
           <div className="brand-group">
             <NavLink to="/customer" className="brand-title">
-              Parcel<span>Flow</span>
+              <span className="brand-mark" aria-hidden="true">P</span>
+              <span className="brand-wordmark">Parcel<strong>Flow</strong></span>
             </NavLink>
-            <span className="role-tag customer-tag">Cổng Khách hàng</span>
           </div>
 
-          {/* Thanh taskbar điều hướng chuyển sang bên phải */}
           <div className="customer-right-taskbar">
             <Navigation
               items={customerNavItems}
@@ -29,8 +34,8 @@ export function CustomerLayout() {
               linkClassName="customer-nav-link"
             />
             <div className="user-profile-preview">
-              <span className="user-status-dot" />
-              <span className="user-name">Khách hàng demo</span>
+              <span className="customer-avatar" aria-hidden="true">KT</span>
+              <span className="user-name">Khách hàng</span>
             </div>
           </div>
         </div>
@@ -41,9 +46,24 @@ export function CustomerLayout() {
       </main>
 
       <footer className="customer-footer">
-        <div className="footer-inner">
-          <span>ParcelFlow &copy; 2026 - UET Cloud Application Development (Nhóm 6)</span>
-          <span className="sub-text">Hỗ trợ giao nhận nhanh & theo dõi hành trình thời gian thực</span>
+        <div className="customer-shell customer-footer-grid">
+          <div>
+            <div className="footer-brand">Parcel<span>Flow</span></div>
+            <p>Nền tảng giao nhận và theo dõi hành trình dành cho mọi đơn hàng.</p>
+          </div>
+          <div>
+            <strong>Dịch vụ</strong>
+            <NavLink to="/customer/create">Tạo đơn giao hàng</NavLink>
+            <NavLink to="/customer/shipments">Tra cứu đơn hàng</NavLink>
+          </div>
+          <div>
+            <strong>Hỗ trợ</strong>
+            <span>Hotline: 1900 0000</span>
+            <span>Email: support@parcelflow.vn</span>
+          </div>
+        </div>
+        <div className="customer-footer-bottom">
+          ParcelFlow &copy; 2026 · UET Cloud Application Development
         </div>
       </footer>
     </div>
