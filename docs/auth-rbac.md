@@ -1,4 +1,4 @@
-# Auth & RBAC Contract — Draft v0.2
+# Auth & RBAC Contract — Draft v0.3
 
 ## 1. Scope
 
@@ -7,6 +7,7 @@ Tài liệu này mô tả bản nháp cơ chế xác thực và phân quyền ch
 Phạm vi tuần 1:
 
 - Phác thảo `AuthModule`.
+- Phác thảo `AdminModule`, controller và service; chưa triển khai endpoint nghiệp vụ ở tuần 1.
 - Xác định các role của hệ thống.
 - Thống nhất cách backend nhận và xác thực Firebase ID Token.
 - Xác định quy tắc trả về `401 Unauthorized` và `403 Forbidden`.
@@ -49,13 +50,13 @@ Trong đó:
 
 ## 3. Roles
 
-Hệ thống có ba role:
+Quyết định ngày 09/10/2026: giữ Admin và gộp chức năng điều phối vào role này; không có role Dispatcher riêng. Hệ thống có ba role:
 
 | Role | Mô tả |
 | --- | --- |
 | `CUSTOMER` | Tạo và theo dõi đơn giao hàng của mình |
 | `DRIVER` | Nhận nhiệm vụ giao hàng và cập nhật trạng thái |
-| `DISPATCHER` | Điều phối đơn hàng và tài xế |
+| `ADMIN` | Điều phối đơn hàng, phân công tài xế và giám sát vận hành |
 
 Trong phạm vi MVP, mỗi tài khoản chỉ có một role tại một thời điểm.
 
@@ -137,7 +138,7 @@ Ví dụ khai báo quyền trên controller hoặc handler dành cho điều ph�
 
 ```ts
 @UseGuards(FirebaseAuthGuard, RolesGuard)
-@Roles(UserRole.DISPATCHER)
+@Roles(UserRole.ADMIN)
 ```
 
 Quyền truy cập dự kiến:
@@ -147,7 +148,7 @@ Quyền truy cập dự kiến:
 | API công khai | Không yêu cầu role |
 | API khách hàng | `CUSTOMER` |
 | API tài xế | `DRIVER` |
-| API điều phối | `DISPATCHER` |
+| API điều phối | `ADMIN` |
 
 Bảng quyền chi tiết sẽ được cập nhật khi API contract của các module được thống nhất.
 
@@ -224,6 +225,24 @@ export interface AuthenticatedUser {
 }
 ```
 
+### `AdminModule`
+
+Scaffold gồm `admin.module.ts`, `controllers/admin.controller.ts` và `services/admin.service.ts`. Module import `AuthModule` để nhận các guard qua dependency injection. Controller khai báo `@UseGuards(FirebaseAuthGuard, RolesGuard)` và `@Roles(UserRole.ADMIN)`; các handler sau này trong controller dùng quyền Admin mặc định.
+
+Tuần 1 chưa cung cấp endpoint hoặc logic quản trị/điều phối. TV1 đăng ký `AdminModule` vào `AppModule` khi tích hợp bootstrap. Không tạo tài khoản Admin, cấp custom claim hoặc mở quyền từ frontend trong scaffold này.
+
+Phạm vi Admin bám theo các màn hình hiện có của TV3; Admin là người điều phối vận hành:
+
+| Route frontend | Chức năng |
+| --- | --- |
+| `/admin` | Tổng quan vận hành và đơn hàng |
+| `/admin/shipments` | Xem, tìm kiếm và lọc toàn bộ đơn hàng |
+| `/admin/assignment` | Phân công tài xế cho đơn hàng |
+| `/admin/drivers` | Theo dõi danh sách tài xế và trạng thái hoạt động |
+| `/admin/live-map` | Xem vị trí và trạng thái tài xế trên bản đồ |
+
+Các route trên là màn hình frontend, không phải endpoint REST mới. Contract Shipment, Assignment và Tracking sẽ được thống nhất với TV1/TV3 khi tích hợp. Trang `/admin/accounts` hiện là bảng dữ liệu mẫu của TV3; chức năng cấp quyền hoặc quản lý tài khoản thật chưa thuộc scaffold TV6 tuần 1.
+
 ## 7. Test cases
 
 ### Authentication tests
@@ -238,9 +257,9 @@ export interface AuthenticatedUser {
 ### Authorization tests
 
 1. Người dùng chưa xác thực truy cập endpoint protected → trả về `401`.
-2. Role `CUSTOMER` truy cập endpoint yêu cầu `DISPATCHER` → trả về `403`.
-3. Role `DRIVER` truy cập endpoint yêu cầu `DISPATCHER` → trả về `403`.
-4. Role `DISPATCHER` truy cập endpoint yêu cầu `DISPATCHER` → request thành công.
+2. Role `CUSTOMER` truy cập endpoint yêu cầu `ADMIN` → trả về `403`.
+3. Role `DRIVER` truy cập endpoint yêu cầu `ADMIN` → trả về `403`.
+4. Role `ADMIN` truy cập endpoint yêu cầu `ADMIN` → request thành công.
 5. Role `CUSTOMER` truy cập endpoint yêu cầu `CUSTOMER` → request thành công.
 6. Role `DRIVER` truy cập endpoint yêu cầu `DRIVER` → request thành công.
 7. Endpoint dùng `FirebaseAuthGuard` nhưng không khai báo role → người dùng đã xác thực được phép truy cập.
@@ -268,8 +287,8 @@ Ví dụ:
 const tokenVerifier = {
   verify: vi.fn().mockResolvedValue({
     uid: 'test-user-id',
-    email: 'dispatcher@example.com',
-    role: UserRole.DISPATCHER,
+    email: 'admin@example.com',
+    role: UserRole.ADMIN,
   }),
 };
 ```
@@ -319,5 +338,5 @@ Các phần interface, guard, decorator và mock test có thể được chuẩn
 - Cloud Run: dùng service account của runtime và ADC; TV5 xác nhận quyền và Firebase project. Không đưa JSON service account key vào repo.
 - Local: cung cấp ADC hoặc `GOOGLE_APPLICATION_CREDENTIALS` trỏ tới file credentials bên ngoài repo. Provider đọc biến môi trường đã có; bootstrap TV1 chịu trách nhiệm nạp `.env`.
 - `FIREBASE_PROJECT_ID`: project Firebase cần xác thực, ví dụ `int3326e`; SDK dùng cấu hình ADC nếu không khai báo.
-- Role custom claim chỉ nhận `CUSTOMER`, `DRIVER`, `DISPATCHER`. Claim `ADMIN` cũ bị từ chối; tài khoản dùng claim cũ cần được cập nhật ở Firebase rồi refresh ID Token.
-- Nhánh TV6 không sửa frontend, Prisma hoặc worker. Các nhánh đó cần bỏ role Admin theo cùng quyết định. Firebase Authentication thật, cấp claims, đồng bộ user/role với database và response `ProblemDetails` cần được kiểm thử khi tích hợp.
+- Role custom claim chỉ nhận `CUSTOMER`, `DRIVER`, `ADMIN`. Claim `DISPATCHER` cũ bị từ chối. Nếu đã có tài khoản điều phối dùng claim này, người có quyền quản lý Firebase phải cập nhật custom claim thành `ADMIN` và refresh ID Token; client không tự cấp quyền.
+- Nhánh TV6 không sửa frontend, Prisma hoặc worker. Các nhánh đó cần thống nhất ba role `CUSTOMER`, `DRIVER`, `ADMIN` theo cùng quyết định. Firebase Authentication thật, cấp claims, đồng bộ user/role với database và response `ProblemDetails` cần được kiểm thử khi tích hợp.

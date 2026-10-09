@@ -15,7 +15,7 @@ describe('FirebaseTokenVerifierService', () => {
     expect(verifyIdToken).toHaveBeenLastCalledWith('signed-id-token');
   });
 
-  it.each(['ADMIN', 'customer', '', undefined, null, 123, ['DRIVER'], { role: 'DRIVER' }])(
+  it.each(['DISPATCHER', 'customer', '', undefined, null, 123, ['DRIVER'], { role: 'DRIVER' }])(
     'rejects unsupported or missing role %j',
     async (role) => {
       verifyIdToken.mockResolvedValue({ uid: 'user-1', role });

@@ -14,9 +14,9 @@ import { FIREBASE_AUTH } from './providers/firebase-auth.provider';
 @Controller('auth-test')
 @UseGuards(FirebaseAuthGuard, RolesGuard)
 class AuthTestController {
-  @Get('dispatcher')
-  @Roles(UserRole.DISPATCHER)
-  dispatcher(@Req() request: AuthenticatedRequest) {
+  @Get('admin')
+  @Roles(UserRole.ADMIN)
+  admin(@Req() request: AuthenticatedRequest) {
     return request.user;
   }
 
@@ -51,31 +51,31 @@ describe('AuthModule HTTP integration', () => {
   afterAll(async () => { await app?.close(); });
 
   it('returns 401 for missing authentication before invoking Firebase', async () => {
-    const response = await fetch(`${baseUrl}/auth-test/dispatcher`);
+    const response = await fetch(`${baseUrl}/auth-test/admin`);
     expect(response.status).toBe(401);
     expect(verifyIdToken).not.toHaveBeenCalled();
   });
 
   it('returns 401 for a failed Firebase verification', async () => {
     verifyIdToken.mockRejectedValueOnce(new Error('expired token'));
-    const response = await fetch(`${baseUrl}/auth-test/dispatcher`, {
+    const response = await fetch(`${baseUrl}/auth-test/admin`, {
       headers: { Authorization: 'Bearer expired-token' },
     });
     expect(response.status).toBe(401);
     expect(await response.text()).not.toContain('expired token');
   });
 
-  it('rejects the removed ADMIN claim even after Firebase verifies the token', async () => {
-    verifyIdToken.mockResolvedValueOnce({ uid: 'old-admin', role: 'ADMIN' });
-    const response = await fetch(`${baseUrl}/auth-test/dispatcher`, {
+  it('rejects the removed DISPATCHER claim even after Firebase verifies the token', async () => {
+    verifyIdToken.mockResolvedValueOnce({ uid: 'old-role', role: 'DISPATCHER' });
+    const response = await fetch(`${baseUrl}/auth-test/admin`, {
       headers: { Authorization: 'Bearer signed-token' },
     });
     expect(response.status).toBe(401);
   });
 
-  it.each([UserRole.CUSTOMER, UserRole.DRIVER])('returns 403 for %s on dispatcher operations', async (role) => {
+  it.each([UserRole.CUSTOMER, UserRole.DRIVER])('returns 403 for %s on admin operations', async (role) => {
     verifyIdToken.mockResolvedValueOnce({ uid: 'user-1', role });
-    const response = await fetch(`${baseUrl}/auth-test/dispatcher`, {
+    const response = await fetch(`${baseUrl}/auth-test/admin`, {
       headers: { Authorization: 'Bearer signed-token' },
     });
     expect(response.status).toBe(403);
