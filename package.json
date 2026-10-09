@@ -1,10 +1,14 @@
 {
   "name": "parcelflow",
-  "version": "0.0.1",
-  "description": "",
-  "author": "",
+  "version": "0.1.0",
   "private": true,
+  "description": "ParcelFlow - Modular Monolith logistics & delivery platform",
+  "author": "",
   "license": "UNLICENSED",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "build": "nest build worker",
     "deploy": "nest deploy",
