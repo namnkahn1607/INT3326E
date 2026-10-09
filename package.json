@@ -17,7 +17,7 @@
     "start:dev": "nest start worker --watch",
     "start:debug": "nest start worker --debug --watch",
     "start:prod": "node dist/apps/worker/src/main",
-    "lint": "oxlint --type-aware apps/ test/",
+    "lint": "oxlint --type-aware apps/worker/ apps/api/",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",

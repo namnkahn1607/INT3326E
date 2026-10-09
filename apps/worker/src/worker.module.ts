@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
 import { GpsSubscriber } from './consumer/gps.subscriber';
+import { HealthController } from './health/health.controller';
 
 @Module({
   imports: [],
-  controllers: [],
+  controllers: [HealthController],
   providers: [GpsSubscriber],
 })
 export class WorkerModule {}
