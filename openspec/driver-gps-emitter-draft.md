@@ -45,11 +45,11 @@ Các mục này được triển khai theo roadmap ở mục 8. Riêng thử ngh
 | Project | `int3326e` |
 | Subscription trong ảnh | `hello-test-sub` |
 | Tên resource | `projects/int3326e/subscriptions/hello-test-sub` |
-| Topic thử nghiệm | Ghi lại topic thực tế mà subscription trên đang gắn vào; ảnh cung cấp chưa hiển thị tên topic |
+| Topic thử nghiệm | `hello-test` — `projects/int3326e/topics/hello-test`; ảnh bổ sung ngày 09/10/2026 hiển thị topic cùng subscription `hello-test-sub` |
 | Message body | `Hello World` |
 | Điều kiện trước khi chạy | Topic và subscription tồn tại; tài khoản thử nghiệm có quyền publish/pull tương ứng |
 
-`gps-events` là tên topic GPS trong kiến trúc và cấu hình mẫu của repo. Chưa có bằng chứng subscription `hello-test-sub` trong ảnh gắn với topic đó; không dùng hai tên này thay thế cho nhau trong biên bản thử nghiệm.
+`gps-events` là tên topic GPS trong kiến trúc và cấu hình mẫu của repo. Topic dùng cho phép thử này là `hello-test`, gắn với subscription `hello-test-sub`; không dùng `gps-events` thay cho tên topic thực tế trong biên bản thử nghiệm.
 
 ### 3.2. Yêu cầu
 
@@ -142,13 +142,90 @@ Kiểm tra kỹ thuật bằng script sẵn có: `npm run lint:web` và `npm run
 
 ## 6. Bằng chứng hiện có
 
-| Hạng mục | Bằng chứng được cung cấp hoặc đã đối chiếu | Kết luận |
+Ngày 09/10/2026 bổ sung 10 ảnh do TV4 cung cấp, lưu tại `docs/evidence/week-1/`, và cập nhật ảnh mẫu thứ nhất. Bộ ảnh xác định topic/subscription, ghi nhận publish/pull `Hello World`, giao diện emitter ban đầu, khi có một mẫu, hai mẫu và khi dừng, cùng kết quả kiểm tra kỹ thuật. Kết luận dưới đây dựa trên nội dung ảnh và kết quả lệnh đã chạy; không suy ra các ca kiểm tra chưa có bằng chứng. Các yêu cầu lưu bằng chứng chi tiết tại PS-01 đến PS-03 và mục 7 là checklist của tài liệu này; ô D7 không yêu cầu riêng ảnh publish thành công, ACK hoặc worker consume bằng code.
+
+### 6.1. Pub/Sub Hello World
+
+Hai ảnh ban đầu được giữ lại để đối chiếu:
+
+Ảnh 1 — Subscription `hello-test-sub` trong project `int3326e`:
+
+![Subscription hello-test-sub trong project int3326e](../docs/evidence/week-1/pubsub-hello-test-sub.png)
+
+Ảnh 2 — Màn hình Pull nhận `Hello World`, publish time `Oct 8, 2026, 9:26:49 PM` (ảnh không hiển thị múi giờ); “Enable ack messages” chưa được chọn:
+
+![Màn hình Pull nhận thông điệp Hello World](../docs/evidence/week-1/pubsub-hello-world-pull.png)
+
+Ảnh bổ sung — Topic `hello-test` và subscription `hello-test-sub` trong project `int3326e`:
+
+![Topic hello-test gắn với subscription hello-test-sub](../docs/evidence/week-1/pubsub-topic-subscription.png)
+
+Ảnh bổ sung — Topic `hello-test` hiển thị thông báo `Message published.`:
+
+![Publish thành công trên topic hello-test](../docs/evidence/week-1/pubsub-hello-world-publish.png)
+
+Ảnh bổ sung — Pull từ `projects/int3326e/subscriptions/hello-test-sub` nhận hai dòng `Hello World`, với publish time `Oct 8, 2026, 9:26:49 PM` và `Oct 9, 2026, 8:32:49 PM`:
+
+![Pull Hello World từ hello-test-sub ngày 09/10/2026](../docs/evidence/week-1/pubsub-hello-world-pull-2026-10-09.png)
+
+| Hạng mục | Bằng chứng | Kết luận |
 | --- | --- | --- |
-| Subscription | Ảnh danh sách có `hello-test-sub` trong project `int3326e`. | Có bằng chứng subscription tồn tại; cần bổ sung tên topic. |
-| Nhận thông điệp | Ảnh Pull hiển thị body `Hello World` và publish time `Oct 8, 2026, 9:26:49 PM`. | Có bằng chứng nhận thông điệp; ảnh chưa cho biết múi giờ. |
-| ACK và worker | “Enable ack messages” chưa được chọn trong ảnh; chưa có log xử lý worker. | Chưa có bằng chứng ACK hoặc worker consume bằng code. |
-| Giao diện Driver | Ảnh `/driver` hiển thị tài xế mẫu, trạng thái dừng, số mẫu `0` và hai nút điều khiển. | Có bằng chứng trạng thái ban đầu; chưa có ảnh phát mẫu hoặc dừng sau khi phát. |
-| Logic emitter | Mã nguồn hiện có timer 8.000 ms, tọa độ cố định, tạo timestamp, callback và cleanup. | Có phần triển khai tương ứng; cần thực thi các ca kiểm tra để kết luận nghiệm thu hành vi. |
+| Project, topic, subscription | Ảnh topic hiển thị `projects/int3326e/topics/hello-test` và subscription `hello-test-sub`. | Đã xác định resource thực tế của phép thử. |
+| Publish | Ảnh có tên topic và thông báo `Message published.` | Có bằng chứng publish thành công; ảnh không hiển thị body gửi hoặc message ID để đối chiếu trực tiếp với lần pull. |
+| Pull | Ảnh có tên subscription, body `Hello World` và thời điểm publish nêu trên. | Có bằng chứng nhận đúng nội dung; ảnh không hiển thị múi giờ nên giữ nguyên thời gian như trong ảnh. |
+| ACK và worker | `Enable ack messages` chưa được chọn; cột Ack hiển thị `Deadline exceeded`; không có log worker. | Chưa có bằng chứng ACK thành công, worker xử lý hoặc ghi DB. Không đánh dấu các bước này đã đạt. |
+
+### 6.2. GPS emitter trên `/driver`
+
+Ảnh trạng thái ban đầu — URL `localhost:5173/driver`, tài xế `demo-driver-1`, trạng thái `Đã dừng`, số mẫu `0`, chưa có payload:
+
+![GPS emitter ở trạng thái ban đầu](../docs/evidence/week-1/driver-gps-initial.png)
+
+Ảnh mẫu thứ nhất — Trạng thái `Đang phát mẫu`, số mẫu `1`, payload đủ bốn trường, tọa độ `21.0285`, `105.8542` và timestamp `2026-10-09T13:38:17.266Z` (UTC):
+
+![GPS emitter đang phát với một mẫu](../docs/evidence/week-1/driver-gps-running-1.png)
+
+Ảnh đang phát — Trạng thái `Đang phát mẫu`, số mẫu `2`, tọa độ `21.0285`, `105.8542` và timestamp `2026-10-09T13:29:34.609Z` (UTC):
+
+![GPS emitter đang phát với hai mẫu](../docs/evidence/week-1/driver-gps-running-2.png)
+
+Ảnh sau khi dừng — Trạng thái `Đã dừng`, số mẫu `2`, payload và timestamp `2026-10-09T13:29:34.609Z` giữ nguyên so với ảnh đang phát:
+
+![GPS emitter dừng và giữ payload gần nhất](../docs/evidence/week-1/driver-gps-stopped.png)
+
+Ảnh được cung cấp với tên `driver-gps-stopped-after-10s.png` — Trạng thái `Đã dừng`, số mẫu `2`, timestamp `2026-10-09T13:26:50.157Z` (UTC):
+
+![Ảnh được cung cấp với tên stopped-after-10s](../docs/evidence/week-1/driver-gps-stopped-after-10s.png)
+
+Ảnh mẫu thứ nhất được chụp ở lượt chạy sau ảnh hai mẫu: timestamp `13:38:17.266Z` so với `13:29:34.609Z`. Hai ảnh chứng minh giao diện ở từng trạng thái, nhưng không tạo thành cặp mẫu liên tiếp để đo chu kỳ 8 giây. Ảnh `driver-gps-stopped-after-10s.png` cũng thuộc lượt khác với cặp đang phát/dừng, nên chưa đủ đối chiếu payload trước và sau khoảng chờ. Cần video hoặc biên bản thao tác có thời gian để xác nhận chu kỳ phát và việc không tạo thêm mẫu sau khi dừng.
+
+### 6.3. Kiểm tra kỹ thuật
+
+Ảnh lệnh `npm run lint:web` gọi ESLint, không hiển thị lỗi trong phần được chụp:
+
+![Terminal chạy lint frontend](../docs/evidence/week-1/lint-web.png)
+
+Ảnh lệnh `npm run build:web` chạy `tsc -b && vite build`, transform 158 module và kết thúc với `built in 218ms`:
+
+![Terminal build frontend thành công](../docs/evidence/week-1/build-web.png)
+
+Kiểm tra độc lập trên repo ngày 09/10/2026: `npm run lint:web` và `npm run build:web` đều kết thúc với exit code `0`. Kết luận lint đạt dựa trên kết quả lệnh này; ảnh lint của TV4 chỉ hiển thị phần gọi ESLint. Ảnh build của TV4 thể hiện build thành công.
+
+### 6.4. Đối chiếu nghiệm thu
+
+| Ca kiểm tra | Kết quả đối chiếu bằng chứng hiện có | Phần cần xác nhận thêm |
+| --- | --- | --- |
+| TC-01 | Có ảnh trạng thái ban đầu dừng, `0` mẫu, chưa có JSON. | Ảnh tĩnh không xác nhận trực tiếp thuộc tính vô hiệu hóa của nút Dừng. |
+| TC-02 | Có ảnh đang phát với số mẫu `1` và JSON đúng bốn trường. | Chưa có ghi nhận thời gian từ lúc bấm đến mẫu đầu tiên và việc không phát ngay khi bấm. |
+| TC-03 | Có ảnh số mẫu `1` và `2`, cùng tọa độ mẫu nhưng ở các lượt chạy khác nhau. | Cần hai mẫu liên tiếp trong cùng lần chạy để đối chiếu timestamp và chu kỳ khoảng 8 giây. |
+| TC-04 | Cặp ảnh đang phát/dừng giữ nguyên số mẫu `2` và payload. | Cần ghi nhận hoặc video chờ hơn 8 giây sau khi dừng; ảnh mang tên `stopped-after-10s` thuộc lượt khác. |
+| TC-05 | Chưa có ghi nhận thao tác bắt đầu lại và bấm lặp. | Kiểm tra số mẫu tiếp tục tăng, chỉ một mẫu mỗi chu kỳ và không có timer trùng. |
+| TC-06 | Chưa có ghi nhận đổi route trong lúc đang chạy. | Chuyển route rồi quay lại `/driver`, xác nhận trạng thái ban đầu. |
+| TC-07 | Mã nguồn có điều kiện `driverId.trim()` để chặn định danh rỗng. | Chưa có kết quả chạy với định danh rỗng hoặc chỉ có khoảng trắng. |
+| TC-08 | Mã nguồn tạo payload nội bộ; giao diện ghi rõ chưa gửi dữ liệu lên máy chủ. | Chưa có ghi nhận quan sát quyền vị trí và Network khi chạy. |
+| TC-09 | Có ảnh resource, publish thành công và pull nhận `Hello World`. | Múi giờ của publish time chưa được xác nhận; chưa có bằng chứng ACK và không yêu cầu suy ra worker xử lý. |
+
+Kết quả hiện tại: đã có bằng chứng Pub/Sub publish/pull và emitter hiển thị một mẫu, hai mẫu, chuyển sang trạng thái dừng, cùng lint/build đạt. Bộ ảnh phù hợp để minh họa phần phác thảo TV4 tuần 1; chưa đủ để xác nhận toàn bộ TC-01 đến TC-08. Các bước chưa xác nhận được giữ trong bảng để bổ sung kết quả thực tế trước khi nghiệm thu đầy đủ theo mục 7.
 
 ## 7. Điều kiện hoàn thành và bàn giao
 
