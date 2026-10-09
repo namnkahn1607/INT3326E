@@ -7,6 +7,7 @@ Tài liệu này mô tả bản nháp cơ chế xác thực và phân quyền ch
 Phạm vi tuần 1:
 
 - Phác thảo `AuthModule`.
+- Phác thảo `AdminModule`, controller và service; chưa triển khai endpoint nghiệp vụ ở tuần 1.
 - Xác định các role của hệ thống.
 - Thống nhất cách backend nhận và xác thực Firebase ID Token.
 - Xác định quy tắc trả về `401 Unauthorized` và `403 Forbidden`.
@@ -223,6 +224,24 @@ export interface AuthenticatedUser {
   role: UserRole;
 }
 ```
+
+### `AdminModule`
+
+Scaffold gồm `admin.module.ts`, `controllers/admin.controller.ts` và `services/admin.service.ts`. Module import `AuthModule` để nhận các guard qua dependency injection. Controller khai báo `@UseGuards(FirebaseAuthGuard, RolesGuard)` và `@Roles(UserRole.ADMIN)`; các handler sau này trong controller dùng quyền Admin mặc định.
+
+Tuần 1 chưa cung cấp endpoint hoặc logic quản trị/điều phối. TV1 đăng ký `AdminModule` vào `AppModule` khi tích hợp bootstrap. Không tạo tài khoản Admin, cấp custom claim hoặc mở quyền từ frontend trong scaffold này.
+
+Phạm vi Admin bám theo các màn hình hiện có của TV3; Admin là người điều phối vận hành:
+
+| Route frontend | Chức năng |
+| --- | --- |
+| `/admin` | Tổng quan vận hành và đơn hàng |
+| `/admin/shipments` | Xem, tìm kiếm và lọc toàn bộ đơn hàng |
+| `/admin/assignment` | Phân công tài xế cho đơn hàng |
+| `/admin/drivers` | Theo dõi danh sách tài xế và trạng thái hoạt động |
+| `/admin/live-map` | Xem vị trí và trạng thái tài xế trên bản đồ |
+
+Các route trên là màn hình frontend, không phải endpoint REST mới. Contract Shipment, Assignment và Tracking sẽ được thống nhất với TV1/TV3 khi tích hợp. Trang `/admin/accounts` hiện là bảng dữ liệu mẫu của TV3; chức năng cấp quyền hoặc quản lý tài khoản thật chưa thuộc scaffold TV6 tuần 1.
 
 ## 7. Test cases
 
