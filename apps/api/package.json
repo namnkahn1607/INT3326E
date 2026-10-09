@@ -6,7 +6,8 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc -p tsconfig.test.json",
     "test": "vitest run",
-    "test:auth": "vitest run src/modules/auth"
+    "test:auth": "vitest run src/modules/auth",
+    "start": "node dist/main.js"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
@@ -23,6 +24,6 @@
     "vitest": "^3.2.4"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=20.12.0"
   }
 }

@@ -1,0 +1,87 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  CUSTOMER
+  DRIVER
+  ADMIN
+}
+
+enum ShipmentStatus {
+  CREATED
+  ASSIGNED
+  PICKED_UP
+  DELIVERED
+  DELIVERY_FAILED
+}
+
+model User {
+  id          String   @id @default(uuid())
+  firebaseUid String   @unique
+  email       String   @unique
+  role        Role     @default(CUSTOMER)
+  name        String
+  phone       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdShipments Shipment[] @relation("CustomerShipments")
+  assignedShipments Shipment[] @relation("DriverShipments")
+
+  @@map("users")
+}
+
+model Shipment {
+  id                 String         @id @default(uuid())
+  trackingCode       String         @unique
+  senderId           String
+  driverId           String?
+  status             ShipmentStatus @default(CREATED)
+  pickupAddress      String
+  pickupLat          Float
+  pickupLng          Float
+  deliveryAddress    String
+  deliveryLat        Float
+  deliveryLng        Float
+  packageDescription String
+  packageWeightKg    Float
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  sender User  @relation("CustomerShipments", fields: [senderId], references: [id])
+  driver User? @relation("DriverShipments", fields: [driverId], references: [id])
+
+  @@index([status])
+  @@index([senderId])
+  @@index([driverId])
+  @@map("shipments")
+}
+
+model CurrentLocation {
+  driverId  String   @id
+  lat       Float
+  lng       Float
+  seq       Int
+  updatedAt DateTime @updatedAt
+
+  @@map("current_locations")
+}
+
+model LocationHistory {
+  id              BigInt   @id @default(autoincrement())
+  driverId        String
+  lat             Float
+  lng             Float
+  seq             Int
+  clientTimestamp DateTime
+  receivedAt      DateTime @default(now())
+
+  @@index([driverId, receivedAt(sort: Desc)])
+  @@map("location_history")
+}

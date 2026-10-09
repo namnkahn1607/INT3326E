@@ -279,7 +279,7 @@ npm run build
 npm run test:auth
 ```
 
-Các kiểm tra không cần credentials hoặc Firebase project thật. `build` hiện biên dịch module Auth, chưa tạo một backend HTTP chạy độc lập vì bootstrap thuộc scaffold TV1.
+Các kiểm tra không cần credentials hoặc Firebase project thật. TV1 đã bổ sung bootstrap và đăng ký Auth/Admin trong AppModule; xem `docs/api-scaffold.md` để chạy backend và kiểm tra public `GET /healthz`.
 
 Ví dụ:
 
@@ -316,7 +316,7 @@ Việc này cho phép kiểm thử Auth và RBAC mà chưa cần:
 Các nội dung cần thống nhất với nhóm:
 
 - Role được lưu bằng Firebase custom claims hay trong PostgreSQL.
-- Đồng bộ prefix `/v1` với API contract tại `docs/openapi.json` ở nhánh TV1.
+- API scaffold đã dùng prefix `/v1` cho nghiệp vụ và giữ `/healthz` công khai ngoài prefix; contract nghiệp vụ vẫn là draft.
 - Exception filter chung cần chuyển lỗi `401`/`403` từ NestJS sang `ProblemDetails` của contract TV1. Các ví dụ response ở tài liệu này mô tả scaffold mặc định, chưa phải response tích hợp cuối cùng.
 - Cách đồng bộ người dùng Firebase với bảng người dùng trong database.
 

@@ -78,7 +78,7 @@ flowchart TD
 
     B["Backend<br/>NestJS on Cloud Run<br/>Modules: Shipment / Assign / Notification / ETA"]
 
-    B -- "POST /location<br/>(publish only, no DB write)" --> P["Pub/Sub: gps-events"]
+    B -- "POST /locations<br/>(publish only, no DB write)" --> P["Pub/Sub: gps-events"]
     B -- "Other CRUD (sync)" --> DB[("Cloud SQL<br/>PostgreSQL")]
 
     P -- "Subscribe" --> W["GPS Worker<br/>Cloud Run, separate service"]
@@ -96,7 +96,7 @@ All business operations (create shipment, assign, notifications, auth, ...) go t
 
 To meet the load requirements, the **write path** and **read path** of GPS data are fully separated:
 
-- **Write path (driver sends GPS):** The driver calls `POST /location`. The backend only **publishes** a message to Google Cloud Pub/Sub and immediately returns `HTTP 200` - it does not wait for a database write.
+- **Write path (driver sends GPS):** The driver calls `POST /locations`. The backend only **publishes** a message to Google Cloud Pub/Sub and immediately returns `HTTP 202` (draft) - it does not wait for a database write.
 - **Background processing (worker):** A standalone service (**GPS Worker**) subscribes to Pub/Sub and writes the data into Cloud SQL.
 - **Read path (customer tracking):** The Customer app uses **REST polling** (every 5 to 10s) to read the `current_location` table from Postgres.
 
@@ -153,3 +153,7 @@ Design assumptions: at any moment there are **~300–500 active shipments**, and
 | 8 | Integration & permission tests. Prepare load-test and recovery scenarios. | System stable; failure-simulation scenario ready. |
 | 9 | Run load tests per NFRs. Finalize Cloud Monitoring data, fix bugs. | Load-test report (performance & scalability); Release Candidate. |
 | 10 | Finalize documentation and final risk contingency. | Packaged product; metrics ready for the defense. |
+
+## Week 1 API scaffold
+
+The API now boots with Shipment, Auth and Admin modules and exposes public `GET /healthz`. Shipment/Admin business handlers and database access remain deferred. See [run and container instructions](docs/api-scaffold.md) and the [contract draft decisions](docs/api-contract.md). `docs/openapi.json` is a future API draft; cancellation is an unapproved proposal outside the five-state baseline. Cloud Run deployment evidence is tracked in issue #9.

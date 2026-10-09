@@ -4,3 +4,10 @@
 
 .env
 dump.txt
+
+node_modules/
+dist/
+coverage/
+.env.*
+!.env.example
+*.log

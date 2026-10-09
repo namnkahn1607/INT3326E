@@ -93,7 +93,7 @@ apps/api/src/
     │   └── assignments.module.ts
     │
     ├── location/                 # GPS Write-path & Polling Read-path
-    │   ├── location.controller.ts  # POST /location (publishes event), GET /tracking/:shipmentId
+    │   ├── location.controller.ts  # Draft POST /locations (publishes event), GET /shipments/:id/tracking
     │   ├── location.service.ts     # Pub/Sub publisher + location query coordination
     │   ├── location.repository.ts  # Reads from current_location & location_history
     │   ├── dto/
@@ -168,3 +168,7 @@ apps/web/src/
 ├── types/                        # Frontend TypeScript types
 └── utils/
 ```
+
+## Week 1 implementation status
+
+`AppModule` registers the Shipment scaffold plus TV6 Auth/Admin. Only public `GET /healthz` is implemented. Business handlers, database repositories, GPS processing, DTO validation and shared error formatting remain later-week work. The API uses the existing NestJS 11 Express adapter and a standalone package/lockfile; adapter/workspace reconciliation remains issue #10. Three roles are `CUSTOMER`, `DRIVER`, `ADMIN`, with Admin responsible for dispatch operations and `/admin` retained in TV3. Contract choices and proposals are documented in `docs/api-contract.md`.
