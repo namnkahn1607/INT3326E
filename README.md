@@ -39,7 +39,6 @@ The goal is an MVP that:
 - **Customer**
 - **Driver**
 - **Dispatcher**
-- **Administrator**
 
 ### Shipment state flow (single flow)
 
@@ -75,9 +74,9 @@ The system uses a **Modular Monolith** for business logic, plus an **Event-Drive
 flowchart TD
     C["Customer (React)"] -- "Polling REST" --> B
     D["Driver (React)"] -- "REST" --> B
-    A["Dispatcher / Admin (React)"] -- "REST" --> B
+    A["Dispatcher (React)"] -- "REST" --> B
 
-    B["Backend<br/>NestJS on Cloud Run<br/>Modules: Shipment / Assign / Notification / Administration / ETA"]
+    B["Backend<br/>NestJS on Cloud Run<br/>Modules: Shipment / Assign / Notification / ETA"]
 
     B -- "POST /location<br/>(publish only, no DB write)" --> P["Pub/Sub: gps-events"]
     B -- "Other CRUD (sync)" --> DB[("Cloud SQL<br/>PostgreSQL")]
@@ -149,7 +148,7 @@ Design assumptions: at any moment there are **~300–500 active shipments**, and
 | 3 | Assign shipment + Dispatcher/Driver UI. Define GPS event schema. | Dispatcher can assign a driver. Driver can publish a test message to Pub/Sub. |
 | 4 | Pickup/Delivery status updates. GPS Worker starts consuming the queue. | Basic delivery flow works. Location is persisted to the DB via the worker. |
 | 5 | Complete the end-to-end GPS pipeline. Dedupe / out-of-order handling. | Customer sees near real-time driver location (polling). **Mandatory** |
-| 6 | Failed/Late delivery handling, Notification module, Admin dashboard. | All required use cases complete. |
+| 6 | Failed/Late delivery handling, Notification module. | All required use cases complete. |
 | 7 | ETA prediction (Haversine) based on `current_location`. | Customer sees ETA alongside tracking. |
 | 8 | Integration & permission tests. Prepare load-test and recovery scenarios. | System stable; failure-simulation scenario ready. |
 | 9 | Run load tests per NFRs. Finalize Cloud Monitoring data, fix bugs. | Load-test report (performance & scalability); Release Candidate. |

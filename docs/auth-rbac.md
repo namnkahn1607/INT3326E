@@ -1,4 +1,4 @@
-# Auth & RBAC Contract — Draft v0.1
+# Auth & RBAC Contract — Draft v0.2
 
 ## 1. Scope
 
@@ -7,7 +7,6 @@ Tài liệu này mô tả bản nháp cơ chế xác thực và phân quyền ch
 Phạm vi tuần 1:
 
 - Phác thảo `AuthModule`.
-- Phác thảo `AdminModule`.
 - Xác định các role của hệ thống.
 - Thống nhất cách backend nhận và xác thực Firebase ID Token.
 - Xác định quy tắc trả về `401 Unauthorized` và `403 Forbidden`.
@@ -50,18 +49,17 @@ Trong đó:
 
 ## 3. Roles
 
-Hệ thống dự kiến có bốn role:
+Hệ thống có ba role:
 
 | Role | Mô tả |
 | --- | --- |
 | `CUSTOMER` | Tạo và theo dõi đơn giao hàng của mình |
 | `DRIVER` | Nhận nhiệm vụ giao hàng và cập nhật trạng thái |
 | `DISPATCHER` | Điều phối đơn hàng và tài xế |
-| `ADMIN` | Quản trị hệ thống |
 
 Trong phạm vi MVP, mỗi tài khoản chỉ có một role tại một thời điểm.
 
-Nguồn lưu role chính thức sẽ được nhóm thống nhất sau. Auth module chỉ sử dụng giá trị role đã được chuẩn hóa và không phụ thuộc trực tiếp vào database.
+Implementation scaffold hiện đọc role từ Firebase custom claim `role` sau khi xác thực ID Token. Chỉ ba giá trị trên được chấp nhận; claim thiếu hoặc không hợp lệ sẽ bị từ chối với `401`. Nguồn role chính thức (custom claims hay PostgreSQL) vẫn cần nhóm chốt trước khi tích hợp đăng nhập thật. Auth guard chỉ dùng `TokenVerifier`, không truy cập database trực tiếp.
 
 ## 4. Authentication rules
 
@@ -73,7 +71,7 @@ Nếu request không có header `Authorization`, backend trả về:
 401 Unauthorized
 ```
 
-Ví dụ response:
+Ví dụ response mặc định của NestJS trong scaffold:
 
 ```json
 {
@@ -135,15 +133,11 @@ Các endpoint yêu cầu role cụ thể phải sử dụng cả:
 - `RolesGuard`
 - `@Roles(...)`
 
-Ví dụ dự kiến:
+Ví dụ khai báo quyền trên controller hoặc handler dành cho điều phối viên:
 
 ```ts
 @UseGuards(FirebaseAuthGuard, RolesGuard)
-@Roles(UserRole.ADMIN)
-@Get()
-findAll() {
-  return this.adminService.findAll();
-}
+@Roles(UserRole.DISPATCHER)
 ```
 
 Quyền truy cập dự kiến:
@@ -154,7 +148,6 @@ Quyền truy cập dự kiến:
 | API khách hàng | `CUSTOMER` |
 | API tài xế | `DRIVER` |
 | API điều phối | `DISPATCHER` |
-| `/admin/*` | `ADMIN` |
 
 Bảng quyền chi tiết sẽ được cập nhật khi API contract của các module được thống nhất.
 
@@ -171,11 +164,14 @@ auth/
 │   └── roles.guard.ts
 ├── interfaces/
 │   ├── authenticated-user.interface.ts
+│   ├── authenticated-request.interface.ts
 │   └── token-verifier.interface.ts
 ├── enums/
 │   └── user-role.enum.ts
 ├── services/
 │   └── firebase-token-verifier.service.ts
+├── providers/
+│   └── firebase-auth.provider.ts
 └── auth.module.ts
 ```
 
@@ -191,7 +187,7 @@ Auth guard chỉ phụ thuộc vào interface này, giúp unit test bằng mock 
 
 Implementation sử dụng Firebase Admin SDK để xác thực Firebase ID Token.
 
-Service này sẽ được hoàn thiện sau khi TV5 cung cấp Firebase project configuration.
+Service nhận Firebase Auth qua dependency injection. Provider khởi tạo default Firebase app bằng Application Default Credentials (ADC), dùng `FIREBASE_PROJECT_ID` nếu được cấu hình và tái sử dụng default app đã tồn tại. Chỉ backend tin cậy được phép cấp custom claim; frontend không tự chọn role.
 
 ### `FirebaseAuthGuard`
 
@@ -228,47 +224,7 @@ export interface AuthenticatedUser {
 }
 ```
 
-## 7. Admin module
-
-Admin module tuần 1 chỉ là skeleton, chưa triển khai nghiệp vụ quản trị và chưa truy cập database.
-
-Cấu trúc dự kiến:
-
-```text
-admin/
-├── controllers/
-│   └── admin.controller.ts
-├── services/
-│   └── admin.service.ts
-└── admin.module.ts
-```
-
-Các thành phần:
-
-- `AdminModule`: đăng ký controller và service của module Admin.
-- `AdminController`: khai báo các endpoint dành cho Admin.
-- `AdminService`: chứa business logic của Admin trong các tuần sau.
-
-Tất cả endpoint thuộc `/admin/*` phải được bảo vệ bằng role `ADMIN`.
-
-Có thể sử dụng endpoint tạm thời để kiểm tra guard:
-
-```http
-GET /admin/health
-```
-
-Response dự kiến:
-
-```json
-{
-  "status": "ok",
-  "module": "admin"
-}
-```
-
-Endpoint này chỉ dùng trong quá trình scaffold và có thể được thay đổi hoặc loại bỏ khi API Admin chính thức được thống nhất.
-
-## 8. Test cases
+## 7. Test cases
 
 ### Authentication tests
 
@@ -281,25 +237,39 @@ Endpoint này chỉ dùng trong quá trình scaffold và có thể được thay
 
 ### Authorization tests
 
-1. Người dùng chưa xác thực truy cập `/admin/*` → trả về `401`.
-2. Role `CUSTOMER` truy cập `/admin/*` → trả về `403`.
-3. Role `DRIVER` truy cập `/admin/*` → trả về `403`.
-4. Role `DISPATCHER` truy cập `/admin/*` → trả về `403`.
-5. Role `ADMIN` truy cập `/admin/*` → request thành công.
-6. Endpoint không khai báo role → người dùng đã xác thực được phép truy cập.
+1. Người dùng chưa xác thực truy cập endpoint protected → trả về `401`.
+2. Role `CUSTOMER` truy cập endpoint yêu cầu `DISPATCHER` → trả về `403`.
+3. Role `DRIVER` truy cập endpoint yêu cầu `DISPATCHER` → trả về `403`.
+4. Role `DISPATCHER` truy cập endpoint yêu cầu `DISPATCHER` → request thành công.
+5. Role `CUSTOMER` truy cập endpoint yêu cầu `CUSTOMER` → request thành công.
+6. Role `DRIVER` truy cập endpoint yêu cầu `DRIVER` → request thành công.
+7. Endpoint dùng `FirebaseAuthGuard` nhưng không khai báo role → người dùng đã xác thực được phép truy cập.
 
 ### Mocking strategy
 
 Unit test sử dụng mock implementation của `TokenVerifier`.
 
+Các file `*.spec.ts` dùng Vitest. Unit test kiểm tra token/header, ba role, claim không hợp lệ và Firebase initialization; HTTP integration test khởi tạo NestJS với `AuthModule` thật và mock Firebase Auth để kiểm tra response `401`, `403`, `200`. Controller trong test chỉ là fixture, không thêm endpoint nghiệp vụ vào ứng dụng.
+
+Chạy độc lập từ `apps/api` với Node.js >= 20:
+
+```bash
+npm ci --workspaces=false
+npm run typecheck
+npm run build
+npm run test:auth
+```
+
+Các kiểm tra không cần credentials hoặc Firebase project thật. `build` hiện biên dịch module Auth, chưa tạo một backend HTTP chạy độc lập vì bootstrap thuộc scaffold TV1.
+
 Ví dụ:
 
 ```ts
 const tokenVerifier = {
-  verify: jest.fn().mockResolvedValue({
+  verify: vi.fn().mockResolvedValue({
     uid: 'test-user-id',
-    email: 'admin@example.com',
-    role: UserRole.ADMIN,
+    email: 'dispatcher@example.com',
+    role: UserRole.DISPATCHER,
   }),
 };
 ```
@@ -312,7 +282,7 @@ Việc này cho phép kiểm thử Auth và RBAC mà chưa cần:
 - Prisma.
 - GCP deployment.
 
-## 9. Security requirements
+## 8. Security requirements
 
 - Không commit Firebase service account key vào Git.
 - Không ghi toàn bộ token vào log.
@@ -320,20 +290,18 @@ Việc này cho phép kiểm thử Auth và RBAC mà chưa cần:
 - Backend phải tự xác thực token và lấy role từ nguồn đáng tin cậy.
 - Firebase credentials phải được cung cấp qua environment variables hoặc secret manager.
 - Thông tin lỗi không được làm lộ credentials hoặc nội dung token.
-- Mọi endpoint Admin phải được kiểm tra role ở backend.
+- Mọi endpoint yêu cầu role phải được kiểm tra quyền ở backend.
 
-## 10. Pending decisions
+## 9. Pending decisions
 
 Các nội dung cần thống nhất với nhóm:
 
 - Role được lưu bằng Firebase custom claims hay trong PostgreSQL.
-- Tên và prefix API chính thức, ví dụ `/api/v1`.
-- Cấu trúc error response chung của backend.
-- Cách Firebase Admin SDK được khởi tạo trong NestJS.
-- Danh sách endpoint Admin chính thức.
+- Đồng bộ prefix `/v1` với API contract tại `docs/openapi.json` ở nhánh TV1.
+- Exception filter chung cần chuyển lỗi `401`/`403` từ NestJS sang `ProblemDetails` của contract TV1. Các ví dụ response ở tài liệu này mô tả scaffold mặc định, chưa phải response tích hợp cuối cùng.
 - Cách đồng bộ người dùng Firebase với bảng người dùng trong database.
 
-## 11. External dependencies
+## 10. External dependencies
 
 Việc tích hợp hoàn chỉnh phụ thuộc vào:
 
@@ -342,4 +310,14 @@ Việc tích hợp hoàn chỉnh phụ thuộc vào:
 - API contract chung của nhóm.
 - Database schema của người dùng và role.
 
-Các phần interface, guard, decorator, mock test và Admin skeleton có thể được chuẩn bị trước mà không cần chờ các dependency trên.
+Package API đã khai báo `firebase-admin` và cấu hình kiểm tra Auth. Khi ghép với nhánh frontend, hòa `apps/api/package.json` để giữ dependency/script của cả hai bên; khi chốt workspace, tạo lại lockfile chung nếu chuyển sang cài dependencies tại root. Sau khi TV1 cung cấp bootstrap, đăng ký `AuthModule` vào `AppModule` và dùng `@UseGuards(FirebaseAuthGuard, RolesGuard)` theo đúng thứ tự trên endpoint protected. Không đặt guard toàn cục lên health check công khai. Module Shipment phải kiểm tra quyền trên từng đơn hàng (chủ đơn hoặc tài xế được gán); `RolesGuard` chỉ kiểm tra role.
+
+Các phần interface, guard, decorator và mock test có thể được chuẩn bị trước mà không cần chờ các dependency trên.
+
+## 11. Firebase configuration và giới hạn tích hợp
+
+- Cloud Run: dùng service account của runtime và ADC; TV5 xác nhận quyền và Firebase project. Không đưa JSON service account key vào repo.
+- Local: cung cấp ADC hoặc `GOOGLE_APPLICATION_CREDENTIALS` trỏ tới file credentials bên ngoài repo. Provider đọc biến môi trường đã có; bootstrap TV1 chịu trách nhiệm nạp `.env`.
+- `FIREBASE_PROJECT_ID`: project Firebase cần xác thực, ví dụ `int3326e`; SDK dùng cấu hình ADC nếu không khai báo.
+- Role custom claim chỉ nhận `CUSTOMER`, `DRIVER`, `DISPATCHER`. Claim `ADMIN` cũ bị từ chối; tài khoản dùng claim cũ cần được cập nhật ở Firebase rồi refresh ID Token.
+- Nhánh TV6 không sửa frontend, Prisma hoặc worker. Các nhánh đó cần bỏ role Admin theo cùng quyết định. Firebase Authentication thật, cấp claims, đồng bộ user/role với database và response `ProblemDetails` cần được kiểm thử khi tích hợp.
