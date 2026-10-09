@@ -38,8 +38,7 @@ The goal is an MVP that:
 
 - **Customer**
 - **Driver**
-- **Dispatcher**
-- **Administrator**
+- **Admin** — shipment dispatching, driver assignment and operational monitoring.
 
 ### Shipment state flow (single flow)
 
@@ -75,11 +74,11 @@ The system uses a **Modular Monolith** for business logic, plus an **Event-Drive
 flowchart TD
     C["Customer (React)"] -- "Polling REST" --> B
     D["Driver (React)"] -- "REST" --> B
-    A["Dispatcher / Admin (React)"] -- "REST" --> B
+    A["Admin (React)"] -- "REST" --> B
 
-    B["Backend<br/>NestJS on Cloud Run<br/>Modules: Shipment / Assign / Notification / Administration / ETA"]
+    B["Backend<br/>NestJS on Cloud Run<br/>Modules: Shipment / Assign / Notification / ETA"]
 
-    B -- "POST /location<br/>(publish only, no DB write)" --> P["Pub/Sub: gps-events"]
+    B -- "POST /locations<br/>(publish only, no DB write)" --> P["Pub/Sub: gps-events"]
     B -- "Other CRUD (sync)" --> DB[("Cloud SQL<br/>PostgreSQL")]
 
     P -- "Subscribe" --> W["GPS Worker<br/>Cloud Run, separate service"]
@@ -97,7 +96,7 @@ All business operations (create shipment, assign, notifications, auth, ...) go t
 
 To meet the load requirements, the **write path** and **read path** of GPS data are fully separated:
 
-- **Write path (driver sends GPS):** The driver calls `POST /location`. The backend only **publishes** a message to Google Cloud Pub/Sub and immediately returns `HTTP 200` - it does not wait for a database write.
+- **Write path (driver sends GPS):** The driver calls `POST /locations`. The backend only **publishes** a message to Google Cloud Pub/Sub and immediately returns `HTTP 202` (draft) - it does not wait for a database write.
 - **Background processing (worker):** A standalone service (**GPS Worker**) subscribes to Pub/Sub and writes the data into Cloud SQL.
 - **Read path (customer tracking):** The Customer app uses **REST polling** (every 5 to 10s) to read the `current_location` table from Postgres.
 
@@ -146,11 +145,15 @@ Design assumptions: at any moment there are **~300–500 active shipments**, and
 |------|-------|-----------|
 | 1 | Init repo, React + NestJS skeleton. Set up Cloud Run, Cloud SQL, Pub/Sub. | Base URLs live, health checks pass on both services. Budget alert configured. |
 | 2 | Integrate Auth, design Postgres schema, complete Create Shipment API. | Customer can log in; created shipments persist in Cloud SQL. |
-| 3 | Assign shipment + Dispatcher/Driver UI. Define GPS event schema. | Dispatcher can assign a driver. Driver can publish a test message to Pub/Sub. |
+| 3 | Assign shipment + Admin/Driver UI. Define GPS event schema. | Admin can assign a driver. Driver can publish a test message to Pub/Sub. |
 | 4 | Pickup/Delivery status updates. GPS Worker starts consuming the queue. | Basic delivery flow works. Location is persisted to the DB via the worker. |
 | 5 | Complete the end-to-end GPS pipeline. Dedupe / out-of-order handling. | Customer sees near real-time driver location (polling). **Mandatory** |
-| 6 | Failed/Late delivery handling, Notification module, Admin dashboard. | All required use cases complete. |
+| 6 | Failed/Late delivery handling, Notification module. | All required use cases complete. |
 | 7 | ETA prediction (Haversine) based on `current_location`. | Customer sees ETA alongside tracking. |
 | 8 | Integration & permission tests. Prepare load-test and recovery scenarios. | System stable; failure-simulation scenario ready. |
 | 9 | Run load tests per NFRs. Finalize Cloud Monitoring data, fix bugs. | Load-test report (performance & scalability); Release Candidate. |
 | 10 | Finalize documentation and final risk contingency. | Packaged product; metrics ready for the defense. |
+
+## Week 1 API scaffold
+
+The API now boots with Shipment, Auth and Admin modules and exposes public `GET /healthz`. Shipment/Admin business handlers and database access remain deferred. See [run and container instructions](docs/api-scaffold.md) and the [contract draft decisions](docs/api-contract.md). `docs/openapi.json` is a future API draft; cancellation is an unapproved proposal outside the five-state baseline. Cloud Run deployment evidence is tracked in issue #9.

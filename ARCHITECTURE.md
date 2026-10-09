@@ -18,9 +18,6 @@ parcelflow/
 │   ├── types/                    # Shared DTOs, interfaces & event schemas
 │   └── config/                   # Shared ESLint, Prettier, TypeScript configs
 │
-├── docs/                         # API contracts & technical documentation
-│   └── openapi.json
-│
 ├── infra/                        # Infrastructure and local development setup
 │   ├── docker-compose.yml        # Local PostgreSQL & Pub/Sub emulator
 │   └── pubsub/                   # Topic and subscription bootstrap scripts
@@ -82,6 +79,11 @@ apps/api/src/
     │   │   └── shipment.entity.ts
     │   └── shipments.module.ts
     │
+    ├── admin/                    # Admin scaffold; dispatching permissions
+    │   ├── admin.module.ts
+    │   ├── controllers/admin.controller.ts
+    │   └── services/admin.service.ts
+    │
     ├── assignments/              # Shipment assignment to drivers
     │   ├── assignments.controller.ts
     │   ├── assignments.service.ts
@@ -90,20 +92,21 @@ apps/api/src/
     │   │   └── assign-driver.dto.ts
     │   └── assignments.module.ts
     │
-    ├── location/                 # GPS Telemetry Ingestion & Tracking + ETA Read-path
-    │   ├── location.controller.ts  # POST /locations, GET /shipments/:id/tracking
-    │   ├── location.service.ts     # Ingestion coordination + tracking & ETA calculation
-    │   ├── eta.service.ts          # Haversine distance & travel time estimation
-    │   ├── location.repository.ts  # Reads driver location and shipment destination
+    ├── location/                 # GPS Write-path & Polling Read-path
+    │   ├── location.controller.ts  # Draft POST /locations (publishes event), GET /shipments/:id/tracking
+    │   ├── location.service.ts     # Pub/Sub publisher + location query coordination
+    │   ├── location.repository.ts  # Reads from current_location & location_history
     │   ├── dto/
     │   │   ├── ingest-location.dto.ts
     │   │   └── tracking-response.dto.ts
     │   └── location.module.ts
     │
+    ├── eta/                      # ETA calculation service
+    │   ├── eta.controller.ts     # GET /shipments/:id/eta
+    │   ├── eta.service.ts        # Haversine distance & estimation logic
+    │   └── eta.module.ts
+    │
     └── notifications/            # Customer notifications
-        ├── notifications.controller.ts
-        ├── notifications.service.ts
-        └── notifications.module.ts
         ├── notifications.controller.ts
         ├── notifications.service.ts
         └── notifications.module.ts
@@ -160,8 +163,12 @@ apps/web/src/
 │   ├── auth/                     # Login / register / Firebase auth state
 │   ├── customer/                 # Shipment tracking & history view
 │   ├── driver/                   # Driver active order & GPS submission sender
-│   └── dispatcher/               # Dispatching board, driver assignment & system tracking
+│   └── admin/               # Order dispatching & driver assignment view
 ├── hooks/                        # Custom hooks (e.g., usePollingTracking, useDriverLocation)
 ├── types/                        # Frontend TypeScript types
 └── utils/
 ```
+
+## Week 1 implementation status
+
+`AppModule` registers the Shipment scaffold plus TV6 Auth/Admin. Only public `GET /healthz` is implemented. Business handlers, database repositories, GPS processing, DTO validation and shared error formatting remain later-week work. The API uses the existing NestJS 11 Express adapter and a standalone package/lockfile; adapter/workspace reconciliation remains issue #10. Three roles are `CUSTOMER`, `DRIVER`, `ADMIN`, with Admin responsible for dispatch operations and `/admin` retained in TV3. Contract choices and proposals are documented in `docs/api-contract.md`.

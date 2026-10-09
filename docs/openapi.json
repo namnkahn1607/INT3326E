@@ -2,17 +2,13 @@
   "openapi": "3.0.3",
   "info": {
     "title": "ParcelFlow Core Logistics API (MVP)",
-    "description": "Pragmatic REST API contract for the ParcelFlow Modular Monolith and Async Telemetry Ingestion MVP.\n\n### Core MVP Architectural Decisions:\n- **Roles:** `CUSTOMER`, `DRIVER`, `DISPATCHER`.\n- **Order Creation:** Restricted strictly to `CUSTOMER` (eliminating ambiguity around customer identity in the MVP).\n- **Explicit Action RPCs:** State mutations use sub-resource endpoints (`/assign`, `/pickup`, `/deliver`, `/fail`, `/cancel`) to enforce strict server-side state transitions.\n- **State Lifecycle:**\n  - `CREATED` -> `ASSIGNED` (by Dispatcher), `CANCELLED` (by Customer or Dispatcher)\n  - `ASSIGNED` -> `ASSIGNED` (Reassign by Dispatcher), `PICKED_UP` (by Driver), `CANCELLED` (by Dispatcher only)\n  - `PICKED_UP` -> `DELIVERED` (by Driver), `DELIVERY_FAILED` (by Driver or Dispatcher)\n  - `DELIVERED`, `DELIVERY_FAILED`, `CANCELLED` are terminal states.\n- **Natural Idempotency:** Transition actions are naturally idempotent for the same actor (e.g. repeated `/pickup` returns `200 OK` with current state). Reassigning to the currently assigned driver returns `200 OK`.\n- **Creation Idempotency:** `POST /shipments` strictly requires an `Idempotency-Key` header (UUID v4) to prevent duplicate shipments on client network retries.\n- **Session-Scoped Monotonic Telemetry:** `POST /locations` requires `sessionId` (UUID v4) and monotonic sequence number `seq` (integer >= 1). The ingestion worker tracks `(driverId, sessionId, lastSeq)`: a new session always wins unconditionally, while identical sessions require `seq > lastSeq`. This prevents data loss across app restarts.\n- **Driver Location Privacy:** In `GET /shipments/{id}/tracking`, `currentDriverLocation` and `lastLocationUpdatedAt` are ONLY populated when shipment status is `ASSIGNED` or `PICKED_UP`. Once terminal, driver coordinates return `null`.\n- **Conditional ETA in Tracking:** The `eta` field in tracking is `null` during `CREATED` and `ASSIGNED` (driver is traveling to pickup), and is only computed once status is `PICKED_UP`.\n- **Keyset Pagination:** Shipments are ordered by `createdAt DESC, id DESC`. The `cursor` encodes the `(createdAt, id)` tuple of the last record.\n- **Deterministic Identifiers:** Resource IDs use prefixed Crockford Base32 ULIDs (`sh_...`, `usr_...`). Tracking numbers use date + 6-character Base32 random tokens (`PF-YYYYMMDD-XXXXXX`) with DB unique constraint + retry.",
-    "version": "1.0.0"
+    "description": "Week 1 draft for later ParcelFlow API implementation. Only GET /healthz is implemented in the scaffold. Business operations are proposals, not live endpoints.\n\nRoles: CUSTOMER, DRIVER, ADMIN; Admin performs dispatch operations.\nBaseline shipment flow: CREATED -> ASSIGNED -> PICKED_UP -> DELIVERED / DELIVERY_FAILED.\nDraft conventions: business routes use /v1; GPS POST /locations returns 202; REST uses dropoffAddress/dropoffLocation and data/pagination. See docs/api-contract.md for field mappings and pending integration decisions. Cancellation is preserved separately under x-proposals and requires team approval. Session/sequence GPS behavior, identifier design and idempotency require review before implementation.",
+    "version": "0.2.0-week1-draft"
   },
   "servers": [
     {
-      "url": "https://api.parcelflow.dev/v1",
-      "description": "Cloud Run development environment"
-    },
-    {
       "url": "http://localhost:3000/v1",
-      "description": "Local development environment"
+      "description": "Local business API draft; use TV5's verified URL for Cloud Run"
     }
   ],
   "tags": [
@@ -23,12 +19,18 @@
     {
       "name": "Tracking & Location",
       "description": "Async driver telemetry ingestion and consolidated tracking + ETA read-path."
+    },
+    {
+      "name": "Health",
+      "description": "Week 1 public liveness"
     }
   ],
   "paths": {
     "/shipments": {
       "post": {
-        "tags": ["Shipments"],
+        "tags": [
+          "Shipments"
+        ],
         "summary": "Create a new shipment (Customer only)",
         "description": "Creates a shipment in `CREATED` status. Requires `CUSTOMER` role.\n\nClients MUST provide an `Idempotency-Key` header to safely retry on transient network failures without creating duplicate orders.",
         "operationId": "createShipment",
@@ -81,12 +83,15 @@
           {
             "BearerAuth": []
           }
-        ]
+        ],
+        "x-implementation-status": "draft"
       },
       "get": {
-        "tags": ["Shipments"],
+        "tags": [
+          "Shipments"
+        ],
         "summary": "List shipments with keyset pagination",
-        "description": "Retrieves a paginated list of shipments ordered by `createdAt DESC, id DESC`. Scope is filtered by caller role:\n- `CUSTOMER`: Only shipments created by caller\n- `DRIVER`: Only shipments assigned to caller\n- `DISPATCHER`: All system shipments",
+        "description": "Retrieves a paginated list of shipments ordered by `createdAt DESC, id DESC`. Scope is filtered by caller role:\n- `CUSTOMER`: Only shipments created by caller\n- `DRIVER`: Only shipments assigned to caller\n- `ADMIN`: All system shipments",
         "operationId": "listShipments",
         "parameters": [
           {
@@ -145,14 +150,17 @@
           {
             "BearerAuth": []
           }
-        ]
+        ],
+        "x-implementation-status": "draft"
       }
     },
     "/shipments/{id}": {
       "get": {
-        "tags": ["Shipments"],
+        "tags": [
+          "Shipments"
+        ],
         "summary": "Get shipment details by ID",
-        "description": "Fetches complete shipment metadata including pickup/dropoff coordinates, current status, notes, failure actor/reason, and cancellation reasons.",
+        "description": "Fetches complete shipment metadata including pickup/dropoff coordinates, current status, notes, failure actor/reason.",
         "operationId": "getShipmentById",
         "parameters": [
           {
@@ -187,14 +195,17 @@
           {
             "BearerAuth": []
           }
-        ]
+        ],
+        "x-implementation-status": "draft"
       }
     },
     "/shipments/{id}/assign": {
       "post": {
-        "tags": ["Shipments"],
+        "tags": [
+          "Shipments"
+        ],
         "summary": "Assign or reassign shipment to a driver",
-        "description": "Transitions state from `CREATED` to `ASSIGNED`, or updates `driverId` on an already `ASSIGNED` shipment (reassignment).\n\n**Authorized Roles:** `DISPATCHER`.\n\n**Natural Idempotency:**\n- If assigned to the same driver when already `ASSIGNED`: no-op, returns `200 OK`.\n- If reassigned to a different driver when `ASSIGNED`: updates `driverId`, returns `200 OK`.\n- If shipment is in `PICKED_UP`, `DELIVERED`, `DELIVERY_FAILED`, or `CANCELLED`: rejected with `409 Conflict`.\n\nValidates that the target user exists and holds the `DRIVER` role.",
+        "description": "Transitions state from `CREATED` to `ASSIGNED`, or updates `driverId` on an already `ASSIGNED` shipment (reassignment).\n\n**Authorized Roles:** `ADMIN`.\n\n**Natural Idempotency:**\n- If assigned to the same driver when already `ASSIGNED`: no-op, returns `200 OK`.\n- If reassigned to a different driver when `ASSIGNED`: updates `driverId`, returns `200 OK`.\n- If shipment is in `PICKED_UP`, `DELIVERED`, `DELIVERY_FAILED`: rejected with `409 Conflict`.\n\nValidates that the target user exists and holds the `DRIVER` role.",
         "operationId": "assignShipment",
         "parameters": [
           {
@@ -235,7 +246,7 @@
             "$ref": "#/components/responses/404NotFound"
           },
           "409": {
-            "description": "Invalid state transition (shipment already picked up, delivered, failed, or cancelled)",
+            "description": "Invalid state transition (shipment already picked up, delivered, failed)",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -252,12 +263,15 @@
           {
             "BearerAuth": []
           }
-        ]
+        ],
+        "x-implementation-status": "draft"
       }
     },
     "/shipments/{id}/pickup": {
       "post": {
-        "tags": ["Shipments"],
+        "tags": [
+          "Shipments"
+        ],
         "summary": "Driver confirms pickup",
         "description": "Transitions state from `ASSIGNED` to `PICKED_UP`.\n\n**Authorized Roles:** `DRIVER` (must be assigned driver).\n\n**Natural Idempotency:** If the assigned driver retries `/pickup` when the shipment is already `PICKED_UP`, the server returns `200 OK` with current state instead of `409 Conflict`.",
         "operationId": "pickupShipment",
@@ -297,12 +311,15 @@
           {
             "BearerAuth": []
           }
-        ]
+        ],
+        "x-implementation-status": "draft"
       }
     },
     "/shipments/{id}/deliver": {
       "post": {
-        "tags": ["Shipments"],
+        "tags": [
+          "Shipments"
+        ],
         "summary": "Driver confirms delivery completion",
         "description": "Transitions state from `PICKED_UP` to `DELIVERED` (terminal state).\n\n**Authorized Roles:** `DRIVER` (must be assigned driver).\n\n**Natural Idempotency:** If the assigned driver retries `/deliver` when the shipment is already `DELIVERED`, the server returns `200 OK` with the current state.",
         "operationId": "deliverShipment",
@@ -352,14 +369,17 @@
           {
             "BearerAuth": []
           }
-        ]
+        ],
+        "x-implementation-status": "draft"
       }
     },
     "/shipments/{id}/fail": {
       "post": {
-        "tags": ["Shipments"],
-        "summary": "Report shipment delivery failure (Driver or Dispatcher)",
-        "description": "Transitions state from `PICKED_UP` to `DELIVERY_FAILED` (terminal state).\n\n**Authorized Roles:** `DRIVER` (assigned driver) or `DISPATCHER`.\n\n**Invariant:** Delivery failure is strictly valid *only* after `PICKED_UP`. If a driver cannot collect an item before pickup, the dispatcher reassigns another driver or cancels the order.\n\n**Audit Trail:** The server records `failedByRole` (`DRIVER` or `DISPATCHER`) and `failedByUserId` to preserve provenance if a dispatcher steps in after a driver vanishes.\n\n**Natural Idempotency:** Retrying `/fail` on an already failed shipment returns `200 OK`.",
+        "tags": [
+          "Shipments"
+        ],
+        "summary": "Report shipment delivery failure (Driver or Admin)",
+        "description": "Transitions state from `PICKED_UP` to `DELIVERY_FAILED` (terminal state).\n\n**Authorized Roles:** `DRIVER` (assigned driver) or `ADMIN`.\n\n**Invariant:** Delivery failure is strictly valid *only* after `PICKED_UP`. If a driver cannot collect an item before pickup, the admin reassigns another driver.\n\n**Audit Trail:** The server records `failedByRole` (`DRIVER` or `ADMIN`) and `failedByUserId` to preserve provenance if a admin steps in after a driver vanishes.\n\n**Natural Idempotency:** Retrying `/fail` on an already failed shipment returns `200 OK`.",
         "operationId": "failShipment",
         "parameters": [
           {
@@ -410,67 +430,15 @@
           {
             "BearerAuth": []
           }
-        ]
-      }
-    },
-    "/shipments/{id}/cancel": {
-      "post": {
-        "tags": ["Shipments"],
-        "summary": "Cancel shipment",
-        "description": "Transitions state from `CREATED` or `ASSIGNED` to `CANCELLED` (terminal state).\n\n**Authorized Roles & State Constraints:**\n- `CUSTOMER`: Allowed ONLY when shipment is in `CREATED` status.\n- `DISPATCHER`: Allowed when shipment is in `CREATED` or `ASSIGNED` status.\n- Once a shipment is `PICKED_UP`, `DELIVERED`, or `DELIVERY_FAILED`, cancellation is rejected with `409 Conflict`.\n\n**Natural Idempotency:** If the permitted caller retries cancelling an already cancelled shipment, returns `200 OK`.",
-        "operationId": "cancelShipment",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/ShipmentIdParam"
-          }
         ],
-        "requestBody": {
-          "required": false,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CancelShipmentRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Shipment cancelled successfully (or already cancelled)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ShipmentResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/401Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/403Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/404NotFound"
-          },
-          "409": {
-            "$ref": "#/components/responses/409Conflict"
-          },
-          "500": {
-            "$ref": "#/components/responses/500InternalServerError"
-          }
-        },
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ]
+        "x-implementation-status": "draft"
       }
     },
     "/locations": {
       "post": {
-        "tags": ["Tracking & Location"],
+        "tags": [
+          "Tracking & Location"
+        ],
         "summary": "Submit driver location coordinates (High throughput - Async)",
         "description": "**Asynchronous Write Path:**\nDriver client submits periodic telemetry (e.g. every ~8 seconds). The API validates the payload, queues/buffers it for background processing, and immediately returns `202 Accepted`.\n\n**Session-Scoped Monotonic Sequence:**\nDriver clients generate a `sessionId` (UUID v4) on application startup/session start, and a monotonic counter `seq` (>= 1). The ingestion worker tracks `(driverId, sessionId, lastSeq)`:\n- If `sessionId` changes, the new session wins unconditionally, resetting the sequence.\n- If `sessionId` matches, packets are accepted only if `seq > lastSeq`.\nThis completely prevents silent data loss when a mobile client crashes, restarts, and resets its counter.\n\n**Authorized Roles:** `DRIVER`.",
         "operationId": "submitLocation",
@@ -518,14 +486,17 @@
           {
             "BearerAuth": []
           }
-        ]
+        ],
+        "x-implementation-status": "draft"
       }
     },
     "/shipments/{id}/tracking": {
       "get": {
-        "tags": ["Tracking & Location"],
+        "tags": [
+          "Tracking & Location"
+        ],
         "summary": "Get real-time tracking and ETA data for a shipment",
-        "description": "**Consolidated Read Path (Polling):**\nClients poll this endpoint periodically (every 5-10s). Returns `pickupLocation`, `dropoffLocation`, current driver coordinates, and real-time ETA.\n\n**Driver Privacy Invariant:**\nTo prevent exposing driver movements outside of active fulfillment, `currentDriverLocation` and `lastLocationUpdatedAt` are **strictly `null`** unless shipment status is `ASSIGNED` or `PICKED_UP`. In `CREATED`, `DELIVERED`, `DELIVERY_FAILED`, or `CANCELLED`, driver coordinates return `null`.\n\n**Conditional ETA Rule:**\nThe `eta` field is `null` during `CREATED` and `ASSIGNED` states (driver is en route to pickup). It is calculated only when status is `PICKED_UP` and driver coordinates are available.\n\n**Authorized Roles:** `CUSTOMER` (owner), `DISPATCHER`, `DRIVER` (assigned).",
+        "description": "**Consolidated Read Path (Polling):**\nClients poll this endpoint periodically (every 5-10s). Returns `pickupLocation`, `dropoffLocation`, current driver coordinates, and real-time ETA.\n\n**Driver Privacy Invariant:**\nTo prevent exposing driver movements outside of active fulfillment, `currentDriverLocation` and `lastLocationUpdatedAt` are **strictly `null`** unless shipment status is `ASSIGNED` or `PICKED_UP`. In `CREATED`, `DELIVERED`, `DELIVERY_FAILED`, driver coordinates return `null`.\n\n**Conditional ETA Rule:**\nThe `eta` field is `null` during `CREATED` and `ASSIGNED` states (driver is en route to pickup). It is calculated only when status is `PICKED_UP` and driver coordinates are available.\n\n**Authorized Roles:** `CUSTOMER` (owner), `ADMIN`, `DRIVER` (assigned).",
         "operationId": "getShipmentTracking",
         "parameters": [
           {
@@ -563,7 +534,59 @@
           {
             "BearerAuth": []
           }
-        ]
+        ],
+        "x-implementation-status": "draft"
+      }
+    },
+    "/healthz": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "operationId": "getHealth",
+        "summary": "Public API liveness check",
+        "description": "Week 1 runtime endpoint. Does not verify a token or check Cloud SQL/Pub/Sub/Firebase availability.",
+        "servers": [
+          {
+            "url": "/"
+          }
+        ],
+        "security": [],
+        "x-implementation-status": "implemented",
+        "responses": {
+          "200": {
+            "description": "API process is running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "status",
+                    "service"
+                  ],
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ok"
+                      ]
+                    },
+                    "service": {
+                      "type": "string",
+                      "enum": [
+                        "api"
+                      ]
+                    }
+                  }
+                },
+                "example": {
+                  "status": "ok",
+                  "service": "api"
+                }
+              }
+            }
+          }
+        }
       }
     }
   },
@@ -685,20 +708,22 @@
     "schemas": {
       "ShipmentStatus": {
         "type": "string",
-        "description": "Strict lifecycle states for a shipment.",
+        "description": "Five-state baseline from the project scope. Cancellation is a separate unapproved proposal.",
         "enum": [
           "CREATED",
           "ASSIGNED",
           "PICKED_UP",
           "DELIVERED",
-          "DELIVERY_FAILED",
-          "CANCELLED"
+          "DELIVERY_FAILED"
         ],
         "example": "CREATED"
       },
       "Coordinates": {
         "type": "object",
-        "required": ["lat", "lng"],
+        "required": [
+          "lat",
+          "lng"
+        ],
         "description": "Geographic coordinates. Geocoding is delegated entirely to the client.",
         "properties": {
           "lat": {
@@ -766,7 +791,9 @@
       },
       "AssignShipmentRequest": {
         "type": "object",
-        "required": ["driverId"],
+        "required": [
+          "driverId"
+        ],
         "properties": {
           "driverId": {
             "type": "string",
@@ -788,7 +815,9 @@
       },
       "FailShipmentRequest": {
         "type": "object",
-        "required": ["reason"],
+        "required": [
+          "reason"
+        ],
         "properties": {
           "reason": {
             "type": "string",
@@ -822,7 +851,6 @@
           "recipientName",
           "recipientPhone",
           "notes",
-          "cancellationReason",
           "failureReason",
           "failedByRole",
           "failedByUserId",
@@ -883,11 +911,6 @@
             "nullable": true,
             "example": "Fragile items. Handle with care."
           },
-          "cancellationReason": {
-            "type": "string",
-            "nullable": true,
-            "example": null
-          },
           "failureReason": {
             "type": "string",
             "nullable": true,
@@ -895,7 +918,10 @@
           },
           "failedByRole": {
             "type": "string",
-            "enum": ["DRIVER", "DISPATCHER"],
+            "enum": [
+              "DRIVER",
+              "ADMIN"
+            ],
             "nullable": true,
             "description": "Audit record of who declared delivery failure.",
             "example": null
@@ -926,7 +952,10 @@
       },
       "PaginatedShipmentsResponse": {
         "type": "object",
-        "required": ["data", "pagination"],
+        "required": [
+          "data",
+          "pagination"
+        ],
         "properties": {
           "data": {
             "type": "array",
@@ -936,7 +965,10 @@
           },
           "pagination": {
             "type": "object",
-            "required": ["limit", "hasMore"],
+            "required": [
+              "limit",
+              "hasMore"
+            ],
             "properties": {
               "limit": {
                 "type": "integer",
@@ -958,7 +990,12 @@
       },
       "SubmitLocationRequest": {
         "type": "object",
-        "required": ["sessionId", "seq", "lat", "lng"],
+        "required": [
+          "sessionId",
+          "seq",
+          "lat",
+          "lng"
+        ],
         "description": "Periodic location telemetry sent by driver mobile client.",
         "properties": {
           "sessionId": {
@@ -991,11 +1028,17 @@
       },
       "AsyncAcceptedResponse": {
         "type": "object",
-        "required": ["status", "eventId", "receivedAt"],
+        "required": [
+          "status",
+          "eventId",
+          "receivedAt"
+        ],
         "properties": {
           "status": {
             "type": "string",
-            "enum": ["ACCEPTED"],
+            "enum": [
+              "ACCEPTED"
+            ],
             "example": "ACCEPTED"
           },
           "eventId": {
@@ -1012,7 +1055,11 @@
       },
       "EtaDetails": {
         "type": "object",
-        "required": ["distanceMeters", "estimatedSeconds", "estimatedArrivalAt"],
+        "required": [
+          "distanceMeters",
+          "estimatedSeconds",
+          "estimatedArrivalAt"
+        ],
         "properties": {
           "distanceMeters": {
             "type": "number",
@@ -1067,7 +1114,7 @@
               }
             ],
             "nullable": true,
-            "description": "Latest driver coordinates. STRICT PRIVACY INVARIANT: only populated when status is ASSIGNED or PICKED_UP. In CREATED, DELIVERED, DELIVERY_FAILED, or CANCELLED, this is strictly null."
+            "description": "Latest driver coordinates. STRICT PRIVACY INVARIANT: only populated when status is ASSIGNED or PICKED_UP. In CREATED, DELIVERED or DELIVERY_FAILED, this is strictly null."
           },
           "lastLocationUpdatedAt": {
             "type": "string",
@@ -1089,7 +1136,14 @@
       },
       "ProblemDetails": {
         "type": "object",
-        "required": ["type", "title", "status", "code", "instance", "timestamp"],
+        "required": [
+          "type",
+          "title",
+          "status",
+          "code",
+          "instance",
+          "timestamp"
+        ],
         "description": "RFC 9457 Problem Details schema for HTTP APIs with stable machine-readable codes.",
         "properties": {
           "type": {
@@ -1146,7 +1200,10 @@
             "description": "Detailed field-level validation errors (present when code is VALIDATION_ERROR).",
             "items": {
               "type": "object",
-              "required": ["field", "message"],
+              "required": [
+                "field",
+                "message"
+              ],
               "properties": {
                 "field": {
                   "type": "string",
@@ -1161,6 +1218,71 @@
           }
         }
       }
+    }
+  },
+  "x-proposals": {
+    "cancellation": {
+      "status": "pending-team-approval",
+      "proposedShipmentStatus": "CANCELLED",
+      "path": "/shipments/{id}/cancel",
+      "operation": {
+        "post": {
+          "tags": [
+            "Shipments"
+          ],
+          "summary": "Cancel shipment",
+          "description": "Transitions state from `CREATED` or `ASSIGNED` to `CANCELLED` (terminal state).\n\n**Authorized Roles & State Constraints:**\n- `CUSTOMER`: Allowed ONLY when shipment is in `CREATED` status.\n- `ADMIN`: Allowed when shipment is in `CREATED` or `ASSIGNED` status.\n- Once a shipment is `PICKED_UP`, `DELIVERED`, or `DELIVERY_FAILED`, cancellation is rejected with `409 Conflict`.\n\n**Natural Idempotency:** If the permitted caller retries cancelling an already cancelled shipment, returns `200 OK`.",
+          "operationId": "cancelShipment",
+          "parameters": [
+            {
+              "$ref": "#/components/parameters/ShipmentIdParam"
+            }
+          ],
+          "requestBody": {
+            "required": false,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CancelShipmentRequest"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Shipment cancelled successfully (or already cancelled)",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ShipmentResponse"
+                  }
+                }
+              }
+            },
+            "401": {
+              "$ref": "#/components/responses/401Unauthorized"
+            },
+            "403": {
+              "$ref": "#/components/responses/403Forbidden"
+            },
+            "404": {
+              "$ref": "#/components/responses/404NotFound"
+            },
+            "409": {
+              "$ref": "#/components/responses/409Conflict"
+            },
+            "500": {
+              "$ref": "#/components/responses/500InternalServerError"
+            }
+          },
+          "security": [
+            {
+              "BearerAuth": []
+            }
+          ]
+        }
+      },
+      "description": "Preserved from the original TV1 draft; not part of the five-state baseline or week 1 runtime."
     }
   }
 }
