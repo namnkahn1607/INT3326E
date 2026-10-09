@@ -30,13 +30,13 @@ describe('RolesGuard', () => {
     expect(guard.canActivate(context)).toBe(true);
   });
 
-  it.each([UserRole.CUSTOMER, UserRole.DRIVER])('denies %s on dispatcher operations', (role) => {
-    const { guard, context } = fixture(role, [UserRole.DISPATCHER]);
+  it.each([UserRole.CUSTOMER, UserRole.DRIVER])('denies %s on admin operations', (role) => {
+    const { guard, context } = fixture(role, [UserRole.ADMIN]);
     expect(() => guard.canActivate(context)).toThrow(ForbiddenException);
   });
 
   it('requires an authenticated user when a role is declared', () => {
-    const { guard, context } = fixture(undefined, [UserRole.DISPATCHER]);
+    const { guard, context } = fixture(undefined, [UserRole.ADMIN]);
     expect(() => guard.canActivate(context)).toThrow(UnauthorizedException);
   });
 
@@ -47,18 +47,18 @@ describe('RolesGuard', () => {
 
   it('uses controller roles when the handler has no override', () => {
     const { guard, context, Controller } = fixture(UserRole.DRIVER);
-    Roles(UserRole.DISPATCHER)(Controller);
+    Roles(UserRole.ADMIN)(Controller);
     expect(() => guard.canActivate(context)).toThrow(ForbiddenException);
   });
 
   it('allows handler roles to override controller roles', () => {
     const { guard, context, Controller } = fixture(UserRole.DRIVER, [UserRole.DRIVER]);
-    Roles(UserRole.DISPATCHER)(Controller);
+    Roles(UserRole.ADMIN)(Controller);
     expect(guard.canActivate(context)).toBe(true);
   });
 
   it('allows either role declared on a shared operation', () => {
-    const { guard, context } = fixture(UserRole.DRIVER, [UserRole.DRIVER, UserRole.DISPATCHER]);
+    const { guard, context } = fixture(UserRole.DRIVER, [UserRole.DRIVER, UserRole.ADMIN]);
     expect(guard.canActivate(context)).toBe(true);
   });
 });
