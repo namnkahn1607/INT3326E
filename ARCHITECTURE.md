@@ -158,7 +158,7 @@ apps/web/src/
 │   ├── auth/                     # Login / register / Firebase auth state
 │   ├── customer/                 # Shipment tracking & history view
 │   ├── driver/                   # Driver active order & GPS submission sender
-│   └── dispatcher/               # Order dispatching & driver assignment view
+│   └── admin/               # Order dispatching & driver assignment view
 ├── hooks/                        # Custom hooks (e.g., usePollingTracking, useDriverLocation)
 ├── types/                        # Frontend TypeScript types
 └── utils/
