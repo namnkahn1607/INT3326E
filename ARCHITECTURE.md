@@ -79,6 +79,11 @@ apps/api/src/
     │   │   └── shipment.entity.ts
     │   └── shipments.module.ts
     │
+    ├── admin/                    # Admin scaffold; dispatching permissions
+    │   ├── admin.module.ts
+    │   ├── controllers/admin.controller.ts
+    │   └── services/admin.service.ts
+    │
     ├── assignments/              # Shipment assignment to drivers
     │   ├── assignments.controller.ts
     │   ├── assignments.service.ts
