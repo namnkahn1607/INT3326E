@@ -38,7 +38,7 @@ The goal is an MVP that:
 
 - **Customer**
 - **Driver**
-- **Dispatcher**
+- **Admin** — shipment dispatching, driver assignment and operational monitoring.
 
 ### Shipment state flow (single flow)
 
@@ -74,7 +74,7 @@ The system uses a **Modular Monolith** for business logic, plus an **Event-Drive
 flowchart TD
     C["Customer (React)"] -- "Polling REST" --> B
     D["Driver (React)"] -- "REST" --> B
-    A["Dispatcher (React)"] -- "REST" --> B
+    A["Admin (React)"] -- "REST" --> B
 
     B["Backend<br/>NestJS on Cloud Run<br/>Modules: Shipment / Assign / Notification / ETA"]
 
@@ -145,7 +145,7 @@ Design assumptions: at any moment there are **~300–500 active shipments**, and
 |------|-------|-----------|
 | 1 | Init repo, React + NestJS skeleton. Set up Cloud Run, Cloud SQL, Pub/Sub. | Base URLs live, health checks pass on both services. Budget alert configured. |
 | 2 | Integrate Auth, design Postgres schema, complete Create Shipment API. | Customer can log in; created shipments persist in Cloud SQL. |
-| 3 | Assign shipment + Dispatcher/Driver UI. Define GPS event schema. | Dispatcher can assign a driver. Driver can publish a test message to Pub/Sub. |
+| 3 | Assign shipment + Admin/Driver UI. Define GPS event schema. | Admin can assign a driver. Driver can publish a test message to Pub/Sub. |
 | 4 | Pickup/Delivery status updates. GPS Worker starts consuming the queue. | Basic delivery flow works. Location is persisted to the DB via the worker. |
 | 5 | Complete the end-to-end GPS pipeline. Dedupe / out-of-order handling. | Customer sees near real-time driver location (polling). **Mandatory** |
 | 6 | Failed/Late delivery handling, Notification module. | All required use cases complete. |
