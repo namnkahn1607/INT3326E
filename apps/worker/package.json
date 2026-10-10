@@ -1,0 +1,25 @@
+{
+  "name": "@parcelflow/worker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Standalone GPS Pub/Sub consumer for ParcelFlow (Cloud Run)",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/main.js",
+    "start:prod": "node dist/main.js"
+  },
+  "dependencies": {
+    "@google-cloud/pubsub": "^6.1.0",
+    "@nestjs/common": "^12.0.1",
+    "@nestjs/core": "^12.0.1",
+    "@nestjs/platform-express": "^12.0.1",
+    "dotenv": "^18.0.5",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.0",
+    "typescript": "^6.0.2"
+  }
+}
+
