@@ -8,10 +8,16 @@ export class GpsSubscriber implements OnModuleInit, OnModuleDestroy {
   private subscription: any;
 
   onModuleInit() {
-    const subscriptionName = process.env.PUBSUB_SUBSCRIPTION || 'gps-events-sub';
+    const subscriptionName =
+      process.env.PUBSUB_SUBSCRIPTION ||
+      process.env.PUBSUB_SUB_GPS_EVENTS ||
+      'gps-events-sub';
 
     this.pubSubClient = new PubSub({
-      projectId: process.env.GCP_PROJECT_ID || 'parcelflow-gps-worker',
+      projectId:
+        process.env.GCP_PROJECT_ID ||
+        process.env.PUBSUB_PROJECT_ID ||
+        'int3326e',
     });
 
     this.logger.log(`Đang kết nối tới Pub/Sub Subscription: ${subscriptionName}`);
