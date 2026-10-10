@@ -9,7 +9,7 @@ export type ShipmentStatus =
   | 'DELIVERED'
   | 'DELIVERY_FAILED'
 
-export type UserRole = 'CUSTOMER' | 'DRIVER' | 'DISPATCHER' | 'ADMIN'
+export type UserRole = 'CUSTOMER' | 'DRIVER' | 'ADMIN'
 
 export interface Coordinates {
   lat: number
