@@ -1,8 +1,12 @@
 # Dependencies
 node_modules/
+.pnp
+.pnp.js
 
 # Build outputs
 dist/
+dist-ssr/
+build/
 *.tsbuildinfo
 
 # Logs
@@ -11,6 +15,8 @@ logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
 # Environment & Secrets
 .env
@@ -41,6 +47,7 @@ Thumbs.db
 firebase-debug.log*
 firestore-debug.log*
 ui-debug.log*
-.aider*
 
-dump.txt
+/.agents/
+/.specify/
+/apps.zip
