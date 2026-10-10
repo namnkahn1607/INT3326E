@@ -43,3 +43,4 @@ ui-debug.log*
 
 dump.txt
 /apps.zip
+coverage/

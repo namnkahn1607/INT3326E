@@ -1,9 +1,8 @@
 # @parcelflow/database
 
-Database models, schema migrations, and seeds for ParcelFlow.
+Prisma schema draft for ParcelFlow. Roles are `CUSTOMER`, `DRIVER`, and `ADMIN`.
 
 ## Setup
 
-1. Ensure PostgreSQL is running (`docker compose up -d postgres`).
-2. Run migrations: `npm run db:migrate`
-3. Generate client: `npm run db:generate`
+Migrations, client generation, and seed scripts are deferred. No database commands
+are registered in this package yet; coordinate their setup with the backend team.
