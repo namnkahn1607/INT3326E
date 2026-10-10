@@ -14,14 +14,21 @@
 
 ## Quick Start (Worker)
 
-```bash
-# Cài đặt dependencies
-npm install
+Monorepo/Worker dùng Node.js >= 22.12 (Pub/Sub client hiện yêu cầu Node 22;
+Node hiện đại cũng hỗ trợ nạp NestJS 12 ESM từ build CommonJS).
+
+```powershell
+# Cài sạch dependencies theo lockfile gốc (API/frontend vẫn có lockfile riêng)
+npm ci --ignore-scripts --no-audit --no-fund
+
+# PowerShell: chỉ tạo .env nếu chưa có, không ghi đè cấu hình cá nhân
+if (!(Test-Path .env)) { Copy-Item .env.example .env }
 
 # Chạy worker ở chế độ development
 npm run start:dev
 
 # Build
+npm run typecheck
 npm run build
 
 # Kiểm tra health endpoint
@@ -34,6 +41,23 @@ npm run test:e2e
 # Lint
 npm run lint
 ```
+
+Để thử pipeline local, bật Docker và chạy
+`docker compose -f infra/docker-compose.yml up -d pubsub-emulator`, rồi chạy
+`sh infra/pubsub/bootstrap.sh` trong Git Bash/WSL để tạo topic/subscription.
+
+`.env.example` ở gốc là template chung; Worker local cần `PORT`, `GCP_PROJECT_ID`,
+`PUBSUB_SUBSCRIPTION` và `PUBSUB_EMULATOR_HOST`, dùng project `parcelflow-dev`
+trên Pub/Sub emulator. Health `GET /healthz` là liveness: HTTP 200 không chứng minh
+pipeline Pub/Sub hoạt động; nếu chưa bật emulator, Worker có thể log lỗi kết nối.
+API dùng `apps/api/.env.example`; frontend không nhận credentials của Worker/API.
+Không đặt `PUBSUB_EMULATOR_HOST` trên Cloud Run; dùng project thật và ADC do TV5 cấu hình.
+
+Typecheck/test ở gốc chỉ kiểm tra Worker và cấu hình Vitest, không gom code React
+hoặc test API. Chạy riêng API bằng `npm run typecheck --workspace=@parcelflow/api`
+và `npm test --workspace=@parcelflow/api`; frontend dùng `npm run lint:web`,
+`npm run build:web`, `npm run dev:web`. Sau khi đổi compiler config trong VS Code,
+chạy **TypeScript: Restart TS Server** nếu Problems vẫn hiển thị lỗi cũ.
 
 ---
 

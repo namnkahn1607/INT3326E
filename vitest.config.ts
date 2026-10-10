@@ -8,6 +8,6 @@ export default defineConfig({
   test: {
     globals: true,
     root: './',
-    include: ['**/*.spec.ts'],
+    include: ['apps/worker/src/**/*.spec.ts'],
   },
 });
