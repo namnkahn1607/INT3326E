@@ -44,3 +44,7 @@ ui-debug.log*
 dump.txt
 /apps.zip
 coverage/
+
+# Local AI workflow tooling; shared specs and handoff docs remain versioned.
+/.agents/
+/.specify/
