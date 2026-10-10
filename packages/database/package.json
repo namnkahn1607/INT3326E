@@ -2,10 +2,5 @@
   "name": "@parcelflow/database",
   "version": "0.1.0",
   "private": true,
-  "description": "Database schemas, migrations, and seed scripts",
-  "scripts": {
-    "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev",
-    "db:seed": "node scripts/seed.js"
-  }
+  "description": "Week 1 Prisma schema draft; migrations and client generation are deferred"
 }

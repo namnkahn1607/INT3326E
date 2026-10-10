@@ -1,6 +1,10 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "noEmit": false,
+    "types": ["node"],
     "rootDir": ".",
     "tsBuildInfoFile": "./dist/tsconfig.build.tsbuildinfo"
   },

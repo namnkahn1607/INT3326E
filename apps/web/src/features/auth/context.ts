@@ -3,7 +3,7 @@ import { createContext } from 'react'
 export interface UserProfile {
   id: string
   email: string
-  role: 'CUSTOMER' | 'DRIVER' | 'DISPATCHER' | 'ADMIN'
+  role: 'CUSTOMER' | 'DRIVER' | 'ADMIN'
   displayName: string
 }
 

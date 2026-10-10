@@ -43,7 +43,7 @@ export default function App() {
         <Route path="*" element={<NotFoundPage />} />
       </Route>
 
-      {/* Cổng Quản trị & Điều phối (Admin & Dispatcher) - Tuấn phụ trách */}
+      {/* Cổng Quản trị & Điều phối (Admin) - Tuấn phụ trách */}
       <Route path="/admin" element={<AdminLayout />}>
         <Route index element={<AdminOverviewPage />} />
         <Route path="shipments" element={<AdminShipmentsPage />} />
