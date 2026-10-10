@@ -44,7 +44,7 @@ npm run lint
 
 Để thử pipeline local, bật Docker và chạy
 `docker compose -f infra/docker-compose.yml up -d pubsub-emulator`, rồi chạy
-`sh infra/pubsub/bootstrap.sh` trong Git Bash/WSL để tạo topic/subscription.
+`sh infra/pubsub/init-pubsub.sh` trong Git Bash/WSL để tạo topic/subscription.
 
 `.env.example` ở gốc là template chung; Worker local cần `PORT`, `GCP_PROJECT_ID`,
 `PUBSUB_SUBSCRIPTION` và `PUBSUB_EMULATOR_HOST`, dùng project `parcelflow-dev`
@@ -58,6 +58,28 @@ hoặc test API. Chạy riêng API bằng `npm run typecheck --workspace=@parcel
 và `npm test --workspace=@parcelflow/api`; frontend dùng `npm run lint:web`,
 `npm run build:web`, `npm run dev:web`. Sau khi đổi compiler config trong VS Code,
 chạy **TypeScript: Restart TS Server** nếu Problems vẫn hiển thị lỗi cũ.
+
+### Worker trên Cloud Run
+
+Worker có package/lockfile và Dockerfile riêng trong `apps/worker`. Từ gốc repo,
+build image với `docker build -t parcelflow-worker apps/worker`, hoặc deploy source:
+
+```bash
+gcloud run deploy worker-service \
+  --project=int3326e \
+  --region=asia-southeast1 \
+  --source=apps/worker \
+  --port=8080 \
+  --command="" \
+  --args="" \
+  --update-env-vars=GCP_PROJECT_ID=int3326e \
+  --remove-env-vars=PUBSUB_EMULATOR_HOST
+```
+
+Service account dùng ADC; `PUBSUB_SUBSCRIPTION` phải khớp subscription thật của GCP.
+Health tuần 1 phải trả JSON `{"status":"ok"}`; trang mẫu Cloud Run không phải
+worker của dự án. Trên Cloud Run, kiểm tra `/healthz/` để tránh đường dẫn `/healthz`
+được Google dành riêng. Health chỉ xác nhận tiến trình HTTP, chưa xác nhận xử lý GPS.
 
 ---
 
