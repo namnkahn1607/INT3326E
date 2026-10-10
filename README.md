@@ -12,6 +12,31 @@
 
 ---
 
+## Quick Start (Worker)
+
+```bash
+# Cài đặt dependencies
+npm install
+
+# Chạy worker ở chế độ development
+npm run start:dev
+
+# Build
+npm run build
+
+# Kiểm tra health endpoint
+curl http://localhost:8080/healthz
+
+# Chạy test
+npm test
+npm run test:e2e
+
+# Lint
+npm run lint
+```
+
+---
+
 ## Table of Contents
 
 1. [Overview](#1-overview)

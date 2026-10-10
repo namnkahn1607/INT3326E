@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json.schemastore.org/nest-cli",
+  "monorepo": true,
+  "defaultProject": "worker",
+  "projects": {
+    "worker": {
+      "type": "application",
+      "root": "apps/worker",
+      "entryFile": "main",
+      "sourceRoot": "apps/worker/src"
+    }
+  }
+}

@@ -1,31 +1,33 @@
 # Dependencies
 node_modules/
-.pnp
-.pnp.js
 
-# Production build outputs
+# Build outputs
 dist/
-dist-ssr/
-build/
+*.tsbuildinfo
 
 # Logs
-logs/
+logs
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
 
-# Environment files
+# Environment & Secrets
 .env
 .env.*
 !.env.example
 
-# Editor and OS
-.vscode/*
-!.vscode/extensions.json
+# IDE & Tooling
+.vscode/
 .idea/
+.aider*
+dump.txt
+
+# Testing & Coverage
+coverage/
+.vitest/
+
+# OS Files
 .DS_Store
 Thumbs.db
 *.suo
@@ -42,9 +44,3 @@ ui-debug.log*
 .aider*
 
 dump.txt
-/apps.zip
-coverage/
-
-# Local AI workflow tooling; shared specs and handoff docs remain versioned.
-/.agents/
-/.specify/
