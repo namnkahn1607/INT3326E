@@ -127,7 +127,7 @@ flowchart TD
 
     B["Backend<br/>NestJS on Cloud Run<br/>Modules: Shipment / Assign / Notification / ETA"]
 
-    B -- "POST /locations<br/>(publish only, no DB write)" --> P["Pub/Sub: gps-events"]
+    B -- "POST /v1/locations<br/>(publish only, no DB write)" --> P["Pub/Sub: gps-events"]
     B -- "Other CRUD (sync)" --> DB[("Cloud SQL<br/>PostgreSQL")]
 
     P -- "Subscribe" --> W["GPS Worker<br/>Cloud Run, separate service"]
@@ -145,7 +145,7 @@ All business operations (create shipment, assign, notifications, auth, ...) go t
 
 To meet the load requirements, the **write path** and **read path** of GPS data are fully separated:
 
-- **Write path (driver sends GPS):** The driver calls `POST /locations`. The backend only **publishes** a message to Google Cloud Pub/Sub and immediately returns `HTTP 202` (draft) - it does not wait for a database write.
+- **Write path (driver sends GPS):** The driver calls `POST /v1/locations`. The backend only **publishes** a message to Google Cloud Pub/Sub and immediately returns `HTTP 202` (draft) - it does not wait for a database write.
 - **Background processing (worker):** A standalone service (**GPS Worker**) subscribes to Pub/Sub and writes the data into Cloud SQL.
 - **Read path (customer tracking):** The Customer app uses **REST polling** (every 5 to 10s) to read the `current_location` table from Postgres.
 
