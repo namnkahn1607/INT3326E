@@ -13,8 +13,8 @@ yarn-debug.log*
 yarn-error.log*
 
 # Environment & Secrets
-.env
-.env.*
+!.env
+!.env.*
 !.env.example
 
 # IDE & Tooling
