@@ -4,7 +4,7 @@
 | --- | --- |
 | Dự án | ParcelFlow MVP |
 | Module | Driver Frontend và GPS emitter |
-| Phối hợp kỹ thuật | GPS pipeline: thử nghiệm Pub/Sub; Frontend: khung giao diện Driver; Hạ tầng: GCP |
+| Phối hợp kỹ thuật | TV3: ghép emitter vào khung giao diện Driver và kiểm tra Start/Stop; TV2: GPS pipeline; Hạ tầng: GCP |
 | Giai đoạn | Tuần 1 |
 | Trạng thái tài liệu | Đặc tả phạm vi tuần 1; payload GPS còn là bản nháp |
 
@@ -17,13 +17,15 @@ Phạm vi tuần 1 dựa trên `ParcelFlow - Bảng theo dõi tiến độ.xlsx`
 
 Kết quả cần đạt: nhận được thông điệp qua Pub/Sub và có component trên `/driver` tạo payload tọa độ mẫu theo chu kỳ 8 giây, hỗ trợ bắt đầu/dừng và quan sát kết quả.
 
+Theo yêu cầu cập nhật tuần 1, Hello World đã đạt và không cần thử lại. TV4 phối hợp TV3 ghép emitter vào Driver, kiểm tra Start/Stop và sửa tham chiếu contract thành `POST /v1/locations`.
+
 Checkpoint dự án tuần 1 tại ô F4 còn yêu cầu URL chung truy cập được, health check của hai Cloud Run service trả 200 và topic/subscription tồn tại. Nghiệm thu Driver Frontend và emitter là một phần của checkpoint; bằng chứng triển khai và health check cần được xác nhận riêng.
 
 ## 2. Phạm vi
 
 ### 2.1. Trong tuần 1
 
-- Thử publish và pull một thông điệp văn bản trên Pub/Sub trong project `int3326e`, phối hợp với phần GPS pipeline.
+- Giữ kết quả publish/pull Hello World đã đạt trong project `int3326e`; không yêu cầu chạy lại.
 - Dùng route `/driver` và layout hiện có để hiển thị GPS emitter.
 - Dùng tài xế mẫu `demo-driver-1` và tọa độ cố định `{ lat: 21.0285, lng: 105.8542 }`.
 - Tạo payload trong trình duyệt, hiển thị mẫu gần nhất và tổng số mẫu đã tạo.
@@ -136,7 +138,7 @@ Chạy `npm run dev:web` tại root repo, mở URL mà Vite in ra và vào `/dri
 | TC-06 | Khi đang chạy, chuyển sang route khác rồi quay lại `/driver`. | Instance cũ được dọn; instance mới dừng, số mẫu `0`, chưa có JSON. |
 | TC-07 | Kiểm tra prop bằng `driverId` rỗng hoặc chỉ có khoảng trắng trong môi trường phát triển. | Không cho bắt đầu, không tạo mẫu. Không đổi tài xế mẫu trên trang bàn giao. |
 | TC-08 | Quan sát quyền vị trí và Network trong lúc phát mẫu. | Emitter không yêu cầu quyền vị trí và không phát sinh request gửi GPS. |
-| TC-09 | Publish `Hello World` lên topic đã ghi nhận rồi pull từ subscription tương ứng. | Nhận đúng nội dung; lưu bằng chứng theo PS-01 đến PS-03. |
+| TC-09 | Đối chiếu bằng chứng Hello World đã có; không chạy lại. | Đã đạt theo yêu cầu cập nhật tuần 1. |
 
 Kiểm tra kỹ thuật bằng script sẵn có: `npm run lint:web` và `npm run build:web`. Các lệnh và ca kiểm tra trên là kế hoạch nghiệm thu; chỉ xác nhận đạt sau khi chạy và ghi nhận kết quả thực tế.
 
@@ -211,7 +213,7 @@ Hai ảnh ban đầu được giữ lại để đối chiếu:
 
 Kiểm tra độc lập trên repo ngày 09/10/2026: `npm run lint:web` và `npm run build:web` đều kết thúc với exit code `0`. Kết luận lint đạt dựa trên kết quả lệnh này; ảnh lint của TV4 chỉ hiển thị phần gọi ESLint. Ảnh build của TV4 thể hiện build thành công.
 
-### 6.4. Đối chiếu nghiệm thu
+### 6.4. Đối chiếu bộ ảnh ngày 09/10/2026
 
 | Ca kiểm tra | Kết quả đối chiếu bằng chứng hiện có | Phần cần xác nhận thêm |
 | --- | --- | --- |
@@ -223,15 +225,32 @@ Kiểm tra độc lập trên repo ngày 09/10/2026: `npm run lint:web` và `npm
 | TC-06 | Chưa có ghi nhận đổi route trong lúc đang chạy. | Chuyển route rồi quay lại `/driver`, xác nhận trạng thái ban đầu. |
 | TC-07 | Mã nguồn có điều kiện `driverId.trim()` để chặn định danh rỗng. | Chưa có kết quả chạy với định danh rỗng hoặc chỉ có khoảng trắng. |
 | TC-08 | Mã nguồn tạo payload nội bộ; giao diện ghi rõ chưa gửi dữ liệu lên máy chủ. | Chưa có ghi nhận quan sát quyền vị trí và Network khi chạy. |
-| TC-09 | Có ảnh resource, publish thành công và pull nhận `Hello World`. | Múi giờ của publish time chưa được xác nhận; chưa có bằng chứng ACK và không yêu cầu suy ra worker xử lý. |
+| TC-09 | Có ảnh resource, publish thành công và pull nhận `Hello World`; đã đạt theo yêu cầu cập nhật tuần 1. | Không yêu cầu chạy lại. |
 
-Kết quả hiện tại: đã có bằng chứng Pub/Sub publish/pull và emitter hiển thị một mẫu, hai mẫu, chuyển sang trạng thái dừng, cùng lint/build đạt. Bộ ảnh phù hợp để minh họa phần phác thảo TV4 tuần 1; chưa đủ để xác nhận toàn bộ TC-01 đến TC-08. Các bước chưa xác nhận được giữ trong bảng để bổ sung kết quả thực tế trước khi nghiệm thu đầy đủ theo mục 7.
+Kết quả đối chiếu bộ ảnh ngày 09/10/2026: đã có bằng chứng Pub/Sub publish/pull và emitter hiển thị một mẫu, hai mẫu, chuyển sang trạng thái dừng, cùng lint/build đạt. Bộ ảnh phù hợp để minh họa phần phác thảo TV4 tuần 1; chưa đủ để xác nhận toàn bộ TC-01 đến TC-08. Kết quả kiểm thử component bổ sung được ghi tại mục 6.5.
+
+### 6.5. Kiểm tra bổ sung ngày 10/10/2026
+
+Kiểm thử component bằng React Test Renderer, mount trực tiếp `DriverPlaceholderPage` và chạy timer thật. Gói kiểm thử và script nằm trong thư mục tạm, không thêm dependency vào repo.
+
+| Kiểm tra | Kết quả |
+| --- | --- |
+| Ghép emitter vào Driver | Trang Driver mount được emitter; ban đầu số mẫu `0`, Bắt đầu bật, Dừng tắt. |
+| Start | Chỉ có một timer, Bắt đầu bị vô hiệu hóa, Dừng được bật; không tạo mẫu ngay khi bấm. |
+| Hai mẫu liên tiếp | Timestamp `2026-10-10T04:28:15.362Z` và `2026-10-10T04:28:23.373Z`, cách nhau `8011 ms`; payload đúng bốn trường, `driverId` là `demo-driver-1`. |
+| Stop | Timer được hủy; chờ `9000 ms` vẫn giữ nguyên số mẫu `2` và payload thứ hai. |
+| Start lại | Sau một chu kỳ, số mẫu tăng thành `3`; chỉ có một timer. |
+| Vòng đời | Unmount hủy timer; mount lại dừng ở `0` mẫu, chưa có JSON. |
+| Định danh rỗng | `driverId` rỗng hoặc chỉ có khoảng trắng vô hiệu hóa Bắt đầu, không tạo timer. |
+| Lint/build | `npm run lint:web` và `npm run build:web` đều kết thúc với exit code `0`. |
+
+Start/Stop đạt ở mức component. Công cụ hiện không có trình duyệt kết nối, nên chưa bổ sung ảnh/video, kiểm tra chuyển route thực tế hoặc quan sát Network/quyền vị trí. Hello World giữ kết quả đã đạt, không chạy lại.
 
 ## 7. Điều kiện hoàn thành và bàn giao
 
 Phạm vi Driver Frontend và GPS emitter tuần 1 được nghiệm thu khi:
 
-- Có biên bản publish/pull `Hello World`, xác định rõ topic và subscription thực tế.
+- Giữ bằng chứng publish/pull `Hello World` đã đạt, xác định rõ topic và subscription thực tế; không chạy lại.
 - GPS emitter trên `/driver` đạt TC-01 đến TC-08, có ảnh hoặc video thể hiện phát ít nhất hai mẫu và dừng phát.
 - Lưu kết quả lint/build cùng các lỗi còn tồn tại, nếu có.
 - Tài liệu và mã nguồn emitter được bàn giao, ghi rõ payload còn là bản nháp và bước tích hợp tiếp theo.
@@ -241,11 +260,11 @@ Phạm vi Driver Frontend và GPS emitter tuần 1 được nghiệm thu khi:
 | Tuần | Phạm vi phát triển theo bảng tiến độ | Điểm tích hợp |
 | --- | --- | --- |
 | 2 — D13 | Tiếp tục thử pipeline Pub/Sub, thống nhất schema GPS giữa Driver Frontend và GPS pipeline. | Contract request/event, timestamp, `eventId`, `seq`, `receivedAt` và nơi tạo từng trường. |
-| 3 — D19 | Driver login/dashboard skeleton, phát thử GPS event. | Nối driver client với endpoint `POST /location` của backend theo kế hoạch D17 và contract đã thống nhất. |
+| 3 — D19 | Driver login/dashboard skeleton, phát thử GPS event. | Nối driver client với endpoint `POST /v1/locations` của backend theo contract cập nhật; ô D17 trong bảng tiến độ gốc còn ghi tên cũ. |
 | 4 — D25 | Kết nối Driver app gửi GPS thật hoặc simulator toggle. | Frontend gọi REST; backend publish Pub/Sub, worker xử lý dữ liệu. |
 | 5 — D31 | Xử lý GPS stale/invalid, bắt đầu phác thảo load test. | Chốt cách xử lý lỗi vị trí và lỗi gửi trước khi nghiệm thu pipeline đầy đủ. |
 
-`POST /location` là endpoint trong kiến trúc dự kiến; các file controller/service/DTO của module location hiện còn rỗng. Spec tuần 1 không coi endpoint này đã hoạt động. Theo `frontend-spec.md`, khi tích hợp nghiệp vụ, emitter bắt đầu gửi GPS ở `PICKED_UP` và dừng khi đơn kết thúc (`DELIVERED` hoặc `DELIVERY_FAILED`); bản phác thảo hiện chưa kiểm tra trạng thái đơn hàng.
+`POST /v1/locations` là endpoint theo contract cập nhật; các file controller/service/DTO của module location hiện còn rỗng. Spec tuần 1 không coi endpoint này đã hoạt động. Khi nối qua `apiClient`, dùng đường dẫn `/locations` vì base URL đã chứa `/v1`. Theo `frontend-spec.md`, khi tích hợp nghiệp vụ, emitter bắt đầu gửi GPS ở `PICKED_UP` và dừng khi đơn kết thúc (`DELIVERED` hoặc `DELIVERY_FAILED`); bản phác thảo hiện chưa kiểm tra trạng thái đơn hàng.
 
 ## 9. Tài liệu tham chiếu
 

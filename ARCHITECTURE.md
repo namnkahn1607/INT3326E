@@ -88,7 +88,7 @@ apps/api/src/
     │   └── assignments.module.ts
     │
     ├── location/                 # GPS Write-path & Polling Read-path
-    │   ├── location.controller.ts  # POST /location (publishes event), GET /tracking/:shipmentId
+    │   ├── location.controller.ts  # POST /v1/locations (publishes event), GET /tracking/:shipmentId
     │   ├── location.service.ts     # Pub/Sub publisher + location query coordination
     │   ├── location.repository.ts  # Reads from current_location & location_history
     │   ├── dto/
