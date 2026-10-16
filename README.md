@@ -44,7 +44,7 @@ npm run lint
 
 Để thử pipeline local, bật Docker và chạy
 `docker compose -f infra/docker-compose.yml up -d pubsub-emulator`, rồi chạy
-`sh infra/pubsub/bootstrap.sh` trong Git Bash/WSL để tạo topic/subscription.
+`sh infra/pubsub/init-pubsub.sh` trong Git Bash/WSL để tạo topic/subscription.
 
 `.env.example` ở gốc là template chung; Worker local cần `PORT`, `GCP_PROJECT_ID`,
 `PUBSUB_SUBSCRIPTION` và `PUBSUB_EMULATOR_HOST`, dùng project `parcelflow-dev`
@@ -53,11 +53,18 @@ pipeline Pub/Sub hoạt động; nếu chưa bật emulator, Worker có thể lo
 API dùng `apps/api/.env.example`; frontend không nhận credentials của Worker/API.
 Không đặt `PUBSUB_EMULATOR_HOST` trên Cloud Run; dùng project thật và ADC do TV5 cấu hình.
 
-Typecheck/test ở gốc chỉ kiểm tra Worker và cấu hình Vitest, không gom code React
+Typecheck/test ở gốc kiểm tra Worker, GPS contract dùng chung, smoke runner test
+và cấu hình Vitest, không gom code React
 hoặc test API. Chạy riêng API bằng `npm run typecheck --workspace=@parcelflow/api`
 và `npm test --workspace=@parcelflow/api`; frontend dùng `npm run lint:web`,
 `npm run build:web`, `npm run dev:web`. Sau khi đổi compiler config trong VS Code,
 chạy **TypeScript: Restart TS Server** nếu Problems vẫn hiển thị lỗi cũ.
+
+Contract request/event GPS hiện hành nằm trong [hợp đồng sự kiện GPS](docs/gps-event-contract.md).
+Chạy `npm run test:gps-pubsub` khi đã có Pub/Sub emulator và cấu hình
+`PUBSUB_EMULATOR_HOST`; chế độ cloud dùng `--cloud --project int3326e` và ADC.
+Xem [kiểm thử pipeline GPS](docs/gps-pipeline-validation.md) để chạy từng bước,
+thử trực tiếp trên Cloud Console và phân biệt bằng chứng local với cloud.
 
 ---
 

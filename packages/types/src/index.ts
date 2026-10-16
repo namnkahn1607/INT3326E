@@ -16,18 +16,8 @@ export interface Coordinates {
   lng: number
 }
 
-/**
- * Pub/Sub event schema published by API and consumed by GPS Worker.
- */
-export interface GpsTelemetryEvent {
-  eventId: string
-  driverId: string
-  lat: number
-  lng: number
-  seq: number
-  clientTimestamp: string
-  receivedAt: string
-}
+export { MAX_GPS_SEQUENCE, assertGpsLocationRequest, assertGpsTelemetryEvent } from './gps'
+export type { GpsLocationRequest, GpsTelemetryEvent } from './gps'
 
 export interface ShipmentEntity {
   id: string

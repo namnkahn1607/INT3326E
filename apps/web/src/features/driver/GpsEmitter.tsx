@@ -1,11 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { MAX_GPS_SEQUENCE } from '@parcelflow/types'
+import type { GpsLocationRequest } from '@parcelflow/types'
 
-export interface GpsEmitterDraftEvent {
-  driverId: string
-  lat: number
-  lng: number
-  clientTimestamp: string
-}
+export type GpsEmitterDraftEvent = GpsLocationRequest
 
 interface GpsEmitterProps {
   driverId: string
@@ -19,20 +16,22 @@ export function GpsEmitter({ driverId, onEmit }: GpsEmitterProps) {
   const [running, setRunning] = useState(false)
   const [lastEvent, setLastEvent] = useState<GpsEmitterDraftEvent | null>(null)
   const [eventCount, setEventCount] = useState(0)
+  const sequence = useRef(0)
 
   useEffect(() => {
     if (!running || !driverId.trim()) return
 
     const intervalId = window.setInterval(() => {
       const event: GpsEmitterDraftEvent = {
-        driverId,
         ...SAMPLE_COORDINATES,
+        seq: ++sequence.current,
         clientTimestamp: new Date().toISOString(),
       }
 
       setLastEvent(event)
       setEventCount((count) => count + 1)
       onEmit?.(event)
+      if (sequence.current === MAX_GPS_SEQUENCE) setRunning(false)
     }, EMIT_INTERVAL_MS)
 
     return () => window.clearInterval(intervalId)
@@ -52,7 +51,7 @@ export function GpsEmitter({ driverId, onEmit }: GpsEmitterProps) {
         <button
           type="button"
           className="btn btn-secondary"
-          disabled={running || !driverId.trim()}
+          disabled={running || !driverId.trim() || eventCount >= MAX_GPS_SEQUENCE}
           onClick={() => setRunning(true)}
         >
           Bắt đầu phát mẫu
