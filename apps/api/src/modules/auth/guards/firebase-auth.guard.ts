@@ -3,6 +3,7 @@ import {
   ExecutionContext,
   Inject,
   Injectable,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
@@ -37,7 +38,10 @@ export class FirebaseAuthGuard implements CanActivate {
     try {
       request.user = await this.tokenVerifier.verify(token);
       return true;
-    } catch {
+    } catch (error) {
+      if (error instanceof ServiceUnavailableException) {
+        throw new ServiceUnavailableException('Authentication service temporarily unavailable');
+      }
       throw new UnauthorizedException(
         'Invalid or expired authentication token',
       );

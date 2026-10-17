@@ -26,11 +26,26 @@ describe('FirebaseTokenVerifierService', () => {
     },
   );
 
-  it('preserves SDK verification failures for the authentication guard to handle', async () => {
-    const error = new Error('expired token');
+  it('classifies expired tokens as 401 without exposing SDK errors', async () => {
+    const error = Object.assign(new Error('private SDK details'), { code: 'auth/id-token-expired' });
     verifyIdToken.mockRejectedValue(error);
     await expect(new FirebaseTokenVerifierService({ verifyIdToken, getUser }).verify('expired-id-token'))
-      .rejects.toBe(error);
+      .rejects.toMatchObject({ status: 401, message: 'Invalid or expired authentication token' });
+  });
+
+  it.each(['app/network-error', 'auth/internal-error', 'auth/insufficient-permission', 'auth/invalid-credential', undefined])(
+    'classifies Firebase dependency/configuration failure %s as 503', async (code) => {
+      verifyIdToken.mockRejectedValue(Object.assign(new Error('private SDK details'), { code }));
+      await expect(new FirebaseTokenVerifierService({ verifyIdToken, getUser }).verify('token'))
+        .rejects.toMatchObject({ status: 503, message: 'Authentication service temporarily unavailable' });
+    },
+  );
+
+  it('also reports account lookup network failures as 503', async () => {
+    verifyIdToken.mockResolvedValue({ uid: 'user-1', role: UserRole.DRIVER });
+    getUser.mockRejectedValueOnce(Object.assign(new Error('private backend address'), { code: 'app/network-error' }));
+    await expect(new FirebaseTokenVerifierService({ verifyIdToken, getUser }).verify('token'))
+      .rejects.toMatchObject({ status: 503 });
   });
 
   it.each([undefined, 'DISPATCHER', UserRole.CUSTOMER])('rejects a stale ADMIN token after the current role becomes %j', async (role) => {

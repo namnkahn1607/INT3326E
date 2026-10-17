@@ -310,8 +310,8 @@ Quyết định tuần 2 và các nội dung cần phối hợp:
 
 - Đã chốt: role xác thực lấy từ Firebase custom claims, gồm CUSTOMER/DRIVER/ADMIN; không phụ thuộc PostgreSQL để xác thực.
 - API scaffold đã dùng prefix `/v1` cho nghiệp vụ và giữ `/healthz` công khai ngoài prefix; contract nghiệp vụ vẫn là draft.
-- Exception filter chung cần chuyển lỗi `401`/`403` từ NestJS sang `ProblemDetails` của contract TV1. Các ví dụ response ở tài liệu này mô tả scaffold mặc định, chưa phải response tích hợp cuối cùng.
-- Cách đồng bộ người dùng Firebase với bảng người dùng trong database.
+- Bản follow-up review dùng exception filter chung để trả ProblemDetails cho lỗi API, gồm 401/403/409/503. Các ví dụ response Nest ở phần tuần 1 là hồ sơ lịch sử.
+- Đã có SQL lookup và BusinessUserGuard cho liên kết user; migration, seed và nghiệm thu Cloud SQL cần TV1/TV5 phối hợp, xem mục 12.6.
 
 ## 10. External dependencies
 
@@ -336,7 +336,7 @@ Bản tích hợp tuần 2 ở mục 12 bổ sung frontend Firebase Web SDK; ph�
 
 ## 12. TV6 — Tích hợp tuần 2 (17/10/2026)
 
-Phạm vi đã được người yêu cầu xác nhận: giữ ba role `CUSTOMER`, `DRIVER`, `ADMIN`; Admin kiêm điều phối. Hoàn thiện custom claims, guard và luồng đăng nhập. Không thêm database, Cloud Functions, role thứ tư, đăng ký tự chọn quyền hoặc logic Shipment/GPS.
+Phạm vi đã được người yêu cầu xác nhận: giữ ba role `CUSTOMER`, `DRIVER`, `ADMIN`; Admin kiêm điều phối. Hoàn thiện custom claims, guard và luồng đăng nhập. Follow-up review bổ sung đường đọc user nghiệp vụ từ PostgreSQL hiện có; không tạo database, migration, Cloud Functions, role thứ tư, đăng ký tự chọn quyền hoặc logic Shipment/GPS.
 
 ### 12.1. Hành vi và ranh giới tin cậy
 
@@ -344,7 +344,7 @@ Phạm vi đã được người yêu cầu xác nhận: giữ ba role `CUSTOMER
 - AuthModule áp dụng FirebaseAuthGuard trước RolesGuard cho toàn bộ handler. Chỉ `@Public()` bỏ qua; health vẫn public. Không gắn lại `@UseGuards` ở controller để tránh xác thực SDK hai lần.
 - `GET /v1/auth/me`: mọi role hợp lệ; trả `{uid,email?,role}`. `GET /v1/admin/me`: chỉ ADMIN; role khác nhận 403. Cả hai trả `Cache-Control: no-store`. API nghiệp vụ khác vẫn là draft/chưa có handler.
 - Token thiếu, sai, hết hạn, bị thu hồi; account bị vô hiệu hóa; claim không hợp lệ hoặc cũ: 401. Token/account hợp lệ nhưng không đúng role của handler: 403. Lỗi SDK/chi tiết credential không trả về client.
-- CORS dùng danh sách origin chính xác, cho Authorization/Content-Type; preflight qua trước guard. `CORS_ORIGINS` có thể cấu hình theo `.env.example`; không dùng wildcard. CORS không thay thế kiểm tra token.
+- CORS dùng danh sách origin chính xác, cho Authorization/Content-Type/Idempotency-Key; preflight qua trước guard. `CORS_ORIGINS` có thể cấu hình theo `.env.example`; không dùng wildcard. CORS không thay thế kiểm tra token.
 - Frontend dùng Firebase Web SDK email/password, session persistence trong phiên trình duyệt, không có user demo hoặc role mặc định. AuthProvider được gắn vào ứng dụng; profile/role được xác nhận qua API `/auth/me`, UID phải trùng tài khoản Firebase đang đăng nhập.
 - Route Customer/Driver/Admin kiểm tra đúng role; `/` và đăng nhập thành công đưa tới trang của role. Đăng xuất xóa trạng thái; response cũ không khôi phục session sau logout. Đổi token cùng tài khoản không làm unmount màn hình đang nhập. API client lấy ID Token hiện tại khi gọi API, không lưu token riêng vào localStorage. Không log token hoặc mật khẩu.
 
@@ -415,3 +415,23 @@ Tài liệu chính thức đã đối chiếu:
 - Worker typecheck/build/lint và hai health tests (unit + HTTP): đạt; lint còn cảnh báo scaffold và cấu hình strictNullChecks có sẵn.
 - Firebase Auth Emulator với SDK/NestJS thật: 7/7 tests đạt; đã dọn các tài khoản thử và dừng emulator.
 - Tổng: 121 kiểm tra local và 7 ca emulator đạt, không tính ca skip thành ca pass. Chưa có bằng chứng Firebase production hoặc browser end-to-end trên Hosting.
+
+
+### 12.6. Follow-up review PR #15 — danh tính nghiệp vụ và lỗi dependency
+
+- Giữ CUSTOMER/DRIVER/ADMIN. Không thêm DISPATCHER và không cache role 30–60 giây vì sẽ thay đổi hiệu lực hạ quyền hiện tại.
+- Firebase SDK vẫn dùng verifyIdToken(token, true) và getUser. SDK tự đọc UserRecord khi checkRevoked=true, vì vậy hiện có hai lượt account lookup nối tiếp. Chưa có số liệu p95 trên Firebase thật; không tuyên bố đạt hoặc vi phạm NF03/NF04. Tối ưu sau đo phải giữ kiểm tra chữ ký, thu hồi, disabled và role hiện tại.
+- Token sai/hết hạn/thu hồi/account disabled: 401 UNAUTHENTICATED. Lỗi mạng, SDK nội bộ hoặc credential/IAM backend: 503 SERVICE_UNAVAILABLE. Lỗi dependency không bị đổi thành thông báo token sai. Response không lộ lỗi SDK, địa chỉ SQL, credential hoặc query string.
+- ApiExceptionFilter trên AppModule trả application/problem+json với type, title, status, code, instance và timestamp. Nó không thay response thành công của health hoặc profile.
+- UsersRepository đọc bằng truy vấn tham số hóa, chỉ lấy id, firebaseUid, role từ bảng users theo schema Prisma nháp hiện có. DATABASE_URL do runtime cung cấp; pg Pool mở kết nối lười, tối đa 5 kết nối, timeout kết nối/query 5 giây. Không tắt kiểm tra chứng chỉ TLS. Pool được đóng khi Nest shutdown.
+- UsersService.requireBusinessUser dùng Firebase uid đã verify để tìm user. Không có row, nhiều row, ID trống hoặc role/UID lệch trả 409 USER_NOT_PROVISIONED; không tự INSERT user hoặc nâng quyền. Không có DATABASE_URL hoặc SQL lỗi trả 503, không giả thành tài khoản chưa provision.
+- BusinessUserGuard chạy sau global authentication/RolesGuard và gắn request.businessUser = {id,firebaseUid,role}. ShipmentsController đã gắn guard; chưa có handler Shipment thật nên chưa thể nghiệm thu Create. TV1 dùng request.businessUser.id cho customerId/driverId và vẫn kiểm tra ownership trong service. Với controller nghiệp vụ khác, import UsersModule và dùng BusinessUserGuard trước khi nhận traffic; không lấy actor từ body.
+- /v1/auth/me và /v1/admin/me chỉ xác nhận danh tính/quyền Firebase, không yêu cầu row nghiệp vụ. Health không kết nối SQL.
+- CORS đã cho Idempotency-Key để browser có thể gọi Create khi TV1 triển khai API. Contract nghiệp vụ còn draft, các response 409 đã ghi USER_NOT_PROVISIONED.
+
+Phụ thuộc bắt buộc trước nghiệm thu nghiệp vụ: TV1 hoàn thiện migration và seed user với unique firebaseUid và role đồng bộ custom claim; TV5 cung cấp DATABASE_URL trỏ đúng database/runtime. SQL hiện dùng tên cột của packages/database/prisma/schema.prisma: users.id, users."firebaseUid", users.role. Nếu schema cuối đổi tên, phải sửa adapter và kiểm tra lại; không sửa database thật hoặc coi schema nháp là migration đã chạy.
+
+Đo trên cloud sau khi có cấu hình/tài khoản: tách thời gian verifyIdToken và getUser trong trace, đo tổng latency endpoint với cả user lookup khi có nghiệp vụ; ghi revision/source SHA, số mẫu, concurrency, warm/cold và p95. Một vài request /auth/me chỉ là smoke test, không chứng minh NFR Create/Assign hoặc tracking. Không dùng số đo emulator thay cho Firebase production.
+
+
+Kết quả follow-up local: 111 API tests đạt sau npm ci độc lập từ apps/api/package-lock.json; typecheck/build đạt. Firebase Auth Emulator chạy riêng 7/7 đạt, đã dọn tài khoản và tắt emulator. Lint exit 0, chỉ còn cảnh báo scaffold có sẵn. Các test user linkage dùng Firebase/SQL mock với HTTP Nest thật, chưa phải PostgreSQL/Cloud SQL integration. Chưa chạy migration/seed, Firebase production, deploy hoặc đo NFR cloud. PR tiếp tục Draft.

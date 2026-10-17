@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { UnauthorizedException, type ExecutionContext } from '@nestjs/common';
+import { ServiceUnavailableException, UnauthorizedException, type ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -52,5 +52,12 @@ describe('FirebaseAuthGuard', () => {
         status: 401,
       });
     expect(request.user).toBeUndefined();
+  });
+
+  it('preserves temporary authentication failure as 503 without leaking dependency details', async () => {
+    const verify = vi.fn().mockRejectedValue(new ServiceUnavailableException('private service details'));
+    await expect(new FirebaseAuthGuard({ verify }, new Reflector())
+      .canActivate(contextFor({ headers: { authorization: 'Bearer token' } })))
+      .rejects.toMatchObject({ status: 503, message: 'Authentication service temporarily unavailable' });
   });
 });

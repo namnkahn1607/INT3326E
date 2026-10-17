@@ -69,4 +69,14 @@ describe('Week 1 API integration', () => {
     });
     expect(denied.headers.get('access-control-allow-origin')).toBeNull();
   });
+
+  it('allows the Create shipment idempotency header in browser preflight', async () => {
+    const response = await fetch(`${baseUrl}/v1/shipments`, {
+      method: 'OPTIONS', headers: { Origin: 'https://int3326e.web.app',
+        'Access-Control-Request-Method': 'POST',
+        'Access-Control-Request-Headers': 'authorization,content-type,idempotency-key' },
+    });
+    expect(response.status).toBe(204);
+    expect(response.headers.get('access-control-allow-headers')?.toLowerCase()).toContain('idempotency-key');
+  });
 });

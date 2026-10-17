@@ -61,3 +61,8 @@ Health tests and the TV6 Auth/Admin tests can be run now without Firebase calls.
 ## TV6 Auth tuần 2 — 17/10/2026
 
 Bổ sung API đã triển khai `GET /v1/auth/me` (ba role) và `GET /v1/admin/me` (ADMIN). Mọi handler mặc định được guard bảo vệ; health public. API nghiệp vụ còn lại vẫn là draft. Custom claims Firebase là nguồn role, có kiểm tra revocation/account hiện tại; không có role Dispatcher riêng hoặc public API cấp quyền. Xem `docs/auth-rbac.md` mục 12 cho claims CLI, cấu hình frontend/runtime, kiểm thử và trạng thái cloud chưa nghiệm thu.
+
+
+### Follow-up review Auth tuần 2
+
+API hiện trả ProblemDetails cho lỗi qua ApiExceptionFilter; không còn dùng lỗi Nest mặc định ở runtime AppModule. 401/403 giữ ý nghĩa xác thực/quyền; Firebase/SQL tạm lỗi hoặc chưa cấu hình trả 503. BusinessUserGuard trên vùng Shipment dùng UsersService để nối Firebase UID với user nghiệp vụ; thiếu/lệch linkage trả 409 USER_NOT_PROVISIONED. /auth/me và /admin/me không bắt buộc user SQL. OpenAPI đã ghi nhận các lỗi này, business handlers vẫn chưa triển khai. CORS cho Idempotency-Key. Xem docs/auth-rbac.md mục 12.6 về mapping schema, seed và cloud acceptance còn mở.

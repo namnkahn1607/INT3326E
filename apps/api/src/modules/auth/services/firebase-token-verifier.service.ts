@@ -1,10 +1,11 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import type { Auth } from 'firebase-admin/auth';
 
 import { UserRole } from '../enums/user-role.enum';
 import { AuthenticatedUser } from '../interfaces/authenticated-user.interface';
 import { TokenVerifier } from '../interfaces/token-verifier.interface';
 import { FIREBASE_AUTH } from '../providers/firebase-auth.provider';
+import { firebaseAuthError } from './firebase-auth-error';
 
 @Injectable()
 export class FirebaseTokenVerifierService implements TokenVerifier {
@@ -14,19 +15,23 @@ export class FirebaseTokenVerifierService implements TokenVerifier {
   ) {}
 
   async verify(token: string): Promise<AuthenticatedUser> {
-    const decodedToken = await this.auth.verifyIdToken(token, true);
-    const role = this.parseRole(decodedToken.role);
-    const account = await this.auth.getUser(decodedToken.uid);
-    // Reject stale role claims even when a role change and login share a second.
-    if (account.disabled || this.parseRole(account.customClaims?.role) !== role) {
-      throw new Error('Account disabled or role changed; sign in again');
-    }
+    try {
+      const decodedToken = await this.auth.verifyIdToken(token, true);
+      const role = this.parseRole(decodedToken.role);
+      const account = await this.auth.getUser(decodedToken.uid);
+      // Reject stale role claims even when a role change and login share a second.
+      if (account.disabled || this.parseRole(account.customClaims?.role) !== role) {
+        throw new UnauthorizedException('Account disabled or role changed; sign in again');
+      }
 
-    return {
-      uid: decodedToken.uid,
-      email: decodedToken.email,
-      role,
-    };
+      return {
+        uid: decodedToken.uid,
+        email: decodedToken.email,
+        role,
+      };
+    } catch (error) {
+      throw firebaseAuthError(error);
+    }
   }
 
   private parseRole(value: unknown): UserRole {
@@ -34,7 +39,7 @@ export class FirebaseTokenVerifierService implements TokenVerifier {
       typeof value !== 'string' ||
       !Object.values(UserRole).includes(value as UserRole)
     ) {
-      throw new Error('Token does not contain a valid role');
+      throw new UnauthorizedException('Token does not contain a valid role');
     }
 
     return value as UserRole;

@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "ParcelFlow Core Logistics API (MVP)",
-    "description": "Business operations remain Week 1 drafts, not live endpoints. Week 2 implements GET /auth/me and GET /admin/me under /v1; GET /healthz remains public outside /v1. Authentication uses verified Firebase ID Tokens and current Firebase custom claims for CUSTOMER, DRIVER and ADMIN. No public role-assignment endpoint is provided.\n\nRoles: CUSTOMER, DRIVER, ADMIN; Admin performs dispatch operations.\nBaseline shipment flow: CREATED -> ASSIGNED -> PICKED_UP -> DELIVERED / DELIVERY_FAILED.\nDraft conventions: business routes use /v1; GPS POST /locations returns 202; REST uses dropoffAddress/dropoffLocation and data/pagination. See docs/api-contract.md for field mappings and pending integration decisions. Cancellation is preserved separately under x-proposals and requires team approval. Session/sequence GPS behavior, identifier design and idempotency require review before implementation.",
-    "version": "0.3.0-auth-week2"
+    "description": "Business operations remain Week 1 drafts, not live endpoints. Week 2 implements GET /auth/me and GET /admin/me under /v1; GET /healthz remains public outside /v1. Authentication uses verified Firebase ID Tokens and current Firebase custom claims for CUSTOMER, DRIVER and ADMIN. No public role-assignment endpoint is provided.\n\nRoles: CUSTOMER, DRIVER, ADMIN; Admin performs dispatch operations.\nBaseline shipment flow: CREATED -> ASSIGNED -> PICKED_UP -> DELIVERED / DELIVERY_FAILED.\nDraft conventions: business routes use /v1; GPS POST /locations returns 202; REST uses dropoffAddress/dropoffLocation and data/pagination. See docs/api-contract.md for field mappings and pending integration decisions. Cancellation is preserved separately under x-proposals and requires team approval. Session/sequence GPS behavior, identifier design and idempotency require review before implementation.\n\nAuth review follow-up: HTTP errors use ProblemDetails. Business user linkage validates users.firebaseUid and current role before business handlers; missing/inconsistent linkage returns 409 USER_NOT_PROVISIONED, dependency failure returns 503. Business endpoints remain drafts; this change does not deploy schema or implement shipment logic.",
+    "version": "0.3.1-auth-week2-review"
   },
   "servers": [
     {
@@ -77,6 +77,9 @@
           },
           "500": {
             "$ref": "#/components/responses/500InternalServerError"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
           }
         },
         "security": [
@@ -144,6 +147,12 @@
           },
           "500": {
             "$ref": "#/components/responses/500InternalServerError"
+          },
+          "409": {
+            "$ref": "#/components/responses/409Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
           }
         },
         "security": [
@@ -189,6 +198,12 @@
           },
           "500": {
             "$ref": "#/components/responses/500InternalServerError"
+          },
+          "409": {
+            "$ref": "#/components/responses/409Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
           }
         },
         "security": [
@@ -246,7 +261,7 @@
             "$ref": "#/components/responses/404NotFound"
           },
           "409": {
-            "description": "Invalid state transition (shipment already picked up, delivered, failed)",
+            "description": "Invalid state transition (shipment already picked up, delivered, failed); business identity linkage failure returns USER_NOT_PROVISIONED",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -257,6 +272,9 @@
           },
           "500": {
             "$ref": "#/components/responses/500InternalServerError"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
           }
         },
         "security": [
@@ -305,6 +323,9 @@
           },
           "500": {
             "$ref": "#/components/responses/500InternalServerError"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
           }
         },
         "security": [
@@ -363,6 +384,9 @@
           },
           "500": {
             "$ref": "#/components/responses/500InternalServerError"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
           }
         },
         "security": [
@@ -424,6 +448,9 @@
           },
           "500": {
             "$ref": "#/components/responses/500InternalServerError"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
           }
         },
         "security": [
@@ -480,6 +507,9 @@
           },
           "500": {
             "$ref": "#/components/responses/500InternalServerError"
+          },
+          "409": {
+            "$ref": "#/components/responses/409Conflict"
           }
         },
         "security": [
@@ -528,6 +558,12 @@
           },
           "500": {
             "$ref": "#/components/responses/500InternalServerError"
+          },
+          "409": {
+            "$ref": "#/components/responses/409Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
           }
         },
         "security": [
@@ -612,7 +648,10 @@
             }
           },
           "401": {
-            "description": "Missing, invalid, expired or revoked token; disabled account; missing or stale role claim"
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
           }
         }
       }
@@ -640,10 +679,13 @@
             }
           },
           "401": {
-            "description": "Missing, invalid, expired or revoked token; disabled account; missing or stale role claim"
+            "$ref": "#/components/responses/401Unauthorized"
           },
           "403": {
-            "description": "Authenticated user is not ADMIN"
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
           }
         }
       }
@@ -724,7 +766,7 @@
         }
       },
       "409Conflict": {
-        "description": "Conflicting state transition or duplicate idempotency conflict",
+        "description": "Business user missing/inconsistent (USER_NOT_PROVISIONED), conflicting state transition, or idempotency conflict",
         "content": {
           "application/problem+json": {
             "schema": {
@@ -754,7 +796,7 @@
         }
       },
       "503ServiceUnavailable": {
-        "description": "Service temporarily unavailable (e.g. telemetry buffer full or database down)",
+        "description": "Dependency temporarily unavailable or misconfigured, including Firebase Auth or the user database; not an invalid-token error",
         "content": {
           "application/problem+json": {
             "schema": {
@@ -1244,7 +1286,8 @@
               "IDEMPOTENCY_KEY_CONFLICT",
               "RATE_LIMIT_EXCEEDED",
               "SERVICE_UNAVAILABLE",
-              "INTERNAL_SERVER_ERROR"
+              "INTERNAL_SERVER_ERROR",
+              "USER_NOT_PROVISIONED"
             ],
             "example": "INVALID_STATE_TRANSITION"
           },

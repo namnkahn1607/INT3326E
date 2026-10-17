@@ -55,7 +55,7 @@ describe('AuthModule HTTP integration', () => {
   });
 
   it('returns 401 for a failed Firebase verification', async () => {
-    verifyIdToken.mockRejectedValueOnce(new Error('expired token'));
+    verifyIdToken.mockRejectedValueOnce(Object.assign(new Error('expired token'), { code: 'auth/id-token-expired' }));
     const response = await fetch(`${baseUrl}/auth-test/admin`, {
       headers: { Authorization: 'Bearer expired-token' },
     });
