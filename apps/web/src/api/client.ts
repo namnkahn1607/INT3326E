@@ -1,6 +1,8 @@
 /**
  * Centralized API client with auth token interceptor and base error handling.
  */
+import { readSessionToken } from '../features/auth/session'
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/v1'
 
 interface RequestOptions extends RequestInit {
@@ -11,7 +13,11 @@ export async function apiClient<T>(
   endpoint: string,
   options: RequestOptions = {}
 ): Promise<T> {
-  const { token, headers, ...restOptions } = options
+  if (import.meta.env.PROD && !import.meta.env.VITE_API_URL) {
+    throw new Error('VITE_API_URL is required for a production build')
+  }
+  const { token: suppliedToken, headers, ...restOptions } = options
+  const token = suppliedToken === undefined ? await readSessionToken() : suppliedToken
 
   const reqHeaders: Record<string, string> = {
     'Content-Type': 'application/json',

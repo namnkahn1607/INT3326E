@@ -54,4 +54,29 @@ describe('Week 1 API integration', () => {
       expect((await fetch(`${baseUrl}${path}`)).status).toBe(404);
     }
   });
+
+  it('protects real profile routes and allows only configured CORS preflight origins', async () => {
+    expect((await fetch(`${baseUrl}/v1/auth/me`)).status).toBe(401);
+    expect((await fetch(`${baseUrl}/v1/admin/me`)).status).toBe(401);
+    const response = await fetch(`${baseUrl}/v1/auth/me`, {
+      method: 'OPTIONS', headers: { Origin: 'https://int3326e.web.app',
+        'Access-Control-Request-Method': 'GET', 'Access-Control-Request-Headers': 'authorization' },
+    });
+    expect(response.status).toBe(204);
+    expect(response.headers.get('access-control-allow-origin')).toBe('https://int3326e.web.app');
+    const denied = await fetch(`${baseUrl}/v1/auth/me`, {
+      method: 'OPTIONS', headers: { Origin: 'https://untrusted.example', 'Access-Control-Request-Method': 'GET' },
+    });
+    expect(denied.headers.get('access-control-allow-origin')).toBeNull();
+  });
+
+  it('allows the Create shipment idempotency header in browser preflight', async () => {
+    const response = await fetch(`${baseUrl}/v1/shipments`, {
+      method: 'OPTIONS', headers: { Origin: 'https://int3326e.web.app',
+        'Access-Control-Request-Method': 'POST',
+        'Access-Control-Request-Headers': 'authorization,content-type,idempotency-key' },
+    });
+    expect(response.status).toBe(204);
+    expect(response.headers.get('access-control-allow-headers')?.toLowerCase()).toContain('idempotency-key');
+  });
 });

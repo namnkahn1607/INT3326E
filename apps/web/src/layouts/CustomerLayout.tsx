@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from 'react-router'
 import { Navigation, type NavigationItem } from '../components/ui/Navigation'
+import { SessionControls } from '../features/auth/SessionControls'
 
 const customerNavItems: NavigationItem[] = [
   { path: '/customer', label: 'Tổng quan' },
@@ -37,6 +38,7 @@ export function CustomerLayout() {
               <span className="customer-avatar" aria-hidden="true">KT</span>
               <span className="user-name">Khách hàng</span>
             </div>
+            <SessionControls />
           </div>
         </div>
       </header>

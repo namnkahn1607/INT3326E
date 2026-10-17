@@ -62,4 +62,12 @@ describe('Firebase auth provider', () => {
     expect(sdk.initializeApp).toHaveBeenCalledOnce();
     expect(sdk.getApp).not.toHaveBeenCalled();
   });
+
+  it.each(['another-project', undefined])('rejects an existing default app without exact project agreement: %j', (projectId) => {
+    vi.stubEnv('FIREBASE_PROJECT_ID', 'int3326e');
+    sdk.getApps.mockReturnValue([{ name: '[DEFAULT]' }]);
+    sdk.getApp.mockReturnValue({ options: { projectId } });
+    expect(() => createAuth()).toThrow('another project');
+    expect(sdk.getAuth).not.toHaveBeenCalled();
+  });
 });
