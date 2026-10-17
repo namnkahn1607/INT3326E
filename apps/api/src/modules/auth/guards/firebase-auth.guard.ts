@@ -5,6 +5,9 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+
+import { PUBLIC_KEY } from '../decorators/public.decorator';
 
 import { AuthenticatedRequest } from '../interfaces/authenticated-request.interface';
 import {
@@ -17,9 +20,14 @@ export class FirebaseAuthGuard implements CanActivate {
   constructor(
     @Inject(TOKEN_VERIFIER)
     private readonly tokenVerifier: TokenVerifier,
+    @Inject(Reflector) private readonly reflector: Reflector,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    if (this.reflector.getAllAndOverride<boolean>(PUBLIC_KEY, [
+      context.getHandler(), context.getClass(),
+    ])) return true;
+
     const request = context
       .switchToHttp()
       .getRequest<AuthenticatedRequest>();

@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from 'react-router'
 import { Navigation, type NavigationItem } from '../components/ui/Navigation'
+import { SessionControls } from '../features/auth/SessionControls'
 
 const adminNavItems: NavigationItem[] = [
   { path: '/admin', label: 'Tổng quan' },
@@ -48,6 +49,7 @@ export function AdminLayout() {
           </div>
 
           <div className="topbar-right">
+            <SessionControls />
             <span className="admin-live-status"><i /> Hệ thống ổn định</span>
           </div>
         </header>

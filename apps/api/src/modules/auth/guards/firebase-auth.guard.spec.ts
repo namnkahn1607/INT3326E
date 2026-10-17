@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import { UnauthorizedException, type ExecutionContext } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { describe, expect, it, vi } from 'vitest';
 
 import { UserRole } from '../enums/user-role.enum';
@@ -8,8 +9,10 @@ import { FirebaseAuthGuard } from './firebase-auth.guard';
 
 function contextFor(request: AuthenticatedRequest): ExecutionContext {
   return {
+    getHandler: () => () => undefined,
+    getClass: () => class TestController {},
     switchToHttp: () => ({ getRequest: () => request }),
-  } as ExecutionContext;
+  } as unknown as ExecutionContext;
 }
 
 describe('FirebaseAuthGuard', () => {
@@ -17,7 +20,7 @@ describe('FirebaseAuthGuard', () => {
     'rejects malformed Authorization header %j before verifying',
     async (authorization) => {
       const verify = vi.fn();
-      const guard = new FirebaseAuthGuard({ verify });
+      const guard = new FirebaseAuthGuard({ verify }, new Reflector());
 
       await expect(guard.canActivate(contextFor({ headers: { authorization } })))
         .rejects.toBeInstanceOf(UnauthorizedException);
@@ -32,7 +35,7 @@ describe('FirebaseAuthGuard', () => {
       const verify = vi.fn().mockResolvedValue(user);
       const request: AuthenticatedRequest = { headers: { authorization } };
 
-      await expect(new FirebaseAuthGuard({ verify }).canActivate(contextFor(request)))
+      await expect(new FirebaseAuthGuard({ verify }, new Reflector()).canActivate(contextFor(request)))
         .resolves.toBe(true);
       expect(verify).toHaveBeenCalledWith('token');
       expect(request.user).toEqual(user);
@@ -43,7 +46,7 @@ describe('FirebaseAuthGuard', () => {
     const verify = vi.fn().mockRejectedValue(new Error('private verification details'));
     const request: AuthenticatedRequest = { headers: { authorization: 'Bearer token' } };
 
-    await expect(new FirebaseAuthGuard({ verify }).canActivate(contextFor(request)))
+    await expect(new FirebaseAuthGuard({ verify }, new Reflector()).canActivate(contextFor(request)))
       .rejects.toMatchObject({
         message: 'Invalid or expired authentication token',
         status: 401,

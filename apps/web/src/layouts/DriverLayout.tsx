@@ -1,4 +1,5 @@
 import { NavLink, Outlet } from 'react-router'
+import { SessionControls } from '../features/auth/SessionControls'
 
 export function DriverLayout() {
   return (
@@ -7,7 +8,7 @@ export function DriverLayout() {
         <NavLink to="/driver" style={{ color: '#fff', fontWeight: 700 }}>
           ParcelFlow Driver
         </NavLink>
-        <span style={{ fontSize: '12px' }}>Thành viên 4</span>
+        <SessionControls />
       </header>
 
       <main>
