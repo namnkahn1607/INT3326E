@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useAuth } from './useAuth'
 
@@ -6,12 +6,17 @@ export function SessionControls() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [error, setError] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const sending = useRef(false)
   return <div className="auth-session">
     <span>{user?.displayName}</span>
-    <button type="button" onClick={async () => {
+    <button type="button" disabled={busy} aria-busy={busy} onClick={async () => {
+      if (sending.current) return
+      sending.current = true; setBusy(true); setError(false)
       try { await logout(); navigate('/login', { replace: true }) }
       catch { setError(true) }
-    }}>Đăng xuất</button>
+      finally { sending.current = false; setBusy(false) }
+    }}>{busy ? 'Đang đăng xuất…' : 'Đăng xuất'}</button>
     {error && <span role="alert">Không đăng xuất được. Hãy thử lại.</span>}
   </div>
 }

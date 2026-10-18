@@ -6,6 +6,7 @@ import { DriverLayout } from './layouts/DriverLayout'
 import { NotFoundPage } from './components/ui/NotFoundPage'
 import { LoginPage } from './features/auth/LoginPage'
 import { HomeRedirect, ProtectedRoute } from './features/auth/ProtectedRoute'
+import { StartupExperience } from './features/auth/StartupExperience'
 
 // Feature Customer
 import {
@@ -14,6 +15,7 @@ import {
   CustomerNotificationsPage,
   CustomerOverviewPage,
   CustomerShipmentsPage,
+  CustomerShipmentDetailPage,
 } from './features/customer'
 
 // Feature Admin
@@ -31,7 +33,7 @@ import { DriverPlaceholderPage } from './features/driver'
 
 export default function App() {
   return (
-    <Routes>
+    <StartupExperience><Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/" element={<HomeRedirect />} />
 
@@ -40,6 +42,7 @@ export default function App() {
         <Route index element={<CustomerOverviewPage />} />
         <Route path="create" element={<CustomerCreatePage />} />
         <Route path="shipments" element={<CustomerShipmentsPage />} />
+        <Route path="shipments/:id" element={<CustomerShipmentDetailPage />} />
         <Route path="history" element={<CustomerHistoryPage />} />
         <Route path="notifications" element={<CustomerNotificationsPage />} />
         <Route path="*" element={<NotFoundPage />} />
@@ -64,6 +67,6 @@ export default function App() {
 
       {/* Trang 404 chung */}
       <Route path="*" element={<NotFoundPage />} />
-    </Routes>
+    </Routes></StartupExperience>
   )
 }

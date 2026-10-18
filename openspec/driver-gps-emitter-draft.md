@@ -10,7 +10,14 @@
 
 ## 1. Mục tiêu và căn cứ
 
-Phạm vi tuần 1 dựa trên `ParcelFlow - Bảng theo dõi tiến độ.xlsx`, sheet `Tiến độ 10 Tuần`, ô D7:
+Nguồn hiện hành là [PF SPEC 01 nội dung v1.3](../docs/spec-baseline.md), VII.2;
+bảng tiến độ cũ chỉ là bối cảnh. Tuần 1 đã được nhóm chốt tại
+[issue #8](https://github.com/namnkahn1607/INT3326E/issues/8) và
+[#10](https://github.com/namnkahn1607/INT3326E/issues/10). Dùng lại bằng chứng Hello World,
+không yêu cầu publish/pull lại, nộp thêm ảnh/video hoặc ACK log để tái nghiệm thu frontend.
+Kết quả kiểm tra hiện tại được ghi riêng tại [acceptance.md](week1-reacceptance/acceptance.md).
+
+Phạm vi tuần 1 được bảo toàn:
 
 1. Thử publish/consume thông điệp “hello world” qua Pub/Sub, phối hợp với phần GPS pipeline.
 2. Phác thảo component GPS emitter.
@@ -19,7 +26,7 @@ Kết quả cần đạt: nhận được thông điệp qua Pub/Sub và có com
 
 Theo yêu cầu cập nhật tuần 1, Hello World đã đạt và không cần thử lại. TV4 phối hợp TV3 ghép emitter vào Driver, kiểm tra Start/Stop và sửa tham chiếu contract thành `POST /v1/locations`.
 
-Checkpoint dự án tuần 1 tại ô F4 còn yêu cầu URL chung truy cập được, health check của hai Cloud Run service trả 200 và topic/subscription tồn tại. Nghiệm thu Driver Frontend và emitter là một phần của checkpoint; bằng chứng triển khai và health check cần được xác nhận riêng.
+Checkpoint dự án tuần 1 tại VII.2 yêu cầu URL chung truy cập được, health check của hai Cloud Run service trả 200 và topic/subscription tồn tại. Nghiệm thu Driver Frontend và emitter là một phần của checkpoint; bằng chứng triển khai và health check cần được xác nhận riêng.
 
 ## 2. Phạm vi
 
@@ -47,7 +54,7 @@ Các mục này được triển khai theo roadmap ở mục 8. Riêng thử ngh
 | Project | `int3326e` |
 | Subscription trong ảnh | `hello-test-sub` |
 | Tên resource | `projects/int3326e/subscriptions/hello-test-sub` |
-| Topic thử nghiệm | `hello-test` — `projects/int3326e/topics/hello-test`; ảnh bổ sung ngày 09/10/2026 hiển thị topic cùng subscription `hello-test-sub` |
+| Topic thử nghiệm | `hello-test` — `projects/int3326e/topics/hello-test`; ảnh bổ sung ngày 09/10/2026 hiển thị topic cùng subscription `hello-test-sub`, được ghi nhận tại issue #8 |
 | Message body | `Hello World` |
 | Điều kiện trước khi chạy | Topic và subscription tồn tại; tài khoản thử nghiệm có quyền publish/pull tương ứng |
 
@@ -138,11 +145,15 @@ Chạy `npm run dev:web` tại root repo, mở URL mà Vite in ra và vào `/dri
 | TC-06 | Khi đang chạy, chuyển sang route khác rồi quay lại `/driver`. | Instance cũ được dọn; instance mới dừng, số mẫu `0`, chưa có JSON. |
 | TC-07 | Kiểm tra prop bằng `driverId` rỗng hoặc chỉ có khoảng trắng trong môi trường phát triển. | Không cho bắt đầu, không tạo mẫu. Không đổi tài xế mẫu trên trang bàn giao. |
 | TC-08 | Quan sát quyền vị trí và Network trong lúc phát mẫu. | Emitter không yêu cầu quyền vị trí và không phát sinh request gửi GPS. |
-| TC-09 | Đối chiếu bằng chứng Hello World đã có; không chạy lại. | Đã đạt theo yêu cầu cập nhật tuần 1. |
+| TC-09 | Đối chiếu bằng chứng Hello World đã đạt tại issue #8, không publish/pull lại. | Ghi nhận project/topic/subscription và link nghiệm thu lịch sử riêng với kiểm tra UI lần này. |
 
 Kiểm tra kỹ thuật bằng script sẵn có: `npm run lint:web` và `npm run build:web`. Các lệnh và ca kiểm tra trên là kế hoạch nghiệm thu; chỉ xác nhận đạt sau khi chạy và ghi nhận kết quả thực tế.
 
 ## 6. Bằng chứng hiện có
+
+Bằng chứng dưới đây giữ snapshot cũ trước khi nhóm đóng issue #8/#10; các giới hạn
+ảnh tại thời điểm đó không tự trở thành việc bắt buộc làm lại. Kết quả hiện tại xem
+[acceptance.md](week1-reacceptance/acceptance.md).
 
 Ngày 09/10/2026 bổ sung 10 ảnh do TV4 cung cấp, lưu tại `docs/evidence/week-1/`, và cập nhật ảnh mẫu thứ nhất. Bộ ảnh xác định topic/subscription, ghi nhận publish/pull `Hello World`, giao diện emitter ban đầu, khi có một mẫu, hai mẫu và khi dừng, cùng kết quả kiểm tra kỹ thuật. Kết luận dưới đây dựa trên nội dung ảnh và kết quả lệnh đã chạy; không suy ra các ca kiểm tra chưa có bằng chứng. Các yêu cầu lưu bằng chứng chi tiết tại PS-01 đến PS-03 và mục 7 là checklist của tài liệu này; ô D7 không yêu cầu riêng ảnh publish thành công, ACK hoặc worker consume bằng code.
 
@@ -250,8 +261,8 @@ Start/Stop đạt ở mức component. Công cụ hiện không có trình duy�
 
 Phạm vi Driver Frontend và GPS emitter tuần 1 được nghiệm thu khi:
 
-- Giữ bằng chứng publish/pull `Hello World` đã đạt, xác định rõ topic và subscription thực tế; không chạy lại.
-- GPS emitter trên `/driver` đạt TC-01 đến TC-08, có ảnh hoặc video thể hiện phát ít nhất hai mẫu và dừng phát.
+- Dùng lại biên bản Hello World đã đạt tại issue #8, xác định project/topic/subscription; không chạy lại phép thử.
+- GPS emitter trên `/driver` được kiểm tra hành vi theo phạm vi tuần 1; ghi rõ ca đã chạy và ca chưa chạy. Không bắt buộc tạo ảnh/video mới nếu đã có kết quả kiểm chứng tương ứng.
 - Lưu kết quả lint/build cùng các lỗi còn tồn tại, nếu có.
 - Tài liệu và mã nguồn emitter được bàn giao, ghi rõ payload còn là bản nháp và bước tích hợp tiếp theo.
 
@@ -259,15 +270,21 @@ Phạm vi Driver Frontend và GPS emitter tuần 1 được nghiệm thu khi:
 
 | Tuần | Phạm vi phát triển theo bảng tiến độ | Điểm tích hợp |
 | --- | --- | --- |
-| 2 — D13 | Tiếp tục thử pipeline Pub/Sub, thống nhất schema GPS giữa Driver Frontend và GPS pipeline. | Contract request/event, timestamp, `eventId`, `seq`, `receivedAt` và nơi tạo từng trường. |
-| 3 — D19 | Driver login/dashboard skeleton, phát thử GPS event. | Nối driver client với endpoint `POST /v1/locations` của backend theo contract cập nhật; ô D17 trong bảng tiến độ gốc còn ghi tên cũ. |
-| 4 — D25 | Kết nối Driver app gửi GPS thật hoặc simulator toggle. | Frontend gọi REST; backend publish Pub/Sub, worker xử lý dữ liệu. |
-| 5 — D31 | Xử lý GPS stale/invalid, bắt đầu phác thảo load test. | Chốt cách xử lý lỗi vị trí và lỗi gửi trước khi nghiệm thu pipeline đầy đủ. |
+| 2 — VII.3 | TV4 chuẩn hóa emitter và payload với TV2. | EVT01, timestamp UTC mili giây giữ nguyên khi retry; session/seq chỉ diagnostic. |
+| 3 — VII.4 | Driver UI và publisher/controller. | `POST /v1/locations`, role DRIVER, broker-confirmed 202; không đồng nghĩa đã persist. |
+| 4 — VII.5 | Vòng đời và Worker persist. | Canonical first-write-wins, transaction history/current đủ điều kiện, ACK sau commit. |
+| 5 — VII.6 | Tracking cloud đầu-cuối, offline/stale và cleanup. | Driver → API → queue → Worker → SQL → UI; kiểm chứng buffer/retry và quyền dữ liệu. |
 
-`POST /v1/locations` là endpoint theo contract cập nhật; các file controller/service/DTO của module location hiện còn rỗng. Spec tuần 1 không coi endpoint này đã hoạt động. Khi nối qua `apiClient`, dùng đường dẫn `/locations` vì base URL đã chứa `/v1`. Theo `frontend-spec.md`, khi tích hợp nghiệp vụ, emitter bắt đầu gửi GPS ở `PICKED_UP` và dừng khi đơn kết thúc (`DELIVERED` hoặc `DELIVERY_FAILED`); bản phác thảo hiện chưa kiểm tra trạng thái đơn hàng.
+`POST /v1/locations` là contract đích tại VI.API08; spec tuần 1 không coi handler đã hoạt động.
+Khi nối qua `apiClient`, dùng đường dẫn `/locations` vì base URL đã chứa `/v1`.
+Payload demo có driverId nội bộ không phải request production: API lấy driverId từ danh tính tin cậy.
+Theo FR04/UI02, emitter đích hoạt động khi trang Driver hoạt động; theo FR05/UI01, tracking
+ẩn vị trí/dừng polling khi đơn terminal. Không đánh đồng vòng đời emitter với một đơn duy nhất;
+bản phác thảo tuần 1 vẫn độc lập trạng thái đơn hàng.
 
 ## 9. Tài liệu tham chiếu
 
+- [PF SPEC 01 nội dung v1.3 và thứ tự ưu tiên nguồn](../docs/spec-baseline.md), VII.2–6; thay bảng tiến độ cũ khi có khác biệt.
 - `ParcelFlow - Bảng theo dõi tiến độ.xlsx`, sheet `Tiến độ 10 Tuần`: D7, F4 và D13/D19/D25/D31.
 - [Đặc tả frontend](frontend-spec.md): route Driver, luồng trạng thái và chu kỳ GPS.
 - [Thiết kế frontend](frontend-design.md): frontend giao tiếp REST và kiến trúc Pub/Sub.

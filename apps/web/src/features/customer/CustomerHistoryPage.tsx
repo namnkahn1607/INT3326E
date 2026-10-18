@@ -1,8 +1,10 @@
 import { StatusBadge } from '../../components/ui/StatusBadge'
+import { DemoNotice } from '../../components/ui/DemoNotice'
+import { formatDateTime } from '../../utils'
 
 export function CustomerHistoryPage() {
   return (
-    <div className="page-container">
+    <div className="page-container customer-api-page customer-history-page">
       <div className="page-header">
         <div>
           <h1 className="page-title">Lịch sử giao hàng</h1>
@@ -12,8 +14,9 @@ export function CustomerHistoryPage() {
         </div>
       </div>
 
+      <DemoNotice>Lịch sử bên dưới là dữ liệu mẫu, chưa phải lịch sử đơn hàng của tài khoản.</DemoNotice>
       <div className="section-block">
-        <div className="data-table-wrapper">
+        <div className="data-table-wrapper" role="region" aria-label="Lịch sử giao hàng minh họa, cuộn ngang để xem đầy đủ" tabIndex={0}>
           <table className="data-table">
             <thead>
               <tr>
@@ -31,7 +34,7 @@ export function CustomerHistoryPage() {
                 <td>Phạm Thị Mai</td>
                 <td>Tòa nhà FPT, Duy Tân, Cầu Giấy</td>
                 <td><StatusBadge status="DELIVERED" /></td>
-                <td>03/10/2026 15:45</td>
+                <td><time dateTime="2026-10-03T15:45:00+07:00">{formatDateTime('2026-10-03T15:45:00+07:00')}</time></td>
                 <td>Đã ký nhận đủ</td>
               </tr>
               <tr>
@@ -39,7 +42,7 @@ export function CustomerHistoryPage() {
                 <td>Hoàng Văn Cường</td>
                 <td>Hồ Gươm Plaza, Hà Đông</td>
                 <td><StatusBadge status="DELIVERY_FAILED" /></td>
-                <td>02/10/2026 18:20</td>
+                <td><time dateTime="2026-10-02T18:20:00+07:00">{formatDateTime('2026-10-02T18:20:00+07:00')}</time></td>
                 <td>Không liên lạc được người nhận</td>
               </tr>
               <tr>
@@ -47,7 +50,7 @@ export function CustomerHistoryPage() {
                 <td>Đỗ Thùy Linh</td>
                 <td>20 Phạm Hùng, Mỹ Đình</td>
                 <td><StatusBadge status="DELIVERED" /></td>
-                <td>01/10/2026 09:10</td>
+                <td><time dateTime="2026-10-01T09:10:00+07:00">{formatDateTime('2026-10-01T09:10:00+07:00')}</time></td>
                 <td>Giao đúng giờ hẹn</td>
               </tr>
             </tbody>

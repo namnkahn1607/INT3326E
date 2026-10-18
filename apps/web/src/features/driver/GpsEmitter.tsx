@@ -66,6 +66,7 @@ export function GpsEmitter({ driverId, onEmit }: GpsEmitterProps) {
           Dừng
         </button>
       </div>
+      <p className="ui-disabled-reason">{!driverId.trim() ? 'Cần mã tài xế để phát mẫu.' : running ? 'Đang phát mẫu. Chọn Dừng để kết thúc trước khi bắt đầu lại.' : 'Nút Dừng khả dụng sau khi bắt đầu phát mẫu.'}</p>
       {lastEvent ? (
         <pre style={{ marginTop: '16px', padding: '12px', background: '#f0fdf4', overflowX: 'auto' }}>
           <code>{JSON.stringify(lastEvent, null, 2)}</code>

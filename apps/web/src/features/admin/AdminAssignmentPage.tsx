@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { StatusBadge } from '../../components/ui/StatusBadge'
+import { Icon } from '../../components/ui/Icon'
 
 interface UnassignedShipment {
   id: string
@@ -70,20 +71,10 @@ const mockDrivers: AvailableDriver[] = [
 ]
 
 export function AdminAssignmentPage() {
-  const [selectedShipment, setSelectedShipment] = useState<string>('u-1')
-  const [selectedDriver, setSelectedDriver] = useState<string>('d-2')
-  const [assignSuccess, setAssignSuccess] = useState<string | null>(null)
-
-  const handleAssign = () => {
-    const s = mockUnassignedList.find((x) => x.id === selectedShipment)
-    const d = mockDrivers.find((x) => x.id === selectedDriver)
-    if (s && d) {
-      setAssignSuccess(
-        `Đã phân công đơn ${s.code} cho tài xế ${d.name}.`,
-      )
-      setTimeout(() => setAssignSuccess(null), 5000)
-    }
-  }
+  const [selectedShipment, setSelectedShipment] = useState<string>('')
+  const [selectedDriver, setSelectedDriver] = useState<string>('')
+  const reason = !selectedShipment ? 'Chọn một đơn và một tài xế để xem cặp phân công.'
+    : !selectedDriver ? 'Chọn tài xế để tiếp tục.' : 'Chưa kết nối API phân công. Lựa chọn chỉ để xem trước, chưa được lưu lên máy chủ.'
 
   return (
     <div className="admin-page">
@@ -97,25 +88,21 @@ export function AdminAssignmentPage() {
         </div>
       </div>
 
-      {assignSuccess && (
-        <div className="alert-box alert-success">
-          {assignSuccess}
-        </div>
-      )}
-
       <div className="assignment-split-layout">
         <div className="assignment-col">
           <div className="col-header">
-            <h3>1. Chọn đơn chờ gán ({mockUnassignedList.length})</h3>
+            <h2>1. Chọn đơn chờ gán</h2>
             <span className="badge-count">{mockUnassignedList.length} đơn</span>
           </div>
 
           <div className="assignment-cards-list">
             {mockUnassignedList.map((item) => (
-              <div
+              <button
+                type="button"
+                aria-pressed={selectedShipment === item.id}
                 key={item.id}
                 onClick={() => setSelectedShipment(item.id)}
-                className={`assignment-select-card ${
+                className={`assignment-select-card ui-selection-card ${
                   selectedShipment === item.id ? 'selected' : ''
                 }`}
               >
@@ -124,27 +111,29 @@ export function AdminAssignmentPage() {
                   <StatusBadge status="CREATED" />
                 </div>
                 <div className="card-route-info">
-                  <p>📍 <strong>Lấy:</strong> {item.pickup}</p>
-                  <p>🏁 <strong>Giao:</strong> {item.destination}</p>
+                  <p><Icon name="pin" /><strong>Lấy:</strong> {item.pickup}</p>
+                  <p><Icon name="pin" /><strong>Giao:</strong> {item.destination}</p>
                 </div>
                 <span className="time-badge">{item.createdTime}</span>
-              </div>
+              </button>
             ))}
           </div>
         </div>
 
         <div className="assignment-col">
           <div className="col-header">
-            <h3>2. Chọn tài xế khả dụng</h3>
+            <h2>2. Chọn tài xế</h2>
             <span className="badge-count">Đang online</span>
           </div>
 
           <div className="assignment-cards-list">
             {mockDrivers.map((driver) => (
-              <div
+              <button
+                type="button"
+                aria-pressed={selectedDriver === driver.id}
                 key={driver.id}
                 onClick={() => setSelectedDriver(driver.id)}
-                className={`assignment-select-card ${
+                className={`assignment-select-card ui-selection-card ${
                   selectedDriver === driver.id ? 'selected' : ''
                 }`}
               >
@@ -159,25 +148,27 @@ export function AdminAssignmentPage() {
                   </span>
                 </div>
                 <div className="card-route-info">
-                  <p>📞 {driver.phone}</p>
-                  <p>🛵 {driver.vehicle}</p>
-                  <p>📦 Đang chở: <strong>{driver.currentActiveOrders} đơn</strong></p>
+                  <p>Điện thoại: {driver.phone}</p>
+                  <p><Icon name="truck" />{driver.vehicle}</p>
+                  <p><Icon name="box" />Đang chở: <strong>{driver.currentActiveOrders} đơn</strong></p>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </div>
       </div>
 
       <div className="assignment-action-bar">
-        <div className="summary-text">
-          Đang chọn đơn: <strong>{mockUnassignedList.find((x) => x.id === selectedShipment)?.code}</strong> → Gán cho:{' '}
-          <strong>{mockDrivers.find((x) => x.id === selectedDriver)?.name}</strong>
+        <div className="summary-text" role="status">
+          Đang chọn đơn: <strong>{mockUnassignedList.find((x) => x.id === selectedShipment)?.code ?? 'Chưa chọn'}</strong> → Tài xế:{' '}
+          <strong>{mockDrivers.find((x) => x.id === selectedDriver)?.name ?? 'Chưa chọn'}</strong>
+          <p className="ui-disabled-reason" id="assignment-disabled">{reason}</p>
         </div>
         <button
           type="button"
-          onClick={handleAssign}
-          className="btn btn-warning btn-lg"
+          disabled
+          aria-describedby="assignment-disabled"
+          className="btn btn-primary btn-lg"
         >
           Xác nhận phân công tài xế
         </button>

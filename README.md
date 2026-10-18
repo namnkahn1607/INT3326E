@@ -2,6 +2,11 @@
 
 **A logistics & delivery platform built "Cloud First" - Modular Monolith + async processing for high-throughput GPS data.**
 
+Yêu cầu hiện hành: [PF SPEC 01, nội dung v1.3 và thứ tự ưu tiên nguồn](docs/spec-baseline.md).
+Tuần 1 được bảo toàn theo VII.2; Auth/API thật từ tuần 2. Xem
+[hồ sơ tái nghiệm thu tuần 1](openspec/week1-reacceptance/acceptance.md)
+để phân biệt kết quả hiện tại, bằng chứng lịch sử và việc còn mở.
+
 | | |
 |---|---|
 | **Course** | Cloud Application Development - UET |
