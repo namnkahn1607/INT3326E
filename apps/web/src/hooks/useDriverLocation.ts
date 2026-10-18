@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react'
 export interface Coordinates {
   lat: number
   lng: number
+  latitude: number
+  longitude: number
 }
 
 export function useDriverLocation(watch = false) {
@@ -21,14 +23,26 @@ export function useDriverLocation(watch = false) {
 
     if (!watch) {
       navigator.geolocation.getCurrentPosition(
-        (pos) => setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        (pos) =>
+          setCoords({
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+          }),
         (err) => setError(err.message)
       )
       return
     }
 
     const watchId = navigator.geolocation.watchPosition(
-      (pos) => setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      (pos) =>
+        setCoords({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+        }),
       (err) => setError(err.message),
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     )
