@@ -1,5 +1,10 @@
 # API contract — Week 1 draft
 
+GPS request/event fields were selected on 16/10/2026 for week 2. The current
+contract is [GPS event contract](gps-event-contract.md); independent review by
+the GPS pipeline owner remains pending. The endpoint remains unimplemented.
+The remaining week 1 decisions and proposals below are preserved.
+
 ## Scope and sources
 
 `docs/openapi.json` is TV1's contract draft for later implementation.
@@ -29,10 +34,11 @@ runtime handlers are added in week 1.
   The original cancellation operation and request schema are preserved under
   `x-proposals.cancellation` in OpenAPI and are not active draft operations.
   Do not introduce that state into the shared or database enum before approval.
-- The existing GPS draft's `sessionId/seq` approach is a proposal for later
-  idempotency/out-of-order handling, not a working pipeline. In particular,
-  blindly accepting a changed session can re-activate a late old session;
-  worker rules must be reviewed before implementation.
+- The GPS `sessionId/seq` proposal is superseded by the week 2 timestamp contract.
+  The client sends `lat`, `lng`, `seq`, `clientTimestamp`; API derives `driverId`
+  from authenticated identity and adds `eventId`, `receivedAt`. Sequence is
+  diagnostic; freshness uses `clientTimestamp`, and history dedupe uses
+  `(driverId, clientTimestamp)`. No runtime endpoint or DB behavior is implied.
 - Issue #2 proposes direct database writes instead of Pub/Sub. It still requires
   a group decision before GPS business implementation; it does not remove the
   week 1 Pub/Sub Hello World checkpoint.
@@ -49,7 +55,8 @@ The frontend retains `Admin*` and `/admin`; this PR does not change TV3's UI.
 
 The Prisma schema and shared type index retain TV3's existing five-state
 domain draft; only the obsolete role is removed. Their other fields are
-draft designs, not a generated database or a settled GPS event contract.
+draft designs, not a generated database. GPS types and validation now follow
+the week 2 event contract; the storage schema still needs later alignment.
 
 ## Review before later implementation
 
@@ -57,3 +64,12 @@ TV1 owns the API contract and data/shared draft; TV3/TV4 review client fields,
 pagination and telemetry; TV6 reviews Auth/RBAC; TV5 confirms actual resource
 names. Record any approved changes in OpenAPI and this document in the same PR.
 Health tests and the TV6 Auth/Admin tests can be run now without Firebase calls.
+
+## TV6 Auth tuần 2 — 17/10/2026
+
+Bổ sung API đã triển khai `GET /v1/auth/me` (ba role) và `GET /v1/admin/me` (ADMIN). Mọi handler mặc định được guard bảo vệ; health public. API nghiệp vụ còn lại vẫn là draft. Custom claims Firebase là nguồn role, có kiểm tra revocation/account hiện tại; không có role Dispatcher riêng hoặc public API cấp quyền. Xem `docs/auth-rbac.md` mục 12 cho claims CLI, cấu hình frontend/runtime, kiểm thử và trạng thái cloud chưa nghiệm thu.
+
+
+### Follow-up review Auth tuần 2
+
+API hiện trả ProblemDetails cho lỗi qua ApiExceptionFilter; không còn dùng lỗi Nest mặc định ở runtime AppModule. 401/403 giữ ý nghĩa xác thực/quyền; Firebase/SQL tạm lỗi hoặc chưa cấu hình trả 503. BusinessUserGuard trên vùng Shipment dùng UsersService để nối Firebase UID với user nghiệp vụ; thiếu/lệch linkage trả 409 USER_NOT_PROVISIONED. /auth/me và /admin/me không bắt buộc user SQL. OpenAPI đã ghi nhận các lỗi này, business handlers vẫn chưa triển khai. CORS cho Idempotency-Key. Xem docs/auth-rbac.md mục 12.6 về mapping schema, seed và cloud acceptance còn mở.
