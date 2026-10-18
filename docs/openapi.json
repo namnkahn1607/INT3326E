@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "ParcelFlow Core Logistics API (MVP)",
-    "description": "Business operations remain Week 1 drafts, not live endpoints. Week 2 implements GET /auth/me and GET /admin/me under /v1; GET /healthz remains public outside /v1. Authentication uses verified Firebase ID Tokens and current Firebase custom claims for CUSTOMER, DRIVER and ADMIN. No public role-assignment endpoint is provided.\n\nRoles: CUSTOMER, DRIVER, ADMIN; Admin performs dispatch operations.\nBaseline shipment flow: CREATED -> ASSIGNED -> PICKED_UP -> DELIVERED / DELIVERY_FAILED.\nDraft conventions: business routes use /v1; GPS POST /locations returns 202; REST uses dropoffAddress/dropoffLocation and data/pagination. See docs/api-contract.md for field mappings and pending integration decisions. Cancellation is preserved separately under x-proposals and requires team approval. Session/sequence GPS behavior, identifier design and idempotency require review before implementation.\n\nAuth review follow-up: HTTP errors use ProblemDetails. Business user linkage validates users.firebaseUid and current role before business handlers; missing/inconsistent linkage returns 409 USER_NOT_PROVISIONED, dependency failure returns 503. Business endpoints remain drafts; this change does not deploy schema or implement shipment logic.",
+    "description": "Business operations remain Week 1 drafts, not live endpoints. Week 2 implements GET /auth/me and GET /admin/me under /v1; GET /healthz remains public outside /v1. Authentication uses verified Firebase ID Tokens and current Firebase custom claims for CUSTOMER, DRIVER and ADMIN. No public role-assignment endpoint is provided.\n\nRoles: CUSTOMER, DRIVER, ADMIN; Admin performs dispatch operations.\nBaseline shipment flow: CREATED -> ASSIGNED -> PICKED_UP -> DELIVERED / DELIVERY_FAILED.\nDraft conventions: business routes use /v1; GPS POST /locations returns 202 after Pub/Sub publish; REST uses dropoffAddress/dropoffLocation and data/pagination. See docs/api-contract.md for field mappings and pending integration decisions. Cancellation is preserved separately under x-proposals and requires team approval. GPS uses clientTimestamp for ordering and seq for diagnostics; see docs/gps-event-contract.md for the selected request/event contract and pending independent pipeline review.\n\nAuth review follow-up: HTTP errors use ProblemDetails. Business user linkage validates users.firebaseUid and current role before business handlers; missing/inconsistent linkage returns 409 USER_NOT_PROVISIONED, dependency failure returns 503. Business endpoints remain drafts; this change does not deploy schema or implement shipment logic.",
     "version": "0.3.1-auth-week2-review"
   },
   "servers": [
@@ -467,7 +467,7 @@
           "Tracking & Location"
         ],
         "summary": "Submit driver location coordinates (High throughput - Async)",
-        "description": "**Asynchronous Write Path:**\nDriver client submits periodic telemetry (e.g. every ~8 seconds). The API validates the payload, queues/buffers it for background processing, and immediately returns `202 Accepted`.\n\n**Session-Scoped Monotonic Sequence:**\nDriver clients generate a `sessionId` (UUID v4) on application startup/session start, and a monotonic counter `seq` (>= 1). The ingestion worker tracks `(driverId, sessionId, lastSeq)`:\n- If `sessionId` changes, the new session wins unconditionally, resetting the sequence.\n- If `sessionId` matches, packets are accepted only if `seq > lastSeq`.\nThis completely prevents silent data loss when a mobile client crashes, restarts, and resets its counter.\n\n**Authorized Roles:** `DRIVER`.",
+        "description": "**Asynchronous Write Path (not implemented):**\nDriver submits lat, lng, seq and clientTimestamp every ~8 seconds. The API derives driverId from authenticated identity, creates eventId and receivedAt, and publishes GpsTelemetryEvent as UTF-8 JSON. Return 202 only after publish succeeds; this does not confirm a database write. Reject unknown request fields.\n\n**Timestamp Ordering:**\nclientTimestamp determines location freshness. seq is diagnostic and may restart at 1 after a client restart; it is not a cross-session ordering key. Worker dedupe uses (driverId, clientTimestamp), and current location advances only for a strictly newer clientTimestamp. Retry publish preserves the entire event. See docs/gps-event-contract.md for the selected week 2 contract and pending independent pipeline review.\n\n**Authorized Roles:** `DRIVER`.",
         "operationId": "submitLocation",
         "requestBody": {
           "required": true,
@@ -1091,24 +1091,26 @@
       },
       "SubmitLocationRequest": {
         "type": "object",
+        "additionalProperties": false,
         "required": [
-          "sessionId",
           "seq",
           "lat",
-          "lng"
+          "lng",
+          "clientTimestamp"
         ],
-        "description": "Periodic location telemetry sent by driver mobile client.",
+        "description": "Periodic driver telemetry. Server-managed identity and event metadata are forbidden in the request. See docs/gps-event-contract.md.",
+        "example": {
+          "lat": 21.0285,
+          "lng": 105.8542,
+          "seq": 1,
+          "clientTimestamp": "2026-10-16T10:00:00.000Z"
+        },
         "properties": {
-          "sessionId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Unique UUID v4 generated on driver mobile app startup. A new session ID resets the sequence counter on the server, preventing silent drops after app crashes.",
-            "example": "b18f08f2-89b2-4d2d-9653-535d2d53e7f1"
-          },
           "seq": {
             "type": "integer",
             "minimum": 1,
-            "description": "Monotonically increasing sequence number within the current sessionId.",
+            "maximum": 2147483647,
+            "description": "Client sample counter within one emitter lifetime. Diagnostic only; may restart at 1 after remount. Never use seq alone to reject a newer timestamp.",
             "example": 142
           },
           "lat": {
@@ -1124,6 +1126,56 @@
             "minimum": -180.0,
             "maximum": 180.0,
             "example": 105.7829
+          },
+          "clientTimestamp": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$",
+            "description": "Valid measurement timestamp in canonical UTC with milliseconds, as produced by Date.toISOString(). Preserve on retry.",
+            "example": "2026-10-16T10:00:00.000Z"
+          }
+        }
+      },
+      "GpsTelemetryEvent": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Internal Pub/Sub JSON event enriched by the API. This is not the REST request body. Publish retries preserve every field.",
+        "required": ["eventId", "driverId", "lat", "lng", "seq", "clientTimestamp", "receivedAt"],
+        "example": {
+          "eventId": "gps-example-001",
+          "driverId": "demo-driver-1",
+          "lat": 21.0285,
+          "lng": 105.8542,
+          "seq": 1,
+          "clientTimestamp": "2026-10-16T10:00:00.000Z",
+          "receivedAt": "2026-10-16T10:00:00.120Z"
+        },
+        "properties": {
+          "eventId": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^\\S(?:.*\\S)?$",
+            "description": "Unique opaque identifier generated by API per acceptance, distinct from Pub/Sub messageId. No surrounding whitespace."
+          },
+          "driverId": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^\\S(?:.*\\S)?$",
+            "description": "Internal driver identifier derived by API from authenticated identity. No surrounding whitespace."
+          },
+          "lat": { "type": "number", "format": "double", "minimum": -90.0, "maximum": 90.0 },
+          "lng": { "type": "number", "format": "double", "minimum": -180.0, "maximum": 180.0 },
+          "seq": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+          "clientTimestamp": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+          },
+          "receivedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$",
+            "description": "UTC API reception timestamp, generated once per acceptance."
           }
         }
       },
