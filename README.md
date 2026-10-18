@@ -257,6 +257,9 @@ Firebase CLI must be authenticated with access to `int3326e`. `firebase.json`
 publishes `dist` and rewrites SPA routes to `index.html`, including direct access
 to `/admin`. Hosting: https://int3326e.web.app.
 
+See the [TV6 frontend handoff to TV5](docs/tv6-deploy-handoff.md) for production
+environment variables, backend prerequisites and verification limits.
+
 Keep the API's standalone package and lockfile as documented in
 `docs/api-scaffold.md`. Each app is installed from its own lockfile; `apps.zip`
 is excluded from the repository.
