@@ -29,7 +29,8 @@
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
     "test:debug": "vitest --inspect-brk --no-file-parallelism",
-    "test:e2e": "vitest run --config ./vitest.config.e2e.ts"
+    "test:e2e": "vitest run --config ./vitest.config.e2e.ts",
+    "test:gps-pubsub": "node --experimental-strip-types infra/pubsub/gps-smoke.mjs"
   },
   "dependencies": {
     "@google-cloud/pubsub": "^6.1.0",

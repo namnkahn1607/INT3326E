@@ -58,11 +58,18 @@ pipeline Pub/Sub hoạt động; nếu chưa bật emulator, Worker có thể lo
 API dùng `apps/api/.env.example`; frontend không nhận credentials của Worker/API.
 Không đặt `PUBSUB_EMULATOR_HOST` trên Cloud Run; dùng project thật và ADC do TV5 cấu hình.
 
-Typecheck/test ở gốc chỉ kiểm tra Worker và cấu hình Vitest, không gom code React
+Typecheck/test ở gốc kiểm tra Worker, GPS contract dùng chung, smoke runner test
+và cấu hình Vitest, không gom code React
 hoặc test API. Chạy riêng API bằng `npm run typecheck --workspace=@parcelflow/api`
 và `npm test --workspace=@parcelflow/api`; frontend dùng `npm run lint:web`,
 `npm run build:web`, `npm run dev:web`. Sau khi đổi compiler config trong VS Code,
 chạy **TypeScript: Restart TS Server** nếu Problems vẫn hiển thị lỗi cũ.
+
+Contract request/event GPS hiện hành nằm trong [hợp đồng sự kiện GPS](docs/gps-event-contract.md).
+Chạy `npm run test:gps-pubsub` khi đã có Pub/Sub emulator và cấu hình
+`PUBSUB_EMULATOR_HOST`; chế độ cloud dùng `--cloud --project int3326e` và ADC.
+Xem [kiểm thử pipeline GPS](docs/gps-pipeline-validation.md) để chạy từng bước,
+thử trực tiếp trên Cloud Console và phân biệt bằng chứng local với cloud.
 
 ### Worker trên Cloud Run
 
@@ -261,6 +268,9 @@ npx --yes firebase-tools deploy --only hosting --project int3326e
 Firebase CLI must be authenticated with access to `int3326e`. `firebase.json`
 publishes `dist` and rewrites SPA routes to `index.html`, including direct access
 to `/admin`. Hosting: https://int3326e.web.app.
+
+See the [TV6 frontend handoff to TV5](docs/tv6-deploy-handoff.md) for production
+environment variables, backend prerequisites and verification limits.
 
 Keep the API's standalone package and lockfile as documented in
 `docs/api-scaffold.md`. Each app is installed from its own lockfile; `apps.zip`

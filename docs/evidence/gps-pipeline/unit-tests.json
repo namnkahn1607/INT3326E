@@ -1,0 +1,25 @@
+﻿{
+    "command":  "npm test",
+    "level":  "Unit tests and SDK mocks; no live Pub/Sub connection",
+    "startedAt":  "2026-10-16T15:28:31.0010000Z",
+    "success":  true,
+    "passedTests":  59,
+    "failedTests":  0,
+    "testFiles":  [
+                      {
+                          "name":  "Z:/INT3326E/infra/pubsub/gps-smoke.spec.ts",
+                          "status":  "passed",
+                          "passed":  13
+                      },
+                      {
+                          "name":  "Z:/INT3326E/packages/types/src/gps.spec.ts",
+                          "status":  "passed",
+                          "passed":  45
+                      },
+                      {
+                          "name":  "Z:/INT3326E/apps/worker/src/health/health.controller.spec.ts",
+                          "status":  "passed",
+                          "passed":  1
+                      }
+                  ]
+}

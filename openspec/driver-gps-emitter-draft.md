@@ -1,5 +1,7 @@
 # Driver Frontend & GPS Emitter — Week 1 Specification
 
+Phần tuần 1 được giữ làm hồ sơ lịch sử. Phạm vi chuẩn hóa sự kiện và kiểm thử tuần 2 được tiếp tục tại mục 10; contract hiện hành được ghi trong `docs/gps-event-contract.md`.
+
 | Thuộc tính | Giá trị |
 | --- | --- |
 | Dự án | ParcelFlow MVP |
@@ -290,3 +292,64 @@ bản phác thảo tuần 1 vẫn độc lập trạng thái đơn hàng.
 - [Thiết kế frontend](frontend-design.md): frontend giao tiếp REST và kiến trúc Pub/Sub.
 - [README](../README.md): kiến trúc GPS và roadmap MVP.
 - [GpsEmitter.tsx](../apps/web/src/features/driver/GpsEmitter.tsx) và [types dùng chung](../packages/types/src/index.ts): đối chiếu hành vi và payload hiện có.
+
+## 10. Chuẩn hóa sự kiện GPS và kiểm thử Pub/Sub
+
+### 10.1. Phạm vi và quyết định
+
+Nguồn phạm vi: bảng tiến độ, sheet `Tiến độ 10 Tuần`, ô D13: tiếp tục kiểm thử Pub/Sub và chốt schema GPS với phần GPS pipeline. Checkpoint tạo đơn hàng tại F10 thuộc luồng nghiệp vụ khác, không phải tiêu chí hoàn thành của phần này.
+
+Đối chiếu phạm vi sau lượt thử Console ngày 16/10/2026: các yêu cầu chi tiết về smoke runner, NACK/redelivery và cleanup ở dưới là kiểm chứng kỹ thuật bổ sung do kế hoạch triển khai đề xuất. Bảng tuần 2 không yêu cầu riêng các ca này; chúng không tự trở thành gate bắt buộc của D13. Giữ các ca và trạng thái hiện có để theo dõi trung thực, phân biệt với việc thử Pub/Sub và phối hợp thống nhất schema theo nguồn chính thức.
+
+Ngày 16/10/2026, người yêu cầu giao quyết định kỹ thuật sau khi được thông báo mâu thuẫn giữa OpenAPI và type dùng chung. Chọn sự kiện bảy trường hiện có, timestamp quyết định thứ tự và `seq` phục vụ chẩn đoán. Bỏ proposal đổi phiên luôn thắng trong contract GPS. Đây là quyết định cho hợp đồng tích hợp; chưa có xác nhận review độc lập từ người phụ trách GPS pipeline.
+
+Repository không có `.specify/memory/constitution.md`, bộ artifact Spec Kit hoặc các skill `speckit-*` được cài. Tiếp tục bộ OpenSpec hiện có, không tạo constitution hay chạy script tạo feature mới. Các tài liệu tuần 1 vẫn là bằng chứng lịch sử, không chứng minh trạng thái tuần 2.
+
+### 10.2. Yêu cầu nghiệm thu
+
+| ID | Yêu cầu | Bằng chứng cần có |
+| --- | --- | --- |
+| GPS-201 | Phân biệt request của client với event nội bộ; xác định bên tạo từng trường, kiểu dữ liệu và giới hạn. | Contract, type và OpenAPI nhất quán; request không cho phép giả mạo trường do API quản lý. |
+| GPS-202 | Quy định timestamp, sequence, retry và sự kiện đến muộn phù hợp thiết kế README. | Quy tắc rõ ràng; không dựa vào `seq` để loại bỏ vị trí mới sau khi client khởi động lại. |
+| GPS-203 | Emitter tạo request theo contract mỗi 8 giây, giữ Start/Stop và không tự gửi mạng. | Kiểm thử timer, sequence, callback và cleanup; frontend lint/build đạt. |
+| GPS-204 | Có công cụ publish, pull, đối chiếu payload, NACK/redelivery và ACK qua Pub/Sub. | Run có giới hạn thời gian; đối chiếu message ID lẫn event ID; lỗi hoặc thiếu message trả exit code khác 0. |
+| GPS-205 | Kiểm thử được payload lặp và payload đến muộn mà không giả định thứ tự broker. | Broker giữ nguyên payload; chưa tuyên bố worker đã dedupe hoặc ghi DB. |
+| GPS-206 | Phân biệt kiểm thử mock, emulator và cloud, lưu bằng chứng cùng resource thực tế. | Biên bản có thời điểm, chế độ, topic/subscription, kết quả và blocker; chỉ đánh dấu mức thực sự đã chạy. |
+| GPS-207 | Công cụ thử nghiệm dùng resource riêng và dọn đúng resource do lượt chạy tạo. | Không consume subscription nghiệp vụ; cleanup được kiểm tra cả khi thất bại. |
+
+Ngoài phạm vi: endpoint ingest, xác thực Driver, schema/migration DB, worker ghi DB, xử lý dedupe/ordering thực tế, push subscription, GPS thật và load test. Việc quy định contract không triển khai sớm các phần này.
+
+### 10.3. Kế hoạch thực hiện
+
+1. Chốt contract request/event trong tài liệu và type dùng chung, cập nhật riêng phần GPS của OpenAPI và contract API.
+2. Thêm validation dùng chung để kiểm chứng dữ liệu tại ranh giới JSON; emitter dùng request type và sequence tăng theo từng mẫu trong cùng lần mount.
+3. Thêm smoke runner Node.js dùng Pub/Sub SDK đã có. Mỗi run tạo topic/subscription có UUID riêng, tạo subscription trước publish, giới hạn RPC và tổng thời gian nhận, đối chiếu nội dung trước ACK, yêu cầu redelivery sau NACK, dọn resource trong `finally`.
+4. Kiểm tra contract bằng unit test, kiểm tra runner với SDK mock, kiểm tra emitter bằng fake timer. Sau đó chạy emulator/cloud khi môi trường sẵn sàng; lưu kết quả thực tế và phần chưa kiểm chứng.
+
+### 10.4. Checklist chất lượng yêu cầu
+
+- [x] GC-01: Trường client và trường API có nguồn gốc, kiểu, giới hạn rõ ràng (GPS-201). Review: bảng request/event trong contract.
+- [x] GC-02: Retry, timestamp bằng nhau, đến muộn và sequence khởi động lại có quy tắc rõ ràng (GPS-202). Review: mục Thứ tự và tính lặp trong contract.
+- [x] GC-03: Mỗi yêu cầu có tiêu chí kiểm chứng và giới hạn phạm vi (GPS-201–207). Review: mục 10.2.
+- [x] GC-04: Bằng chứng mock/emulator/cloud và review phối hợp được phân biệt (GPS-206). Review: mục 10.1–10.2 và trạng thái contract.
+- [x] GC-05: Công cụ thử nghiệm có giới hạn thời gian, cô lập và cleanup (GPS-204, GPS-207). Review: mục 10.3, bước 3.
+
+Review yêu cầu riêng ngày 16/10/2026: checklist đạt về chất lượng yêu cầu; không suy ra implementation đã hoàn thành. Phân tích chỉ đọc không còn mâu thuẫn nghiêm trọng trong phạm vi đã chọn. Việc chạy broker thực tế và review phối hợp vẫn là điều kiện mở, không được thay bằng kết quả mock.
+
+### 10.5. Tác vụ triển khai
+
+- [x] G201: Đồng bộ contract, type dùng chung, validation và OpenAPI (GPS-201, GPS-202). Bằng chứng: 45 contract test đạt, gồm đối chiếu OpenAPI.
+- [x] G202: Đồng bộ emitter và kiểm thử hành vi theo thời gian (GPS-203). Bằng chứng: 10 kiểm tra component trong `docs/evidence/gps-pipeline/emitter-component.json`, lint/build frontend đạt.
+- [x] G203: Thêm smoke runner và test thành công/thất bại bằng SDK mock (GPS-204, GPS-205, GPS-207). Bằng chứng: 13 runner test đạt; chưa phải bằng chứng broker thật.
+- [x] G204: Chạy lint, typecheck, test và build phù hợp, ghi kết quả (GPS-201–207). Bằng chứng: `docs/gps-pipeline-validation.md` và `docs/evidence/gps-pipeline/unit-tests.json`.
+- [ ] G205: Chạy Pub/Sub emulator hoặc cloud, lưu bằng chứng broker thực tế (GPS-204–207). Lượt thử Console đã có sáu ảnh; smoke runner trên broker thật và các ca NACK/redelivery, cleanup bổ sung chưa được kiểm chứng.
+- [ ] G206: Bàn giao contract để người phụ trách GPS pipeline review độc lập (GPS-206).
+- [x] G207: Bổ sung bằng chứng runner nhận message đảo thứ tự và báo lỗi khi thiếu redelivery sau NACK, theo rà soát nghiệm thu (GPS-204, GPS-205). Hai ca bổ sung đạt trong bộ 13 runner test.
+
+### 10.6. Đánh giá nghiệm thu
+
+Rà soát ngày 16/10/2026: phần code, contract và kiểm chứng local/mock của G201–G204/G207 đạt. Không phát hiện thiếu sót triển khai khác trong phạm vi đã chọn. Hướng dẫn chạy emulator, cloud bằng ADC và thử thủ công trên Console nằm trong `docs/gps-pipeline-validation.md`.
+
+Lượt thử cloud đã được người vận hành thực hiện trên Console trong project `int3326e`, topic `gps-contract-test-20261016`, subscription `gps-contract-test-20261016-sub`. Sáu ảnh gốc được lưu tại `docs/evidence/gps-pipeline/`, có bằng chứng publish và bốn dòng message nhận được. ACK được ghi nhận theo xác nhận người vận hành và ảnh sau thao tác. Các giá trị event ID/timestamp bị cắt ngang nên chưa đối chiếu đầy đủ payload từ ảnh; không suy ra NACK/redelivery từ bộ ảnh này.
+
+G205 giữ mở cho phần kiểm chứng smoke runner bổ sung trên broker thật; emulator local trước đó không kết nối được và chưa có ADC để chạy script cloud. G206 còn chờ người phụ trách GPS pipeline xác nhận contract. Theo phạm vi chính thức D13, phần thử Pub/Sub thủ công đã thực hiện, phần phối hợp thống nhất schema chưa có xác nhận; vì vậy chưa đánh dấu toàn bộ tuần 2 hoàn tất. Xem biên bản và giới hạn bằng chứng tại `docs/gps-pipeline-validation.md`.
