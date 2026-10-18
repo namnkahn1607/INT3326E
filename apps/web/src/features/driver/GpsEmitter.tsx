@@ -2,20 +2,26 @@ import { useEffect, useState } from 'react'
 
 export interface GpsEmitterDraftEvent {
   driverId: string
-  lat: number
-  lng: number
-  clientTimestamp: string
+  latitude: number
+  longitude: number
+  clientTimestamp: number
+  sessionId?: string
+  seq?: number
+  /** Tương thích ngược */
+  lat?: number
+  lng?: number
 }
 
 interface GpsEmitterProps {
   driverId: string
+  sessionId?: string
   onEmit?: (event: GpsEmitterDraftEvent) => void
 }
 
 const EMIT_INTERVAL_MS = 8000
-const SAMPLE_COORDINATES = { lat: 21.0285, lng: 105.8542 }
+const SAMPLE_COORDINATES = { latitude: 21.028511, longitude: 105.804817 }
 
-export function GpsEmitter({ driverId, onEmit }: GpsEmitterProps) {
+export function GpsEmitter({ driverId, sessionId, onEmit }: GpsEmitterProps) {
   const [running, setRunning] = useState(false)
   const [lastEvent, setLastEvent] = useState<GpsEmitterDraftEvent | null>(null)
   const [eventCount, setEventCount] = useState(0)
@@ -23,20 +29,26 @@ export function GpsEmitter({ driverId, onEmit }: GpsEmitterProps) {
   useEffect(() => {
     if (!running || !driverId.trim()) return
 
+    let currentSeq = eventCount
+
     const intervalId = window.setInterval(() => {
+      currentSeq += 1
       const event: GpsEmitterDraftEvent = {
         driverId,
-        ...SAMPLE_COORDINATES,
-        clientTimestamp: new Date().toISOString(),
+        latitude: SAMPLE_COORDINATES.latitude,
+        longitude: SAMPLE_COORDINATES.longitude,
+        clientTimestamp: Date.now(),
+        sessionId: sessionId || `sess_${driverId}`,
+        seq: currentSeq,
       }
 
       setLastEvent(event)
-      setEventCount((count) => count + 1)
+      setEventCount(currentSeq)
       onEmit?.(event)
     }, EMIT_INTERVAL_MS)
 
     return () => window.clearInterval(intervalId)
-  }, [running, driverId, onEmit])
+  }, [running, driverId, sessionId, onEmit])
 
   return (
     <section aria-labelledby="gps-emitter-title" style={{ marginTop: '24px', textAlign: 'left' }}>
