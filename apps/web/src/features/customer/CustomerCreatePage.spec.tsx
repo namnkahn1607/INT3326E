@@ -9,11 +9,12 @@ import { ApiError } from '../../api/client'
 const api = vi.hoisted(() => ({ create: vi.fn(), identity: 'customer-a' }))
 vi.mock('../../api/endpoints/shipments', () => ({ createShipment: api.create }))
 vi.mock('../auth/useAuth', () => ({ useAuth: () => ({ user: { id: api.identity } }) }))
-vi.mock('./ShipmentLocationPicker', () => ({ ShipmentLocationPicker: ({ kind, point, disabled, error, onSelect }: {
+vi.mock('./ShipmentLocationPicker', () => ({ ShipmentLocationPicker: ({ kind, point, query, disabled, error, onSelect }: {
   kind: 'pickup' | 'dropoff'; point: { lat: number; lng: number } | null; disabled: boolean; error?: string
+  query?: string
   onSelect: (point: { lat: number; lng: number }) => void
 }) => <button type="button" id={'shipment-' + kind + 'Location'} data-testid={'choose-' + kind}
-  data-selected={!!point} disabled={disabled} aria-invalid={!!error}
+  data-selected={!!point} data-query={query} disabled={disabled} aria-invalid={!!error}
   onClick={() => onSelect(kind === 'pickup' ? { lat: 0, lng: 0 } : { lat: 21, lng: 105 })}>Chọn vị trí</button> }))
 let node: HTMLDivElement
 let root: Root
@@ -52,6 +53,15 @@ describe('Customer Create journey (mock only)', () => {
     await valid(); await submit()
     expect(api.create.mock.calls[0][0]).toMatchObject({ pickupLocation: { lat: 0, lng: 0 }, dropoffLocation: { lat: 21, lng: 105 } })
     expect(node.textContent).toContain(shipmentFixture.trackingNumber)
+  })
+  it('keeps private address details out of geocoding while including them in the shipment', async () => {
+    api.create.mockResolvedValue(shipmentFixture)
+    await valid(); await fill('pickupAddress', 'Duong Xuan Thuy'); await fill('pickupArea', 'Ha Noi'); await fill('pickupDetails', 'So 144, can ho 2')
+    expect(node.querySelector('#shipment-pickupLocation')?.getAttribute('data-query')).toBe('Duong Xuan Thuy, Ha Noi')
+    await act(async () => node.querySelector<HTMLButtonElement>('#shipment-pickupLocation')!.click())
+    await submit()
+    expect(api.create.mock.calls[0][0].pickupAddress).toBe('So 144, can ho 2, Duong Xuan Thuy, Ha Noi')
+    expect(api.create.mock.calls[0][0]).not.toHaveProperty('pickupDetails')
   })
   it('clears only the corresponding point when an address changes and requires selecting it again', async () => {
     await valid(); await fill('pickupAddress', 'Dia chi lay hang moi')

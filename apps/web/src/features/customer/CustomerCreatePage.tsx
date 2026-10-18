@@ -174,7 +174,8 @@ function ShipmentCreateForm() {
     const lat = kind === 'pickup' ? 'pickupLat' : 'dropoffLat'
     const lng = kind === 'pickup' ? 'pickupLng' : 'dropoffLng'
     const point = draft[lat] && draft[lng] ? { lat: Number(draft[lat]), lng: Number(draft[lng]) } : null
-    return <ShipmentLocationPicker kind={kind} point={point} disabled={locked || busy} error={errors[lat] ?? errors[lng]}
+    const query = [draft[kind === 'pickup' ? 'pickupAddress' : 'dropoffAddress'], draft[kind === 'pickup' ? 'pickupArea' : 'dropoffArea']].map(value => value.trim()).filter(Boolean).join(', ')
+    return <ShipmentLocationPicker kind={kind} point={point} query={query} disabled={locked || busy} error={errors[lat] ?? errors[lng]}
       onSelect={value => {
         setDraft(previous => ({ ...previous, [lat]: String(value.lat), [lng]: String(value.lng) }))
         setErrors(previous => { const next = { ...previous }; delete next[lat]; delete next[lng]; return next })
@@ -207,7 +208,7 @@ function ShipmentCreateForm() {
         {error && requestIssue === 'rejected' && <p>Yêu cầu bị từ chối. Kiểm tra thông tin hoặc liên hệ quản trị viên theo thông báo trên.</p>}
         {requestIssue === 'auth' && <Link to="/login">Kiểm tra phiên đăng nhập</Link>}
       </div>}
-      <p className="customer-form-intro">Nhập tên đường/tòa nhà, khu vực và địa chỉ chi tiết, sau đó chọn đúng điểm lấy/giao trên bản đồ. Các mục có dấu * là bắt buộc.</p>
+      <p className="customer-form-intro">Nhập tên đường/tòa nhà và khu vực → tìm trên bản đồ → chọn kết quả và xác nhận điểm lấy/giao. Số nhà, căn hộ được nhập riêng. Các mục có dấu * là bắt buộc.</p>
       <fieldset className="form-section"><legend>Điểm lấy hàng</legend><div className="form-grid">
         {field('pickupAddress', true, 'Ví dụ: đường Xuân Thủy hoặc tên tòa nhà…')}
         {field('pickupArea', false, 'Ví dụ: Cầu Giấy, Hà Nội')}{field('pickupDetails', false, 'Ví dụ: số 144, tầng 2, cửa bên trái')}
