@@ -17,7 +17,13 @@
 ## 2. Lộ trình các tuần tiếp theo
 
 ### 🎯 Tuần 2: Xác thực & Kết nối API Tạo đơn (VIỆC TIẾP THEO)
-- [ ] Tích hợp Firebase Auth cho Customer (Đăng nhập / Đăng ký).
+
+Triển khai TV3 ngày 2026-10-18 tại [week2-customer/tasks.md](week2-customer/tasks.md).
+Client Create/List/Detail và reuse Auth đã kiểm chứng local/mock; các checkbox
+nghiệm thu tích hợp bên dưới vẫn mở tới khi có bằng chứng cloud.
+Xem [bàn giao và phụ thuộc](week2-customer/acceptance.md), không tạo lại Auth của TV6.
+
+- [ ] Tích hợp Firebase Auth cho Customer bằng tài khoản đã provision, custom claim tin cậy; không tự cấp role hoặc thêm quản lý tài khoản.
 - [ ] Truyền Bearer Token tới Backend NestJS.
 - [ ] Nối Form tạo đơn (`CustomerCreatePage.tsx`) với API `POST /shipments`.
 - [ ] Nối Danh sách đơn (`CustomerShipmentsPage.tsx`) với API `GET /shipments`.
