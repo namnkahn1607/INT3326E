@@ -3,7 +3,8 @@ export const MAX_GPS_SEQUENCE = 2147483647
 export interface GpsLocationRequest {
   lat: number
   lng: number
-  seq: number
+  seq?: number
+  sessionId?: string
   clientTimestamp: string
 }
 
@@ -13,7 +14,7 @@ export interface GpsTelemetryEvent extends GpsLocationRequest {
   receivedAt: string
 }
 
-const requestFields = ['lat', 'lng', 'seq', 'clientTimestamp']
+const requestFields = ['lat', 'lng', 'seq', 'sessionId', 'clientTimestamp']
 const eventFields = [...requestFields, 'eventId', 'driverId', 'receivedAt']
 
 function assertTimestamp(value: unknown, field: string): void {
@@ -24,6 +25,21 @@ function assertTimestamp(value: unknown, field: string): void {
     new Date(value).toISOString() !== value
   ) {
     throw new TypeError(`${field} must be a valid UTC timestamp with milliseconds`)
+  }
+}
+
+function assertRequestTimestamp(value: unknown): void {
+  const match = typeof value === 'string'
+    ? /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.\d+)?(Z|[+-](\d{2}):(\d{2}))$/.exec(value)
+    : null
+  const wallTime = match ? `${match[1]}.000Z` : ''
+  if (
+    !match ||
+    !Number.isFinite(Date.parse(wallTime)) ||
+    new Date(wallTime).toISOString() !== wallTime ||
+    (match[2] !== 'Z' && (Number(match[3]) > 23 || Number(match[4]) > 59))
+  ) {
+    throw new TypeError('clientTimestamp must be a valid ISO 8601 timestamp with a timezone')
   }
 }
 
@@ -44,18 +60,25 @@ function assertPayload(value: unknown, fields: string[]): asserts value is Recor
     }
   }
 
-  if (!Number.isInteger(payload.seq) || (payload.seq as number) < 1 || (payload.seq as number) > MAX_GPS_SEQUENCE) {
+  if ('seq' in payload && (!Number.isInteger(payload.seq) || (payload.seq as number) < 1 || (payload.seq as number) > MAX_GPS_SEQUENCE)) {
     throw new TypeError(`seq must be an integer between 1 and ${MAX_GPS_SEQUENCE}`)
   }
-  assertTimestamp(payload.clientTimestamp, 'clientTimestamp')
+  if ('sessionId' in payload && (
+    typeof payload.sessionId !== 'string' ||
+    !/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(payload.sessionId)
+  )) {
+    throw new TypeError('sessionId must be a UUID')
+  }
 }
 
 export function assertGpsLocationRequest(value: unknown): asserts value is GpsLocationRequest {
   assertPayload(value, requestFields)
+  assertRequestTimestamp(value.clientTimestamp)
 }
 
 export function assertGpsTelemetryEvent(value: unknown): asserts value is GpsTelemetryEvent {
   assertPayload(value, eventFields)
+  assertTimestamp(value.clientTimestamp, 'clientTimestamp')
   for (const field of ['eventId', 'driverId']) {
     if (typeof value[field] !== 'string' || !value[field] || value[field].trim() !== value[field]) {
       throw new TypeError(`${field} must be a non-empty identifier without surrounding whitespace`)

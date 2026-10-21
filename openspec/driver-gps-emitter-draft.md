@@ -297,11 +297,11 @@ bản phác thảo tuần 1 vẫn độc lập trạng thái đơn hàng.
 
 ### 10.1. Phạm vi và quyết định
 
-Nguồn phạm vi: bảng tiến độ, sheet `Tiến độ 10 Tuần`, ô D13: tiếp tục kiểm thử Pub/Sub và chốt schema GPS với phần GPS pipeline. Checkpoint tạo đơn hàng tại F10 thuộc luồng nghiệp vụ khác, không phải tiêu chí hoàn thành của phần này.
+Nguồn hiện hành: [PF SPEC 01 nội dung v1.3](../docs/spec-baseline.md), VII.3 và VI.API00/API08/EVT01: hoàn thiện interval/timestamp của emitter, chuẩn hóa shared payload với phần GPS pipeline. Bảng tiến độ, sheet `Tiến độ 10 Tuần`, ô D13 là bối cảnh kiểm thử Pub/Sub và phối hợp chốt schema. Checkpoint tạo đơn hàng tại F10 thuộc luồng nghiệp vụ khác, không phải tiêu chí hoàn thành của phần này.
 
 Đối chiếu phạm vi sau lượt thử Console ngày 16/10/2026: các yêu cầu chi tiết về smoke runner, NACK/redelivery và cleanup ở dưới là kiểm chứng kỹ thuật bổ sung do kế hoạch triển khai đề xuất. Bảng tuần 2 không yêu cầu riêng các ca này; chúng không tự trở thành gate bắt buộc của D13. Giữ các ca và trạng thái hiện có để theo dõi trung thực, phân biệt với việc thử Pub/Sub và phối hợp thống nhất schema theo nguồn chính thức.
 
-Ngày 16/10/2026, người yêu cầu giao quyết định kỹ thuật sau khi được thông báo mâu thuẫn giữa OpenAPI và type dùng chung. Chọn sự kiện bảy trường hiện có, timestamp quyết định thứ tự và `seq` phục vụ chẩn đoán. Bỏ proposal đổi phiên luôn thắng trong contract GPS. Đây là quyết định cho hợp đồng tích hợp; chưa có xác nhận review độc lập từ người phụ trách GPS pipeline.
+Quyết định ngày 16/10/2026 về sự kiện bảy trường được giữ làm lịch sử. Contract hiện hành theo VI có `lat/lng/clientTimestamp` bắt buộc; `seq` và UUID `sessionId` tùy chọn, chỉ chẩn đoán. Request nhận ISO 8601 có timezone; event nội bộ yêu cầu UTC mili giây đã chuẩn hóa. Timestamp quyết định thứ tự, không dùng quy tắc đổi phiên luôn thắng. Chưa có xác nhận review độc lập từ người phụ trách GPS pipeline. Kết quả kiểm chứng ngày 16/10 bên dưới chỉ áp dụng cho snapshot lịch sử đó.
 
 Repository không có `.specify/memory/constitution.md`, bộ artifact Spec Kit hoặc các skill `speckit-*` được cài. Tiếp tục bộ OpenSpec hiện có, không tạo constitution hay chạy script tạo feature mới. Các tài liệu tuần 1 vẫn là bằng chứng lịch sử, không chứng minh trạng thái tuần 2.
 
@@ -310,7 +310,7 @@ Repository không có `.specify/memory/constitution.md`, bộ artifact Spec Kit 
 | ID | Yêu cầu | Bằng chứng cần có |
 | --- | --- | --- |
 | GPS-201 | Phân biệt request của client với event nội bộ; xác định bên tạo từng trường, kiểu dữ liệu và giới hạn. | Contract, type và OpenAPI nhất quán; request không cho phép giả mạo trường do API quản lý. |
-| GPS-202 | Quy định timestamp, sequence, retry và sự kiện đến muộn phù hợp thiết kế README. | Quy tắc rõ ràng; không dựa vào `seq` để loại bỏ vị trí mới sau khi client khởi động lại. |
+| GPS-202 | Quy định timestamp, metadata tùy chọn, retry và sự kiện đến muộn theo VI.API00/EVT01. | Phân biệt timestamp request với event canonical; không dựa vào `seq` hoặc session để loại bỏ vị trí mới sau khi client khởi động lại. |
 | GPS-203 | Emitter tạo request theo contract mỗi 8 giây, giữ Start/Stop và không tự gửi mạng. | Kiểm thử timer, sequence, callback và cleanup; frontend lint/build đạt. |
 | GPS-204 | Có công cụ publish, pull, đối chiếu payload, NACK/redelivery và ACK qua Pub/Sub. | Run có giới hạn thời gian; đối chiếu message ID lẫn event ID; lỗi hoặc thiếu message trả exit code khác 0. |
 | GPS-205 | Kiểm thử được payload lặp và payload đến muộn mà không giả định thứ tự broker. | Broker giữ nguyên payload; chưa tuyên bố worker đã dedupe hoặc ghi DB. |

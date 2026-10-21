@@ -1,6 +1,6 @@
 # API contract — Week 1 draft
 
-GPS request/event fields were selected on 16/10/2026 for week 2. The current
+GPS request/event fields follow PF SPEC 01 v1.3, VI.API00/API08/EVT01. The current
 contract is [GPS event contract](gps-event-contract.md); independent review by
 the GPS pipeline owner remains pending. The endpoint remains unimplemented.
 The remaining week 1 decisions and proposals below are preserved.
@@ -34,8 +34,8 @@ runtime handlers are added in week 1.
   The original cancellation operation and request schema are preserved under
   `x-proposals.cancellation` in OpenAPI and are not active draft operations.
   Do not introduce that state into the shared or database enum before approval.
-- The GPS `sessionId/seq` proposal is superseded by the week 2 timestamp contract.
-  The client sends `lat`, `lng`, `seq`, `clientTimestamp`; API derives `driverId`
+- GPS requests require `lat`, `lng`, `clientTimestamp`; `sessionId` (UUID) and
+  `seq` are optional diagnostics. The API derives `driverId`
   from authenticated identity and adds `eventId`, `receivedAt`. Sequence is
   diagnostic; freshness uses `clientTimestamp`, and history dedupe uses
   `(driverId, clientTimestamp)`. No runtime endpoint or DB behavior is implied.

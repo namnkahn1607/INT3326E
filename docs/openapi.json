@@ -1093,12 +1093,11 @@
         "type": "object",
         "additionalProperties": false,
         "required": [
-          "seq",
           "lat",
           "lng",
           "clientTimestamp"
         ],
-        "description": "Periodic driver telemetry. Server-managed identity and event metadata are forbidden in the request. See docs/gps-event-contract.md.",
+        "description": "Periodic driver telemetry. sessionId and seq are optional diagnostics. Server-managed identity and event metadata are forbidden in the request. See docs/gps-event-contract.md.",
         "example": {
           "lat": 21.0285,
           "lng": 105.8542,
@@ -1106,6 +1105,11 @@
           "clientTimestamp": "2026-10-16T10:00:00.000Z"
         },
         "properties": {
+          "sessionId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Optional diagnostic session identifier; never determines GPS ordering."
+          },
           "seq": {
             "type": "integer",
             "minimum": 1,
@@ -1130,8 +1134,8 @@
           "clientTimestamp": {
             "type": "string",
             "format": "date-time",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$",
-            "description": "Valid measurement timestamp in canonical UTC with milliseconds, as produced by Date.toISOString(). Preserve on retry.",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+            "description": "ISO 8601 measurement timestamp with a timezone. Preserve on retry. API normalizes to UTC milliseconds before hashing, deduplication and publishing, truncating sub-millisecond precision without rounding.",
             "example": "2026-10-16T10:00:00.000Z"
           }
         }
@@ -1140,7 +1144,7 @@
         "type": "object",
         "additionalProperties": false,
         "description": "Internal Pub/Sub JSON event enriched by the API. This is not the REST request body. Publish retries preserve every field.",
-        "required": ["eventId", "driverId", "lat", "lng", "seq", "clientTimestamp", "receivedAt"],
+        "required": ["eventId", "driverId", "lat", "lng", "clientTimestamp", "receivedAt"],
         "example": {
           "eventId": "gps-example-001",
           "driverId": "demo-driver-1",
@@ -1165,6 +1169,7 @@
           },
           "lat": { "type": "number", "format": "double", "minimum": -90.0, "maximum": 90.0 },
           "lng": { "type": "number", "format": "double", "minimum": -180.0, "maximum": 180.0 },
+          "sessionId": { "type": "string", "format": "uuid" },
           "seq": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
           "clientTimestamp": {
             "type": "string",
