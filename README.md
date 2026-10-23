@@ -239,7 +239,7 @@ Design assumptions: at any moment there are **~300–500 active shipments**, and
 
 ## Week 1 API scaffold
 
-The API now boots with Shipment, Auth and Admin modules and exposes public `GET /healthz`. Shipment/Admin business handlers and database access remain deferred. See [run and container instructions](docs/api-scaffold.md) and the [contract draft decisions](docs/api-contract.md). `docs/openapi.json` is a future API draft; cancellation is an unapproved proposal outside the five-state baseline. Cloud Run deployment evidence is tracked in issue #9.
+The API boots with Shipment, Auth and Admin modules and exposes public `GET /healthz`, Firebase profile endpoints, and Admin-only read endpoints `GET /v1/drivers` (API11) and `GET /v1/admin/customers`. The lists validate business identity and read PostgreSQL; deployment requires the matching schema. See [Admin directory](docs/tv6-admin-directory.md) and the draft [QA test plan](docs/qa-test-plan.md). Shipment/GPS business handlers remain deferred. [Run and container instructions](docs/api-scaffold.md) preserve the week 1 setup; [contract decisions](docs/api-contract.md) and `docs/openapi.json` distinguish the implemented reads from future operations. Cancellation remains an unapproved proposal outside the five-state baseline. Week 1 deployment evidence is tracked in issue #9.
 
 ## Frontend integration and Hosting
 
