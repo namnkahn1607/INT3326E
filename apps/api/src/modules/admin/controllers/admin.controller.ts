@@ -1,11 +1,15 @@
-import { Controller, UseGuards } from '@nestjs/common';
+import { Controller, Get, Header, Req } from '@nestjs/common';
 
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { UserRole } from '../../auth/enums/user-role.enum';
-import { FirebaseAuthGuard } from '../../auth/guards/firebase-auth.guard';
-import { RolesGuard } from '../../auth/guards/roles.guard';
+import { AuthenticatedRequest } from '../../auth/interfaces/authenticated-request.interface';
 
 @Controller('admin')
-@UseGuards(FirebaseAuthGuard, RolesGuard)
 @Roles(UserRole.ADMIN)
-export class AdminController {}
+export class AdminController {
+  @Get('me')
+  @Header('Cache-Control', 'no-store')
+  me(@Req() request: AuthenticatedRequest) {
+    return request.user;
+  }
+}

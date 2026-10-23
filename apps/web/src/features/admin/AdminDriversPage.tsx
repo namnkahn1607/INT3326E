@@ -51,7 +51,7 @@ export function AdminDriversPage() {
       </div>
 
       <div className="section-block">
-        <div className="data-table-wrapper">
+        <div className="data-table-wrapper" role="region" aria-label="Tài xế minh họa, cuộn ngang để xem đầy đủ" tabIndex={0}>
           <table className="data-table">
             <thead>
               <tr>
@@ -61,7 +61,7 @@ export function AdminDriversPage() {
                 <th>Phương tiện</th>
                 <th>Trạng thái</th>
                 <th>Gửi GPS gần nhất</th>
-                <th>Đơn đã giao</th>
+                <th className="ui-numeric">Đơn đã giao</th>
               </tr>
             </thead>
             <tbody>
@@ -87,7 +87,7 @@ export function AdminDriversPage() {
                   <td>
                     <span className="text-muted">{d.lastGpsTime}</span>
                   </td>
-                  <td><strong>{d.totalDelivered}</strong> đơn</td>
+                  <td className="ui-numeric"><strong>{d.totalDelivered}</strong> đơn</td>
                 </tr>
               ))}
             </tbody>

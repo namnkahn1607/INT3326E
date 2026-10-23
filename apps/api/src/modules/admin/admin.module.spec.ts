@@ -22,12 +22,13 @@ describe('AdminModule scaffold authorization', () => {
   let app: INestApplication;
   let endpoint: string;
   const verifyIdToken = vi.fn();
+  const getUser = vi.fn();
 
   beforeAll(async () => {
     const module = await Test.createTestingModule({
       imports: [AdminModule, AuthModule],
       controllers: [AdminScaffoldProbeController],
-    }).overrideProvider(FIREBASE_AUTH).useValue({ verifyIdToken }).compile();
+    }).overrideProvider(FIREBASE_AUTH).useValue({ verifyIdToken, getUser }).compile();
     app = module.createNestApplication();
     await app.listen(0, '127.0.0.1');
     endpoint = `${await app.getUrl()}/admin-scaffold-probe`;
@@ -43,6 +44,7 @@ describe('AdminModule scaffold authorization', () => {
 
   it.each([UserRole.CUSTOMER, UserRole.DRIVER])('rejects %s on admin operations', async (role) => {
     verifyIdToken.mockResolvedValueOnce({ uid: 'user-1', role });
+    getUser.mockResolvedValueOnce({ disabled: false, customClaims: { role } });
     const response = await fetch(endpoint, {
       headers: { Authorization: 'Bearer signed-token' },
     });
@@ -52,6 +54,7 @@ describe('AdminModule scaffold authorization', () => {
   it('accepts a verified ADMIN claim', async () => {
     const user = { uid: 'admin-1', role: UserRole.ADMIN };
     verifyIdToken.mockResolvedValueOnce(user);
+    getUser.mockResolvedValueOnce({ disabled: false, customClaims: { role: UserRole.ADMIN } });
     const response = await fetch(endpoint, {
       headers: { Authorization: 'Bearer signed-token' },
     });

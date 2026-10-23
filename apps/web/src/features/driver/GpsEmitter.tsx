@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { MAX_GPS_SEQUENCE } from '@parcelflow/types'
+import type { GpsLocationRequest } from '@parcelflow/types'
 
 export interface GpsEmitterDraftEvent {
   driverId: string
@@ -25,6 +27,7 @@ export function GpsEmitter({ driverId, sessionId, onEmit }: GpsEmitterProps) {
   const [running, setRunning] = useState(false)
   const [lastEvent, setLastEvent] = useState<GpsEmitterDraftEvent | null>(null)
   const [eventCount, setEventCount] = useState(0)
+  const sequence = useRef(0)
 
   useEffect(() => {
     if (!running || !driverId.trim()) return
@@ -45,6 +48,7 @@ export function GpsEmitter({ driverId, sessionId, onEmit }: GpsEmitterProps) {
       setLastEvent(event)
       setEventCount(currentSeq)
       onEmit?.(event)
+      if (sequence.current === MAX_GPS_SEQUENCE) setRunning(false)
     }, EMIT_INTERVAL_MS)
 
     return () => window.clearInterval(intervalId)
@@ -64,7 +68,7 @@ export function GpsEmitter({ driverId, sessionId, onEmit }: GpsEmitterProps) {
         <button
           type="button"
           className="btn btn-secondary"
-          disabled={running || !driverId.trim()}
+          disabled={running || !driverId.trim() || eventCount >= MAX_GPS_SEQUENCE}
           onClick={() => setRunning(true)}
         >
           Bắt đầu phát mẫu
@@ -78,6 +82,7 @@ export function GpsEmitter({ driverId, sessionId, onEmit }: GpsEmitterProps) {
           Dừng
         </button>
       </div>
+      <p className="ui-disabled-reason">{!driverId.trim() ? 'Cần mã tài xế để phát mẫu.' : running ? 'Đang phát mẫu. Chọn Dừng để kết thúc trước khi bắt đầu lại.' : 'Nút Dừng khả dụng sau khi bắt đầu phát mẫu.'}</p>
       {lastEvent ? (
         <pre style={{ marginTop: '16px', padding: '12px', background: '#f0fdf4', overflowX: 'auto' }}>
           <code>{JSON.stringify(lastEvent, null, 2)}</code>

@@ -1,5 +1,7 @@
 # Driver Frontend & GPS Emitter — Week 1 Specification
 
+Phần tuần 1 được giữ làm hồ sơ lịch sử. Phạm vi chuẩn hóa sự kiện và kiểm thử tuần 2 được tiếp tục tại mục 10; contract hiện hành được ghi trong `docs/gps-event-contract.md`.
+
 | Thuộc tính | Giá trị |
 | --- | --- |
 | Dự án | ParcelFlow MVP |
@@ -10,7 +12,14 @@
 
 ## 1. Mục tiêu và căn cứ
 
-Phạm vi tuần 1 dựa trên `ParcelFlow - Bảng theo dõi tiến độ.xlsx`, sheet `Tiến độ 10 Tuần`, ô D7:
+Nguồn hiện hành là [PF SPEC 01 nội dung v1.3](../docs/spec-baseline.md), VII.2;
+bảng tiến độ cũ chỉ là bối cảnh. Tuần 1 đã được nhóm chốt tại
+[issue #8](https://github.com/namnkahn1607/INT3326E/issues/8) và
+[#10](https://github.com/namnkahn1607/INT3326E/issues/10). Dùng lại bằng chứng Hello World,
+không yêu cầu publish/pull lại, nộp thêm ảnh/video hoặc ACK log để tái nghiệm thu frontend.
+Kết quả kiểm tra hiện tại được ghi riêng tại [acceptance.md](week1-reacceptance/acceptance.md).
+
+Phạm vi tuần 1 được bảo toàn:
 
 1. Thử publish/consume thông điệp “hello world” qua Pub/Sub, phối hợp với phần GPS pipeline.
 2. Phác thảo component GPS emitter.
@@ -19,7 +28,7 @@ Kết quả cần đạt: nhận được thông điệp qua Pub/Sub và có com
 
 Theo yêu cầu cập nhật tuần 1, Hello World đã đạt và không cần thử lại. TV4 phối hợp TV3 ghép emitter vào Driver, kiểm tra Start/Stop và sửa tham chiếu contract thành `POST /v1/locations`.
 
-Checkpoint dự án tuần 1 tại ô F4 còn yêu cầu URL chung truy cập được, health check của hai Cloud Run service trả 200 và topic/subscription tồn tại. Nghiệm thu Driver Frontend và emitter là một phần của checkpoint; bằng chứng triển khai và health check cần được xác nhận riêng.
+Checkpoint dự án tuần 1 tại VII.2 yêu cầu URL chung truy cập được, health check của hai Cloud Run service trả 200 và topic/subscription tồn tại. Nghiệm thu Driver Frontend và emitter là một phần của checkpoint; bằng chứng triển khai và health check cần được xác nhận riêng.
 
 ## 2. Phạm vi
 
@@ -47,7 +56,7 @@ Các mục này được triển khai theo roadmap ở mục 8. Riêng thử ngh
 | Project | `int3326e` |
 | Subscription trong ảnh | `hello-test-sub` |
 | Tên resource | `projects/int3326e/subscriptions/hello-test-sub` |
-| Topic thử nghiệm | `hello-test` — `projects/int3326e/topics/hello-test`; ảnh bổ sung ngày 09/10/2026 hiển thị topic cùng subscription `hello-test-sub` |
+| Topic thử nghiệm | `hello-test` — `projects/int3326e/topics/hello-test`; ảnh bổ sung ngày 09/10/2026 hiển thị topic cùng subscription `hello-test-sub`, được ghi nhận tại issue #8 |
 | Message body | `Hello World` |
 | Điều kiện trước khi chạy | Topic và subscription tồn tại; tài khoản thử nghiệm có quyền publish/pull tương ứng |
 
@@ -138,11 +147,15 @@ Chạy `npm run dev:web` tại root repo, mở URL mà Vite in ra và vào `/dri
 | TC-06 | Khi đang chạy, chuyển sang route khác rồi quay lại `/driver`. | Instance cũ được dọn; instance mới dừng, số mẫu `0`, chưa có JSON. |
 | TC-07 | Kiểm tra prop bằng `driverId` rỗng hoặc chỉ có khoảng trắng trong môi trường phát triển. | Không cho bắt đầu, không tạo mẫu. Không đổi tài xế mẫu trên trang bàn giao. |
 | TC-08 | Quan sát quyền vị trí và Network trong lúc phát mẫu. | Emitter không yêu cầu quyền vị trí và không phát sinh request gửi GPS. |
-| TC-09 | Đối chiếu bằng chứng Hello World đã có; không chạy lại. | Đã đạt theo yêu cầu cập nhật tuần 1. |
+| TC-09 | Đối chiếu bằng chứng Hello World đã đạt tại issue #8, không publish/pull lại. | Ghi nhận project/topic/subscription và link nghiệm thu lịch sử riêng với kiểm tra UI lần này. |
 
 Kiểm tra kỹ thuật bằng script sẵn có: `npm run lint:web` và `npm run build:web`. Các lệnh và ca kiểm tra trên là kế hoạch nghiệm thu; chỉ xác nhận đạt sau khi chạy và ghi nhận kết quả thực tế.
 
 ## 6. Bằng chứng hiện có
+
+Bằng chứng dưới đây giữ snapshot cũ trước khi nhóm đóng issue #8/#10; các giới hạn
+ảnh tại thời điểm đó không tự trở thành việc bắt buộc làm lại. Kết quả hiện tại xem
+[acceptance.md](week1-reacceptance/acceptance.md).
 
 Ngày 09/10/2026 bổ sung 10 ảnh do TV4 cung cấp, lưu tại `docs/evidence/week-1/`, và cập nhật ảnh mẫu thứ nhất. Bộ ảnh xác định topic/subscription, ghi nhận publish/pull `Hello World`, giao diện emitter ban đầu, khi có một mẫu, hai mẫu và khi dừng, cùng kết quả kiểm tra kỹ thuật. Kết luận dưới đây dựa trên nội dung ảnh và kết quả lệnh đã chạy; không suy ra các ca kiểm tra chưa có bằng chứng. Các yêu cầu lưu bằng chứng chi tiết tại PS-01 đến PS-03 và mục 7 là checklist của tài liệu này; ô D7 không yêu cầu riêng ảnh publish thành công, ACK hoặc worker consume bằng code.
 
@@ -250,8 +263,8 @@ Start/Stop đạt ở mức component. Công cụ hiện không có trình duy�
 
 Phạm vi Driver Frontend và GPS emitter tuần 1 được nghiệm thu khi:
 
-- Giữ bằng chứng publish/pull `Hello World` đã đạt, xác định rõ topic và subscription thực tế; không chạy lại.
-- GPS emitter trên `/driver` đạt TC-01 đến TC-08, có ảnh hoặc video thể hiện phát ít nhất hai mẫu và dừng phát.
+- Dùng lại biên bản Hello World đã đạt tại issue #8, xác định project/topic/subscription; không chạy lại phép thử.
+- GPS emitter trên `/driver` được kiểm tra hành vi theo phạm vi tuần 1; ghi rõ ca đã chạy và ca chưa chạy. Không bắt buộc tạo ảnh/video mới nếu đã có kết quả kiểm chứng tương ứng.
 - Lưu kết quả lint/build cùng các lỗi còn tồn tại, nếu có.
 - Tài liệu và mã nguồn emitter được bàn giao, ghi rõ payload còn là bản nháp và bước tích hợp tiếp theo.
 
@@ -259,17 +272,84 @@ Phạm vi Driver Frontend và GPS emitter tuần 1 được nghiệm thu khi:
 
 | Tuần | Phạm vi phát triển theo bảng tiến độ | Điểm tích hợp |
 | --- | --- | --- |
-| 2 — D13 | Tiếp tục thử pipeline Pub/Sub, thống nhất schema GPS giữa Driver Frontend và GPS pipeline. | Contract request/event, timestamp, `eventId`, `seq`, `receivedAt` và nơi tạo từng trường. |
-| 3 — D19 | Driver login/dashboard skeleton, phát thử GPS event. | Nối driver client với endpoint `POST /v1/locations` của backend theo contract cập nhật; ô D17 trong bảng tiến độ gốc còn ghi tên cũ. |
-| 4 — D25 | Kết nối Driver app gửi GPS thật hoặc simulator toggle. | Frontend gọi REST; backend publish Pub/Sub, worker xử lý dữ liệu. |
-| 5 — D31 | Xử lý GPS stale/invalid, bắt đầu phác thảo load test. | Chốt cách xử lý lỗi vị trí và lỗi gửi trước khi nghiệm thu pipeline đầy đủ. |
+| 2 — VII.3 | TV4 chuẩn hóa emitter và payload với TV2. | EVT01, timestamp UTC mili giây giữ nguyên khi retry; session/seq chỉ diagnostic. |
+| 3 — VII.4 | Driver UI và publisher/controller. | `POST /v1/locations`, role DRIVER, broker-confirmed 202; không đồng nghĩa đã persist. |
+| 4 — VII.5 | Vòng đời và Worker persist. | Canonical first-write-wins, transaction history/current đủ điều kiện, ACK sau commit. |
+| 5 — VII.6 | Tracking cloud đầu-cuối, offline/stale và cleanup. | Driver → API → queue → Worker → SQL → UI; kiểm chứng buffer/retry và quyền dữ liệu. |
 
-`POST /v1/locations` là endpoint theo contract cập nhật; các file controller/service/DTO của module location hiện còn rỗng. Spec tuần 1 không coi endpoint này đã hoạt động. Khi nối qua `apiClient`, dùng đường dẫn `/locations` vì base URL đã chứa `/v1`. Theo `frontend-spec.md`, khi tích hợp nghiệp vụ, emitter bắt đầu gửi GPS ở `PICKED_UP` và dừng khi đơn kết thúc (`DELIVERED` hoặc `DELIVERY_FAILED`); bản phác thảo hiện chưa kiểm tra trạng thái đơn hàng.
+`POST /v1/locations` là contract đích tại VI.API08; spec tuần 1 không coi handler đã hoạt động.
+Khi nối qua `apiClient`, dùng đường dẫn `/locations` vì base URL đã chứa `/v1`.
+Payload demo có driverId nội bộ không phải request production: API lấy driverId từ danh tính tin cậy.
+Theo FR04/UI02, emitter đích hoạt động khi trang Driver hoạt động; theo FR05/UI01, tracking
+ẩn vị trí/dừng polling khi đơn terminal. Không đánh đồng vòng đời emitter với một đơn duy nhất;
+bản phác thảo tuần 1 vẫn độc lập trạng thái đơn hàng.
 
 ## 9. Tài liệu tham chiếu
 
+- [PF SPEC 01 nội dung v1.3 và thứ tự ưu tiên nguồn](../docs/spec-baseline.md), VII.2–6; thay bảng tiến độ cũ khi có khác biệt.
 - `ParcelFlow - Bảng theo dõi tiến độ.xlsx`, sheet `Tiến độ 10 Tuần`: D7, F4 và D13/D19/D25/D31.
 - [Đặc tả frontend](frontend-spec.md): route Driver, luồng trạng thái và chu kỳ GPS.
 - [Thiết kế frontend](frontend-design.md): frontend giao tiếp REST và kiến trúc Pub/Sub.
 - [README](../README.md): kiến trúc GPS và roadmap MVP.
 - [GpsEmitter.tsx](../apps/web/src/features/driver/GpsEmitter.tsx) và [types dùng chung](../packages/types/src/index.ts): đối chiếu hành vi và payload hiện có.
+
+## 10. Chuẩn hóa sự kiện GPS và kiểm thử Pub/Sub
+
+### 10.1. Phạm vi và quyết định
+
+Nguồn phạm vi: bảng tiến độ, sheet `Tiến độ 10 Tuần`, ô D13: tiếp tục kiểm thử Pub/Sub và chốt schema GPS với phần GPS pipeline. Checkpoint tạo đơn hàng tại F10 thuộc luồng nghiệp vụ khác, không phải tiêu chí hoàn thành của phần này.
+
+Đối chiếu phạm vi sau lượt thử Console ngày 16/10/2026: các yêu cầu chi tiết về smoke runner, NACK/redelivery và cleanup ở dưới là kiểm chứng kỹ thuật bổ sung do kế hoạch triển khai đề xuất. Bảng tuần 2 không yêu cầu riêng các ca này; chúng không tự trở thành gate bắt buộc của D13. Giữ các ca và trạng thái hiện có để theo dõi trung thực, phân biệt với việc thử Pub/Sub và phối hợp thống nhất schema theo nguồn chính thức.
+
+Ngày 16/10/2026, người yêu cầu giao quyết định kỹ thuật sau khi được thông báo mâu thuẫn giữa OpenAPI và type dùng chung. Chọn sự kiện bảy trường hiện có, timestamp quyết định thứ tự và `seq` phục vụ chẩn đoán. Bỏ proposal đổi phiên luôn thắng trong contract GPS. Đây là quyết định cho hợp đồng tích hợp; chưa có xác nhận review độc lập từ người phụ trách GPS pipeline.
+
+Repository không có `.specify/memory/constitution.md`, bộ artifact Spec Kit hoặc các skill `speckit-*` được cài. Tiếp tục bộ OpenSpec hiện có, không tạo constitution hay chạy script tạo feature mới. Các tài liệu tuần 1 vẫn là bằng chứng lịch sử, không chứng minh trạng thái tuần 2.
+
+### 10.2. Yêu cầu nghiệm thu
+
+| ID | Yêu cầu | Bằng chứng cần có |
+| --- | --- | --- |
+| GPS-201 | Phân biệt request của client với event nội bộ; xác định bên tạo từng trường, kiểu dữ liệu và giới hạn. | Contract, type và OpenAPI nhất quán; request không cho phép giả mạo trường do API quản lý. |
+| GPS-202 | Quy định timestamp, sequence, retry và sự kiện đến muộn phù hợp thiết kế README. | Quy tắc rõ ràng; không dựa vào `seq` để loại bỏ vị trí mới sau khi client khởi động lại. |
+| GPS-203 | Emitter tạo request theo contract mỗi 8 giây, giữ Start/Stop và không tự gửi mạng. | Kiểm thử timer, sequence, callback và cleanup; frontend lint/build đạt. |
+| GPS-204 | Có công cụ publish, pull, đối chiếu payload, NACK/redelivery và ACK qua Pub/Sub. | Run có giới hạn thời gian; đối chiếu message ID lẫn event ID; lỗi hoặc thiếu message trả exit code khác 0. |
+| GPS-205 | Kiểm thử được payload lặp và payload đến muộn mà không giả định thứ tự broker. | Broker giữ nguyên payload; chưa tuyên bố worker đã dedupe hoặc ghi DB. |
+| GPS-206 | Phân biệt kiểm thử mock, emulator và cloud, lưu bằng chứng cùng resource thực tế. | Biên bản có thời điểm, chế độ, topic/subscription, kết quả và blocker; chỉ đánh dấu mức thực sự đã chạy. |
+| GPS-207 | Công cụ thử nghiệm dùng resource riêng và dọn đúng resource do lượt chạy tạo. | Không consume subscription nghiệp vụ; cleanup được kiểm tra cả khi thất bại. |
+
+Ngoài phạm vi: endpoint ingest, xác thực Driver, schema/migration DB, worker ghi DB, xử lý dedupe/ordering thực tế, push subscription, GPS thật và load test. Việc quy định contract không triển khai sớm các phần này.
+
+### 10.3. Kế hoạch thực hiện
+
+1. Chốt contract request/event trong tài liệu và type dùng chung, cập nhật riêng phần GPS của OpenAPI và contract API.
+2. Thêm validation dùng chung để kiểm chứng dữ liệu tại ranh giới JSON; emitter dùng request type và sequence tăng theo từng mẫu trong cùng lần mount.
+3. Thêm smoke runner Node.js dùng Pub/Sub SDK đã có. Mỗi run tạo topic/subscription có UUID riêng, tạo subscription trước publish, giới hạn RPC và tổng thời gian nhận, đối chiếu nội dung trước ACK, yêu cầu redelivery sau NACK, dọn resource trong `finally`.
+4. Kiểm tra contract bằng unit test, kiểm tra runner với SDK mock, kiểm tra emitter bằng fake timer. Sau đó chạy emulator/cloud khi môi trường sẵn sàng; lưu kết quả thực tế và phần chưa kiểm chứng.
+
+### 10.4. Checklist chất lượng yêu cầu
+
+- [x] GC-01: Trường client và trường API có nguồn gốc, kiểu, giới hạn rõ ràng (GPS-201). Review: bảng request/event trong contract.
+- [x] GC-02: Retry, timestamp bằng nhau, đến muộn và sequence khởi động lại có quy tắc rõ ràng (GPS-202). Review: mục Thứ tự và tính lặp trong contract.
+- [x] GC-03: Mỗi yêu cầu có tiêu chí kiểm chứng và giới hạn phạm vi (GPS-201–207). Review: mục 10.2.
+- [x] GC-04: Bằng chứng mock/emulator/cloud và review phối hợp được phân biệt (GPS-206). Review: mục 10.1–10.2 và trạng thái contract.
+- [x] GC-05: Công cụ thử nghiệm có giới hạn thời gian, cô lập và cleanup (GPS-204, GPS-207). Review: mục 10.3, bước 3.
+
+Review yêu cầu riêng ngày 16/10/2026: checklist đạt về chất lượng yêu cầu; không suy ra implementation đã hoàn thành. Phân tích chỉ đọc không còn mâu thuẫn nghiêm trọng trong phạm vi đã chọn. Việc chạy broker thực tế và review phối hợp vẫn là điều kiện mở, không được thay bằng kết quả mock.
+
+### 10.5. Tác vụ triển khai
+
+- [x] G201: Đồng bộ contract, type dùng chung, validation và OpenAPI (GPS-201, GPS-202). Bằng chứng: 45 contract test đạt, gồm đối chiếu OpenAPI.
+- [x] G202: Đồng bộ emitter và kiểm thử hành vi theo thời gian (GPS-203). Bằng chứng: 10 kiểm tra component trong `docs/evidence/gps-pipeline/emitter-component.json`, lint/build frontend đạt.
+- [x] G203: Thêm smoke runner và test thành công/thất bại bằng SDK mock (GPS-204, GPS-205, GPS-207). Bằng chứng: 13 runner test đạt; chưa phải bằng chứng broker thật.
+- [x] G204: Chạy lint, typecheck, test và build phù hợp, ghi kết quả (GPS-201–207). Bằng chứng: `docs/gps-pipeline-validation.md` và `docs/evidence/gps-pipeline/unit-tests.json`.
+- [ ] G205: Chạy Pub/Sub emulator hoặc cloud, lưu bằng chứng broker thực tế (GPS-204–207). Lượt thử Console đã có sáu ảnh; smoke runner trên broker thật và các ca NACK/redelivery, cleanup bổ sung chưa được kiểm chứng.
+- [ ] G206: Bàn giao contract để người phụ trách GPS pipeline review độc lập (GPS-206).
+- [x] G207: Bổ sung bằng chứng runner nhận message đảo thứ tự và báo lỗi khi thiếu redelivery sau NACK, theo rà soát nghiệm thu (GPS-204, GPS-205). Hai ca bổ sung đạt trong bộ 13 runner test.
+
+### 10.6. Đánh giá nghiệm thu
+
+Rà soát ngày 16/10/2026: phần code, contract và kiểm chứng local/mock của G201–G204/G207 đạt. Không phát hiện thiếu sót triển khai khác trong phạm vi đã chọn. Hướng dẫn chạy emulator, cloud bằng ADC và thử thủ công trên Console nằm trong `docs/gps-pipeline-validation.md`.
+
+Lượt thử cloud đã được người vận hành thực hiện trên Console trong project `int3326e`, topic `gps-contract-test-20261016`, subscription `gps-contract-test-20261016-sub`. Sáu ảnh gốc được lưu tại `docs/evidence/gps-pipeline/`, có bằng chứng publish và bốn dòng message nhận được. ACK được ghi nhận theo xác nhận người vận hành và ảnh sau thao tác. Các giá trị event ID/timestamp bị cắt ngang nên chưa đối chiếu đầy đủ payload từ ảnh; không suy ra NACK/redelivery từ bộ ảnh này.
+
+G205 giữ mở cho phần kiểm chứng smoke runner bổ sung trên broker thật; emulator local trước đó không kết nối được và chưa có ADC để chạy script cloud. G206 còn chờ người phụ trách GPS pipeline xác nhận contract. Theo phạm vi chính thức D13, phần thử Pub/Sub thủ công đã thực hiện, phần phối hợp thống nhất schema chưa có xác nhận; vì vậy chưa đánh dấu toàn bộ tuần 2 hoàn tất. Xem biên bản và giới hạn bằng chứng tại `docs/gps-pipeline-validation.md`.
