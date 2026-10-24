@@ -353,3 +353,91 @@ Rà soát ngày 16/10/2026: phần code, contract và kiểm chứng local/mock 
 Lượt thử cloud đã được người vận hành thực hiện trên Console trong project `int3326e`, topic `gps-contract-test-20261016`, subscription `gps-contract-test-20261016-sub`. Sáu ảnh gốc được lưu tại `docs/evidence/gps-pipeline/`, có bằng chứng publish và bốn dòng message nhận được. ACK được ghi nhận theo xác nhận người vận hành và ảnh sau thao tác. Các giá trị event ID/timestamp bị cắt ngang nên chưa đối chiếu đầy đủ payload từ ảnh; không suy ra NACK/redelivery từ bộ ảnh này.
 
 G205 giữ mở cho phần kiểm chứng smoke runner bổ sung trên broker thật; emulator local trước đó không kết nối được và chưa có ADC để chạy script cloud. G206 còn chờ người phụ trách GPS pipeline xác nhận contract. Theo phạm vi chính thức D13, phần thử Pub/Sub thủ công đã thực hiện, phần phối hợp thống nhất schema chưa có xác nhận; vì vậy chưa đánh dấu toàn bộ tuần 2 hoàn tất. Xem biên bản và giới hạn bằng chứng tại `docs/gps-pipeline-validation.md`.
+
+## 11. TV4 tuần 6 theo lịch nhóm — 26/10 đến 01/11/2026
+
+### 11.1. Phạm vi và làm rõ
+
+Người dùng giao triển khai phần TV4 tuần 6 ngày 24/10/2026. Nguồn phân công:
+bảng Excel `ParcelFlow - Bảng theo dõi tiến độ.xlsx`, sheet `Tiến độ 10 Tuần`,
+B16:C16 và D19:E19: Driver login/dashboard skeleton và gửi thử GPS.
+Mốc này tương ứng VII.4 (tuần 3 của lộ trình sản phẩm), không phải tuần failed/late.
+Contract tích hợp dùng VI.API08/EVT01 theo `docs/gps-event-contract.md` và
+`docs/openapi.json`; không dùng tên `/location` cũ trong bảng Excel.
+
+Các quyết định kỹ thuật trong phạm vi đã giao:
+
+- W6-01: Tái sử dụng login, AuthContext, SessionControls và route DRIVER hiện có;
+  dashboard hiển thị tài khoản thật của phiên. Không tạo tài khoản/role hoặc login riêng.
+- W6-02: Khung Driver có khu vực đơn được phân công với thông báo chưa kết nối,
+  không tạo đơn hoặc thống kê giả. Chưa làm pickup/delivery, GPS browser hay load test.
+- W6-03: Emitter tiếp tục dùng tọa độ mẫu mỗi 8 giây, ban đầu dừng. Dashboard nối
+  callback tới `POST /v1/locations` qua API client chung và Bearer token hiện có;
+  body đúng GpsLocationRequest, không có driverId/role. Emitter độc lập vẫn xem mẫu.
+- W6-04: Chỉ ghi nhận chấp nhận khi HTTP 202 và JSON có status ACCEPTED,
+  eventId không rỗng, receivedAt UTC mili giây hợp lệ, theo AsyncAcceptedResponse.
+  Hiển thị đang gửi, số mẫu được API chấp nhận, mã sự kiện gần nhất và lỗi an toàn.
+  Không diễn giải 202 thành đã lưu SQL hoặc đã đối chiếu Console.
+- W6-05: Mỗi lúc tối đa một request, timeout ngắn hơn nhịp 8 giây; không tạo hàng
+  đợi/retry tự động. Nếu request vẫn chờ thì bỏ qua mẫu mới và thông báo rõ.
+  Stop ngừng tạo/gửi mẫu mới; request đã gửi có thể hoàn tất. Rời trang/hết phiên
+  hủy request và timer, không cập nhật kết quả của phiên cũ.
+- W6-06: Phân biệt test mock/local với Firebase/API/Pub/Sub cloud. Handler GPS của
+  TV2 còn trống trong checkout này. TV4 chuẩn bị client và hướng dẫn tích hợp;
+  không tự triển khai backend, IAM hoặc deploy thay TV2/TV5.
+
+Không có quyết định nghiệp vụ mới cần hỏi. Google Docs không đọc được qua công cụ
+trong lượt này; dùng phạm vi người dùng đã giao, bảng phân công đã đọc và contract
+repo hiện có. Không tuyên bố đã đọc lại toàn bộ VII.4 trên cloud.
+Repo không có constitution hoặc skill speckit-*; tiếp tục artifact Driver này theo
+các bước specify/clarify/plan/checklist/review/tasks/analyze/implement/converge
+thủ công, không tạo constitution, không chạy script tạo feature mới.
+
+### 11.2. Kế hoạch
+
+1. Thêm adapter `api/endpoints/locations.ts` dùng validation shared và API client,
+   kiểm tra HTTP/JSON response theo schema hiện có.
+2. Hoàn thiện DriverPlaceholderPage thành dashboard bằng tài khoản phiên, CSS
+   riêng cho Driver; nối callback emitter, giới hạn request và cleanup theo W6-05.
+   Giữ tên file/export để tránh thay route không cần thiết.
+3. Kiểm thử adapter bằng fetch mock và dashboard bằng StrictMode/fake timers,
+   bao gồm auth gate, Stop/restart, timeout, lỗi HTTP và rời trang/đổi tài khoản.
+4. Chạy lint/build/test frontend, kiểm tra diff và ghi hướng dẫn nghiệm thu thật.
+
+### 11.3. Checklist chất lượng yêu cầu
+
+- [x] W6-C01: Có nguồn phân công, cách đánh số tuần, giới hạn phạm vi (11.1).
+- [x] W6-C02: Request, auth, response và ý nghĩa 202 xác định rõ (W6-01/03/04).
+- [x] W6-C03: Timer, concurrency, timeout, Stop và cleanup có tiêu chí (W6-03/05).
+- [x] W6-C04: Không có dữ liệu nghiệp vụ giả và phân biệt các mức kiểm chứng (W6-02/06).
+
+Review yêu cầu riêng trước implement ngày 24/10/2026: C01 đối chiếu phân công đã
+đọc và mục 11.1; C02 đối chiếu GpsLocationRequest/AsyncAcceptedResponse và API
+client; C03 đối chiếu các hành vi W6-03/05; C04 đối chiếu W6-02/06. Các marker
+chỉ xác nhận yêu cầu có tiêu chí, không chứng minh code đã chạy.
+
+### 11.4. Tác vụ
+
+- [x] W601: Adapter gửi GPS và kiểm thử auth/body/HTTP/schema/lỗi (W6-03/04). `locations.spec.ts`: 17 test đạt.
+- [x] W602: Dashboard tài khoản, khung đơn, callback GPS và cleanup (W6-01–05). Driver dashboard và CSS riêng; test mock/local đạt.
+- [x] W603: Test tích hợp Driver route/timer/HTTP/error/cleanup bằng mock (W6-01–05). `DriverPlaceholderPage.spec.tsx`: 19 test đạt; emitter cũ 7 test đạt.
+- [x] W604: Lint/build/test frontend và tài liệu bàn giao (W6-06). Lint/build exit 0; 219 test/20 file đạt; `docs/driver-dashboard-gps.md` ghi lệnh và mức bằng chứng.
+- [ ] W605: Xác minh Firebase Driver → API TV2 → Pub/Sub cloud với TV2/TV5/TV6 (W6-06).
+
+### 11.5. Phân tích trước implement
+
+Phân tích chỉ đọc sau khi review: mọi W6-01–06 có task và cách kiểm chứng. Không
+còn mâu thuẫn nghiêm trọng trong phần client đã giao. Phụ thuộc ngoài phạm vi:
+handler GPS chưa có, review contract G206 còn mở; W605 không thể thay bằng mock.
+Giữ nguyên tasks G201–207 và checklist cũ. Làm trên branch
+`feature/driver-dashboard-gps` từ develop/origin/develop `8038c83` sau fetch.
+
+### 11.6. Kết quả implement
+
+Ngày 24/10/2026: W601–604 đạt ở mức local/mock; không sửa marker checklist
+trong bước implement. Dashboard dùng login sẵn có, dữ liệu tài khoản phiên và
+callback API; standalone emitter giữ chế độ xem mẫu. Không sửa backend, Auth,
+database hoặc hạ tầng. Các file và lệnh kiểm chứng nằm trong
+`docs/driver-dashboard-gps.md`. Chưa có trình duyệt kết nối để kiểm tra trực quan.
+W605 còn mở vì handler GPS chưa có trong checkout và chưa kiểm chứng môi trường
+thật. G205/G206 của giai đoạn trước giữ nguyên, không dùng test mới để đóng chúng.
