@@ -2,6 +2,11 @@
 
 **A logistics & delivery platform built "Cloud First" - Modular Monolith + async processing for high-throughput GPS data.**
 
+Yêu cầu hiện hành: [PF SPEC 01, nội dung v1.3 và thứ tự ưu tiên nguồn](docs/spec-baseline.md).
+Tuần 1 được bảo toàn theo VII.2; Auth/API thật từ tuần 2. Xem
+[hồ sơ tái nghiệm thu tuần 1](openspec/week1-reacceptance/acceptance.md)
+để phân biệt kết quả hiện tại, bằng chứng lịch sử và việc còn mở.
+
 | | |
 |---|---|
 | **Course** | Cloud Application Development - UET |
@@ -44,7 +49,7 @@ npm run lint
 
 Để thử pipeline local, bật Docker và chạy
 `docker compose -f infra/docker-compose.yml up -d pubsub-emulator`, rồi chạy
-`sh infra/pubsub/bootstrap.sh` trong Git Bash/WSL để tạo topic/subscription.
+`sh infra/pubsub/init-pubsub.sh` trong Git Bash/WSL để tạo topic/subscription.
 
 `.env.example` ở gốc là template chung; Worker local cần `PORT`, `GCP_PROJECT_ID`,
 `PUBSUB_SUBSCRIPTION` và `PUBSUB_EMULATOR_HOST`, dùng project `parcelflow-dev`
@@ -53,11 +58,40 @@ pipeline Pub/Sub hoạt động; nếu chưa bật emulator, Worker có thể lo
 API dùng `apps/api/.env.example`; frontend không nhận credentials của Worker/API.
 Không đặt `PUBSUB_EMULATOR_HOST` trên Cloud Run; dùng project thật và ADC do TV5 cấu hình.
 
-Typecheck/test ở gốc chỉ kiểm tra Worker và cấu hình Vitest, không gom code React
+Typecheck/test ở gốc kiểm tra Worker, GPS contract dùng chung, smoke runner test
+và cấu hình Vitest, không gom code React
 hoặc test API. Chạy riêng API bằng `npm run typecheck --workspace=@parcelflow/api`
 và `npm test --workspace=@parcelflow/api`; frontend dùng `npm run lint:web`,
 `npm run build:web`, `npm run dev:web`. Sau khi đổi compiler config trong VS Code,
 chạy **TypeScript: Restart TS Server** nếu Problems vẫn hiển thị lỗi cũ.
+
+Contract request/event GPS hiện hành nằm trong [hợp đồng sự kiện GPS](docs/gps-event-contract.md).
+Chạy `npm run test:gps-pubsub` khi đã có Pub/Sub emulator và cấu hình
+`PUBSUB_EMULATOR_HOST`; chế độ cloud dùng `--cloud --project int3326e` và ADC.
+Xem [kiểm thử pipeline GPS](docs/gps-pipeline-validation.md) để chạy từng bước,
+thử trực tiếp trên Cloud Console và phân biệt bằng chứng local với cloud.
+
+### Worker trên Cloud Run
+
+Worker có package/lockfile và Dockerfile riêng trong `apps/worker`. Từ gốc repo,
+build image với `docker build -t parcelflow-worker apps/worker`, hoặc deploy source:
+
+```bash
+gcloud run deploy worker-service \
+  --project=int3326e \
+  --region=asia-southeast1 \
+  --source=apps/worker \
+  --port=8080 \
+  --command="" \
+  --args="" \
+  --update-env-vars=GCP_PROJECT_ID=int3326e \
+  --remove-env-vars=PUBSUB_EMULATOR_HOST
+```
+
+Service account dùng ADC; `PUBSUB_SUBSCRIPTION` phải khớp subscription thật của GCP.
+Health tuần 1 phải trả JSON `{"status":"ok"}`; trang mẫu Cloud Run không phải
+worker của dự án. Trên Cloud Run, kiểm tra `/healthz/` để tránh đường dẫn `/healthz`
+được Google dành riêng. Health chỉ xác nhận tiến trình HTTP, chưa xác nhận xử lý GPS.
 
 ---
 
@@ -127,7 +161,7 @@ flowchart TD
 
     B["Backend<br/>NestJS on Cloud Run<br/>Modules: Shipment / Assign / Notification / ETA"]
 
-    B -- "POST /locations<br/>(publish only, no DB write)" --> P["Pub/Sub: gps-events"]
+    B -- "POST /v1/locations<br/>(publish only, no DB write)" --> P["Pub/Sub: gps-events"]
     B -- "Other CRUD (sync)" --> DB[("Cloud SQL<br/>PostgreSQL")]
 
     P -- "Subscribe" --> W["GPS Worker<br/>Cloud Run, separate service"]
@@ -145,7 +179,7 @@ All business operations (create shipment, assign, notifications, auth, ...) go t
 
 To meet the load requirements, the **write path** and **read path** of GPS data are fully separated:
 
-- **Write path (driver sends GPS):** The driver calls `POST /locations`. The backend only **publishes** a message to Google Cloud Pub/Sub and immediately returns `HTTP 202` (draft) - it does not wait for a database write.
+- **Write path (driver sends GPS):** The driver calls `POST /v1/locations`. The backend only **publishes** a message to Google Cloud Pub/Sub and immediately returns `HTTP 202` (draft) - it does not wait for a database write.
 - **Background processing (worker):** A standalone service (**GPS Worker**) subscribes to Pub/Sub and writes the data into Cloud SQL.
 - **Read path (customer tracking):** The Customer app uses **REST polling** (every 5 to 10s) to read the `current_location` table from Postgres.
 
@@ -205,7 +239,7 @@ Design assumptions: at any moment there are **~300–500 active shipments**, and
 
 ## Week 1 API scaffold
 
-The API now boots with Shipment, Auth and Admin modules and exposes public `GET /healthz`. Shipment/Admin business handlers and database access remain deferred. See [run and container instructions](docs/api-scaffold.md) and the [contract draft decisions](docs/api-contract.md). `docs/openapi.json` is a future API draft; cancellation is an unapproved proposal outside the five-state baseline. Cloud Run deployment evidence is tracked in issue #9.
+The API boots with Shipment, Auth and Admin modules and exposes public `GET /healthz`, Firebase profile endpoints, and Admin-only read endpoints `GET /v1/drivers` (API11) and `GET /v1/admin/customers`. The lists validate business identity and read PostgreSQL; deployment requires the matching schema. See [Admin directory](docs/tv6-admin-directory.md) and the draft [QA test plan](docs/qa-test-plan.md). Shipment/GPS business handlers remain deferred. [Run and container instructions](docs/api-scaffold.md) preserve the week 1 setup; [contract decisions](docs/api-contract.md) and `docs/openapi.json` distinguish the implemented reads from future operations. Cancellation remains an unapproved proposal outside the five-state baseline. Week 1 deployment evidence is tracked in issue #9.
 
 ## Frontend integration and Hosting
 
@@ -234,6 +268,9 @@ npx --yes firebase-tools deploy --only hosting --project int3326e
 Firebase CLI must be authenticated with access to `int3326e`. `firebase.json`
 publishes `dist` and rewrites SPA routes to `index.html`, including direct access
 to `/admin`. Hosting: https://int3326e.web.app.
+
+See the [TV6 frontend handoff to TV5](docs/tv6-deploy-handoff.md) for production
+environment variables, backend prerequisites and verification limits.
 
 Keep the API's standalone package and lockfile as documented in
 `docs/api-scaffold.md`. Each app is installed from its own lockfile; `apps.zip`

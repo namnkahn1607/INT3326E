@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "ParcelFlow Core Logistics API (MVP)",
-    "description": "Week 1 draft for later ParcelFlow API implementation. Only GET /healthz is implemented in the scaffold. Business operations are proposals, not live endpoints.\n\nRoles: CUSTOMER, DRIVER, ADMIN; Admin performs dispatch operations.\nBaseline shipment flow: CREATED -> ASSIGNED -> PICKED_UP -> DELIVERED / DELIVERY_FAILED.\nDraft conventions: business routes use /v1; GPS POST /locations returns 202; REST uses dropoffAddress/dropoffLocation and data/pagination. See docs/api-contract.md for field mappings and pending integration decisions. Cancellation is preserved separately under x-proposals and requires team approval. Session/sequence GPS behavior, identifier design and idempotency require review before implementation.",
-    "version": "0.2.0-week1-draft"
+    "description": "Shipment/GPS operations remain drafts. Admin directory implements GET /drivers (API11/SC06) and GET /admin/customers (read-only scope requested on 23/10/2026), requiring ADMIN plus business linkage. Deployment and DATA01/02/04 migration acceptance remain separate; see docs/tv6-admin-directory.md and docs/qa-test-plan.md. Week 2 implements GET /auth/me and GET /admin/me under /v1; GET /healthz remains public outside /v1. Authentication uses verified Firebase ID Tokens and current Firebase custom claims for CUSTOMER, DRIVER and ADMIN. No public role-assignment endpoint is provided.\n\nRoles: CUSTOMER, DRIVER, ADMIN; Admin performs dispatch operations.\nBaseline shipment flow: CREATED -> ASSIGNED -> PICKED_UP -> DELIVERED / DELIVERY_FAILED.\nDraft conventions: business routes use /v1; GPS POST /locations returns 202 after Pub/Sub publish; REST uses dropoffAddress/dropoffLocation and data/pagination. See docs/api-contract.md for field mappings and pending integration decisions. Cancellation is preserved separately under x-proposals and requires team approval. GPS uses clientTimestamp for ordering and seq for diagnostics; see docs/gps-event-contract.md for the selected request/event contract and pending independent pipeline review.\n\nAuth review follow-up: HTTP errors use ProblemDetails. Business user linkage validates users.firebaseUid and current role before business handlers; missing/inconsistent linkage returns 409 USER_NOT_PROVISIONED, dependency failure returns 503. Shipment/GPS handlers remain drafts; Admin reads do not deploy schema or implement shipment logic.",
+    "version": "0.4.0-admin-directory"
   },
   "servers": [
     {
@@ -19,6 +19,14 @@
     {
       "name": "Tracking & Location",
       "description": "Async driver telemetry ingestion and consolidated tracking + ETA read-path."
+    },
+    {
+      "name": "Auth",
+      "description": "Verified Firebase account profiles."
+    },
+    {
+      "name": "Admin",
+      "description": "Read-only Admin directories; no account or custom-claim mutation."
     },
     {
       "name": "Health",
@@ -77,6 +85,9 @@
           },
           "500": {
             "$ref": "#/components/responses/500InternalServerError"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
           }
         },
         "security": [
@@ -144,6 +155,12 @@
           },
           "500": {
             "$ref": "#/components/responses/500InternalServerError"
+          },
+          "409": {
+            "$ref": "#/components/responses/409Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
           }
         },
         "security": [
@@ -189,6 +206,12 @@
           },
           "500": {
             "$ref": "#/components/responses/500InternalServerError"
+          },
+          "409": {
+            "$ref": "#/components/responses/409Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
           }
         },
         "security": [
@@ -246,7 +269,7 @@
             "$ref": "#/components/responses/404NotFound"
           },
           "409": {
-            "description": "Invalid state transition (shipment already picked up, delivered, failed)",
+            "description": "Invalid state transition (shipment already picked up, delivered, failed); business identity linkage failure returns USER_NOT_PROVISIONED",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -257,6 +280,9 @@
           },
           "500": {
             "$ref": "#/components/responses/500InternalServerError"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
           }
         },
         "security": [
@@ -305,6 +331,9 @@
           },
           "500": {
             "$ref": "#/components/responses/500InternalServerError"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
           }
         },
         "security": [
@@ -363,6 +392,9 @@
           },
           "500": {
             "$ref": "#/components/responses/500InternalServerError"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
           }
         },
         "security": [
@@ -424,6 +456,9 @@
           },
           "500": {
             "$ref": "#/components/responses/500InternalServerError"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
           }
         },
         "security": [
@@ -440,7 +475,7 @@
           "Tracking & Location"
         ],
         "summary": "Submit driver location coordinates (High throughput - Async)",
-        "description": "**Asynchronous Write Path:**\nDriver client submits periodic telemetry (e.g. every ~8 seconds). The API validates the payload, queues/buffers it for background processing, and immediately returns `202 Accepted`.\n\n**Session-Scoped Monotonic Sequence:**\nDriver clients generate a `sessionId` (UUID v4) on application startup/session start, and a monotonic counter `seq` (>= 1). The ingestion worker tracks `(driverId, sessionId, lastSeq)`:\n- If `sessionId` changes, the new session wins unconditionally, resetting the sequence.\n- If `sessionId` matches, packets are accepted only if `seq > lastSeq`.\nThis completely prevents silent data loss when a mobile client crashes, restarts, and resets its counter.\n\n**Authorized Roles:** `DRIVER`.",
+        "description": "**Asynchronous Write Path (not implemented):**\nDriver submits lat, lng, seq and clientTimestamp every ~8 seconds. The API derives driverId from authenticated identity, creates eventId and receivedAt, and publishes GpsTelemetryEvent as UTF-8 JSON. Return 202 only after publish succeeds; this does not confirm a database write. Reject unknown request fields.\n\n**Timestamp Ordering:**\nclientTimestamp determines location freshness. seq is diagnostic and may restart at 1 after a client restart; it is not a cross-session ordering key. Worker dedupe uses (driverId, clientTimestamp), and current location advances only for a strictly newer clientTimestamp. Retry publish preserves the entire event. See docs/gps-event-contract.md for the selected week 2 contract and pending independent pipeline review.\n\n**Authorized Roles:** `DRIVER`.",
         "operationId": "submitLocation",
         "requestBody": {
           "required": true,
@@ -480,6 +515,9 @@
           },
           "500": {
             "$ref": "#/components/responses/500InternalServerError"
+          },
+          "409": {
+            "$ref": "#/components/responses/409Conflict"
           }
         },
         "security": [
@@ -528,6 +566,12 @@
           },
           "500": {
             "$ref": "#/components/responses/500InternalServerError"
+          },
+          "409": {
+            "$ref": "#/components/responses/409Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
           }
         },
         "security": [
@@ -588,6 +632,193 @@
           }
         }
       }
+    },
+    "/auth/me": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Return the authenticated account for any supported role",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Verified current account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthenticatedUser"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/drivers": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "List drivers for dispatching (API11)",
+        "description": "ADMIN only, with matching users business linkage. Server filters DRIVER. Keyset order createdAt DESC/id DESC; only limit/cursor query fields. Counts ASSIGNED/PICKED_UP in the same SQL snapshot as GPS. Without active shipments or current GPS, all location fields are null. Freshness uses clientTimestamp with inclusive 0–30 seconds; receivedAt is lastLocationUpdatedAt. No email, UID, onlineFlag or global total. Requires DATA01/02/04 tables and timestamps; schema/dependency failure returns 503, never fabricated empty data.",
+        "operationId": "listDrivers",
+        "x-implementation-status": "implemented",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DirectoryLimit"
+          },
+          {
+            "$ref": "#/components/parameters/DirectoryCursor"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Page of provisioned business users; empty data is valid.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedDriversResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/409Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/admin/customers": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "List Customer summaries (read-only TV6 scope)",
+        "description": "Read-only addition requested for TV6 on 23/10/2026, outside the original API01–11 catalogue. ADMIN and matching business linkage required. Server filters CUSTOMER. Returns only id/name/email/nullable phone, sorted createdAt DESC/id DESC. Only limit/cursor accepted. No account creation, role assignment or unscoped global count.",
+        "operationId": "listAdminCustomers",
+        "x-implementation-status": "implemented",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DirectoryLimit"
+          },
+          {
+            "$ref": "#/components/parameters/DirectoryCursor"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Page of provisioned business users; empty data is valid.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedCustomersResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/409Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/admin/me": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Return the authenticated Admin account; other roles receive 403",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Verified current account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthenticatedUser"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -600,6 +831,29 @@
       }
     },
     "parameters": {
+      "DirectoryLimit": {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "description": "Page size, default 20, range 1–100. Repeated/invalid values are rejected.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 20
+        }
+      },
+      "DirectoryCursor": {
+        "name": "cursor",
+        "in": "query",
+        "required": false,
+        "description": "Opaque keyset cursor from the previous response for this directory. Wrong scope/version/format returns 400. It does not grant access.",
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        }
+      },
       "ShipmentIdParam": {
         "name": "id",
         "in": "path",
@@ -665,7 +919,7 @@
         }
       },
       "409Conflict": {
-        "description": "Conflicting state transition or duplicate idempotency conflict",
+        "description": "Business user missing/inconsistent (USER_NOT_PROVISIONED), conflicting state transition, or idempotency conflict",
         "content": {
           "application/problem+json": {
             "schema": {
@@ -695,7 +949,7 @@
         }
       },
       "503ServiceUnavailable": {
-        "description": "Service temporarily unavailable (e.g. telemetry buffer full or database down)",
+        "description": "Dependency temporarily unavailable or misconfigured, including Firebase Auth or the user database; not an invalid-token error",
         "content": {
           "application/problem+json": {
             "schema": {
@@ -990,24 +1244,30 @@
       },
       "SubmitLocationRequest": {
         "type": "object",
+        "additionalProperties": false,
         "required": [
-          "sessionId",
-          "seq",
           "lat",
-          "lng"
+          "lng",
+          "clientTimestamp"
         ],
-        "description": "Periodic location telemetry sent by driver mobile client.",
+        "description": "Periodic driver telemetry. sessionId and seq are optional diagnostics. Server-managed identity and event metadata are forbidden in the request. See docs/gps-event-contract.md.",
+        "example": {
+          "lat": 21.0285,
+          "lng": 105.8542,
+          "seq": 1,
+          "clientTimestamp": "2026-10-16T10:00:00.000Z"
+        },
         "properties": {
           "sessionId": {
             "type": "string",
             "format": "uuid",
-            "description": "Unique UUID v4 generated on driver mobile app startup. A new session ID resets the sequence counter on the server, preventing silent drops after app crashes.",
-            "example": "b18f08f2-89b2-4d2d-9653-535d2d53e7f1"
+            "description": "Optional diagnostic session identifier; never determines GPS ordering."
           },
           "seq": {
             "type": "integer",
             "minimum": 1,
-            "description": "Monotonically increasing sequence number within the current sessionId.",
+            "maximum": 2147483647,
+            "description": "Client sample counter within one emitter lifetime. Diagnostic only; may restart at 1 after remount. Never use seq alone to reject a newer timestamp.",
             "example": 142
           },
           "lat": {
@@ -1023,6 +1283,57 @@
             "minimum": -180.0,
             "maximum": 180.0,
             "example": 105.7829
+          },
+          "clientTimestamp": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+            "description": "ISO 8601 measurement timestamp with a timezone. Preserve on retry. API normalizes to UTC milliseconds before hashing, deduplication and publishing, truncating sub-millisecond precision without rounding.",
+            "example": "2026-10-16T10:00:00.000Z"
+          }
+        }
+      },
+      "GpsTelemetryEvent": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Internal Pub/Sub JSON event enriched by the API. This is not the REST request body. Publish retries preserve every field.",
+        "required": ["eventId", "driverId", "lat", "lng", "clientTimestamp", "receivedAt"],
+        "example": {
+          "eventId": "gps-example-001",
+          "driverId": "demo-driver-1",
+          "lat": 21.0285,
+          "lng": 105.8542,
+          "seq": 1,
+          "clientTimestamp": "2026-10-16T10:00:00.000Z",
+          "receivedAt": "2026-10-16T10:00:00.120Z"
+        },
+        "properties": {
+          "eventId": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^\\S(?:.*\\S)?$",
+            "description": "Unique opaque identifier generated by API per acceptance, distinct from Pub/Sub messageId. No surrounding whitespace."
+          },
+          "driverId": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^\\S(?:.*\\S)?$",
+            "description": "Internal driver identifier derived by API from authenticated identity. No surrounding whitespace."
+          },
+          "lat": { "type": "number", "format": "double", "minimum": -90.0, "maximum": 90.0 },
+          "lng": { "type": "number", "format": "double", "minimum": -180.0, "maximum": 180.0 },
+          "sessionId": { "type": "string", "format": "uuid" },
+          "seq": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+          "clientTimestamp": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+          },
+          "receivedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$",
+            "description": "UTC API reception timestamp, generated once per acceptance."
           }
         }
       },
@@ -1185,7 +1496,8 @@
               "IDEMPOTENCY_KEY_CONFLICT",
               "RATE_LIMIT_EXCEEDED",
               "SERVICE_UNAVAILABLE",
-              "INTERNAL_SERVER_ERROR"
+              "INTERNAL_SERVER_ERROR",
+              "USER_NOT_PROVISIONED"
             ],
             "example": "INVALID_STATE_TRANSITION"
           },
@@ -1215,6 +1527,187 @@
                 }
               }
             }
+          }
+        }
+      },
+      "DirectoryPagination": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "limit",
+          "hasMore",
+          "nextCursor"
+        ],
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 512
+          }
+        },
+        "description": "SC01: hasMore=true implies a non-null nextCursor; false implies null. No total."
+      },
+      "DriverResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "activeShipmentCount",
+          "currentLocation",
+          "lastLocationUpdatedAt",
+          "locationClientTimestamp",
+          "isLocationStale"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^usr_[0-9A-HJKMNP-TV-Z]{26}$",
+            "example": "usr_01ARZ3NDEKTSV4RRFFQ69G5FAV"
+          },
+          "name": {
+            "type": "string"
+          },
+          "activeShipmentCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "currentLocation": {
+            "type": "object",
+            "nullable": true,
+            "additionalProperties": false,
+            "required": [
+              "lat",
+              "lng"
+            ],
+            "properties": {
+              "lat": {
+                "type": "number",
+                "minimum": -90,
+                "maximum": 90
+              },
+              "lng": {
+                "type": "number",
+                "minimum": -180,
+                "maximum": 180
+              }
+            }
+          },
+          "lastLocationUpdatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "receivedAt of current sample; null when hidden/missing."
+          },
+          "locationClientTimestamp": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "clientTimestamp of current sample; null when hidden/missing."
+          },
+          "isLocationStale": {
+            "type": "boolean",
+            "nullable": true,
+            "description": "False for age in [0,30] seconds, true outside; null when hidden/missing."
+          }
+        }
+      },
+      "CustomerSummaryResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "email",
+          "phone"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^usr_[0-9A-HJKMNP-TV-Z]{26}$",
+            "example": "usr_01ARZ3NDEKTSV4RRFFQ69G5FAV"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "PaginatedDriversResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "pagination"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DriverResponse"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/DirectoryPagination"
+          }
+        }
+      },
+      "PaginatedCustomersResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "pagination"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CustomerSummaryResponse"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/DirectoryPagination"
+          }
+        }
+      },
+      "AuthenticatedUser": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "uid",
+          "role"
+        ],
+        "properties": {
+          "uid": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "CUSTOMER",
+              "DRIVER",
+              "ADMIN"
+            ]
           }
         }
       }

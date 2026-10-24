@@ -1,5 +1,6 @@
 export * from './CustomerOverviewPage'
 export * from './CustomerCreatePage'
 export * from './CustomerShipmentsPage'
+export * from './CustomerShipmentDetailPage'
 export * from './CustomerHistoryPage'
 export * from './CustomerNotificationsPage'

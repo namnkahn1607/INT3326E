@@ -1,5 +1,6 @@
 import { Link } from 'react-router'
 import { StatusBadge } from '../../components/ui/StatusBadge'
+import { Icon } from '../../components/ui/Icon'
 
 export function AdminOverviewPage() {
   return (
@@ -7,7 +8,7 @@ export function AdminOverviewPage() {
       <div className="page-header">
         <div>
           <span className="admin-page-kicker">TỔNG QUAN</span>
-          <h1 className="page-title">Chào buổi sáng, Quản trị viên</h1>
+          <h1 className="page-title">Tổng quan vận hành</h1>
           <p className="page-subtitle">
             Theo dõi nhanh hoạt động giao nhận trong ngày hôm nay.
           </p>
@@ -21,19 +22,19 @@ export function AdminOverviewPage() {
 
       <div className="admin-stat-grid">
         <article className="admin-stat-card">
-          <span className="admin-stat-icon purple">▣</span>
+          <span className="admin-stat-icon purple"><Icon name="box" /></span>
           <div><span>Tổng đơn hôm nay</span><strong>128</strong><small className="positive">↑ 12% so với hôm qua</small></div>
         </article>
         <article className="admin-stat-card">
-          <span className="admin-stat-icon amber">⌛</span>
+          <span className="admin-stat-icon amber"><Icon name="clock" /></span>
           <div><span>Chờ phân công</span><strong>3</strong><small>Cần xử lý sớm</small></div>
         </article>
         <article className="admin-stat-card">
-          <span className="admin-stat-icon blue">↗</span>
+          <span className="admin-stat-icon blue"><Icon name="truck" /></span>
           <div><span>Đang giao</span><strong>42</strong><small>32,8% tổng đơn</small></div>
         </article>
         <article className="admin-stat-card">
-          <span className="admin-stat-icon red">!</span>
+          <span className="admin-stat-icon red"><Icon name="box" /></span>
           <div><span>Cần chú ý</span><strong>2</strong><small>Đơn giao không thành công</small></div>
         </article>
       </div>
@@ -50,7 +51,7 @@ export function AdminOverviewPage() {
             </Link>
           </div>
 
-          <div className="data-table-wrapper">
+          <div className="data-table-wrapper" role="region" aria-label="Đơn cần xử lý minh họa, cuộn ngang để xem đầy đủ" tabIndex={0}>
             <table className="data-table">
               <thead>
                 <tr>
@@ -90,8 +91,8 @@ export function AdminOverviewPage() {
                   <td><StatusBadge status="DELIVERY_FAILED" /></td>
                   <td>Phạm Văn Nam</td>
                   <td>
-                    <Link to="/admin/shipments" className="action-btn action-danger">
-                      Xử lý lỗi
+                    <Link to="/admin/shipments" className="action-btn">
+                      Xem đơn lỗi
                     </Link>
                   </td>
                 </tr>

@@ -21,6 +21,6 @@
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false
   },
-  "include": ["apps/worker/**/*.ts", "vitest.config*.ts"],
+  "include": ["apps/worker/**/*.ts", "packages/types/src/**/*.ts", "infra/pubsub/**/*.spec.ts", "vitest.config*.ts"],
   "exclude": ["node_modules", "dist", "**/node_modules/**", "**/dist/**"]
 }

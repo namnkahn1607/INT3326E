@@ -9,6 +9,8 @@ import {
   useMap,
 } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
+import { AppliedFilters } from '../../components/ui/AppliedFilters'
+import { useReducedMotion } from '../auth/motion'
 
 type DriverState = 'DELIVERING' | 'AVAILABLE' | 'PAUSED'
 
@@ -95,14 +97,17 @@ function createDriverIcon(driver: LiveDriver, selected: boolean) {
   })
 }
 
-function FocusDriver({ driver }: { driver?: LiveDriver }) {
+function FocusDriver({ driver, animate }: { driver?: LiveDriver; animate: boolean }) {
   const map = useMap()
+  const reduced = useReducedMotion()
 
   useEffect(() => {
     if (driver) {
-      map.flyTo(driver.position, Math.max(map.getZoom(), 14), { duration: 0.7 })
+      const zoom = Math.max(map.getZoom(), 14)
+      if (reduced || !animate) map.setView(driver.position, zoom, { animate: false })
+      else map.flyTo(driver.position, zoom, { duration: 0.2 })
     }
-  }, [driver, map])
+  }, [driver, map, reduced, animate])
 
   return null
 }
@@ -110,6 +115,8 @@ function FocusDriver({ driver }: { driver?: LiveDriver }) {
 export function AdminLiveMapPage() {
   const [filter, setFilter] = useState<'ALL' | DriverState>('ALL')
   const [selectedId, setSelectedId] = useState(drivers[0].id)
+  const [animateFocus, setAnimateFocus] = useState(false)
+  const filterLabels = { ALL: 'Tất cả', DELIVERING: 'Đang giao', AVAILABLE: 'Sẵn sàng', PAUSED: 'Tạm nghỉ' }
 
   const visibleDrivers = useMemo(
     () => drivers.filter((driver) => filter === 'ALL' || driver.state === filter),
@@ -117,6 +124,10 @@ export function AdminLiveMapPage() {
   )
   const selectedDriver =
     visibleDrivers.find((driver) => driver.id === selectedId) ?? visibleDrivers[0]
+  function clearFilter() {
+    setAnimateFocus(false); setFilter('ALL')
+    document.querySelector<HTMLButtonElement>('.map-filter-tabs button')?.focus()
+  }
 
   return (
     <div className="admin-page admin-map-page">
@@ -129,31 +140,31 @@ export function AdminLiveMapPage() {
           </p>
         </div>
         <div className="map-live-indicator">
-          <span /> Dữ liệu mô phỏng · cập nhật mỗi 8 giây
+          Dữ liệu mẫu · chưa có GPS trực tiếp
         </div>
       </div>
 
       <div className="live-map-stats">
         <div><span className="map-stat-dot all" /><strong>{drivers.length}</strong><small>Đang hoạt động</small></div>
-        <div><span className="map-stat-dot delivering" /><strong>2</strong><small>Đang giao hàng</small></div>
-        <div><span className="map-stat-dot available" /><strong>2</strong><small>Sẵn sàng</small></div>
-        <div><span className="map-stat-dot paused" /><strong>1</strong><small>Tạm nghỉ</small></div>
+        <div><span className="map-stat-dot delivering" /><strong>{drivers.filter(driver => driver.state === 'DELIVERING').length}</strong><small>Đang giao hàng</small></div>
+        <div><span className="map-stat-dot available" /><strong>{drivers.filter(driver => driver.state === 'AVAILABLE').length}</strong><small>Sẵn sàng</small></div>
+        <div><span className="map-stat-dot paused" /><strong>{drivers.filter(driver => driver.state === 'PAUSED').length}</strong><small>Tạm nghỉ</small></div>
       </div>
+      <AppliedFilters filters={filter === 'ALL' ? [] : [{ key: 'state', label: 'Trạng thái', value: filterLabels[filter], onRemove: clearFilter }]} onClear={clearFilter} />
 
       <div className="live-map-workspace">
         <aside className="driver-map-sidebar">
           <div className="driver-map-sidebar-header">
             <div>
               <h2>Danh sách tài xế</h2>
-              <span>{visibleDrivers.length} người được hiển thị</span>
+              <span role="status">{visibleDrivers.length} tài xế minh họa được hiển thị</span>
             </div>
-            <span className="map-refresh-icon" aria-hidden="true">↻</span>
           </div>
 
-          <div className="map-filter-tabs" aria-label="Lọc trạng thái tài xế">
-            <button className={filter === 'ALL' ? 'active' : ''} onClick={() => setFilter('ALL')}>Tất cả</button>
-            <button className={filter === 'DELIVERING' ? 'active' : ''} onClick={() => setFilter('DELIVERING')}>Đang giao</button>
-            <button className={filter === 'AVAILABLE' ? 'active' : ''} onClick={() => setFilter('AVAILABLE')}>Sẵn sàng</button>
+          <div className="map-filter-tabs" role="group" aria-label="Lọc trạng thái tài xế">
+            {(Object.keys(filterLabels) as (keyof typeof filterLabels)[]).map(value => <button key={value} type="button"
+              aria-pressed={filter === value} className={filter === value ? 'active' : ''}
+              onClick={() => { setAnimateFocus(false); setFilter(value) }}>{filterLabels[value]}</button>)}
           </div>
 
           <div className="driver-map-list">
@@ -162,7 +173,8 @@ export function AdminLiveMapPage() {
                 type="button"
                 key={driver.id}
                 className={`driver-map-card ${selectedDriver?.id === driver.id ? 'selected' : ''}`}
-                onClick={() => setSelectedId(driver.id)}
+                aria-pressed={selectedDriver?.id === driver.id}
+                onClick={event => { setAnimateFocus(event.detail > 0); setSelectedId(driver.id) }}
               >
                 <span className="driver-list-avatar">{driver.name.split(' ').slice(-1)[0][0]}</span>
                 <span className="driver-list-info">
@@ -191,13 +203,15 @@ export function AdminLiveMapPage() {
               url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
             <ZoomControl position="bottomright" />
-            <FocusDriver driver={selectedDriver} />
+            <FocusDriver driver={selectedDriver} animate={animateFocus} />
             {visibleDrivers.map((driver) => (
               <Marker
                 key={driver.id}
+                alt={driver.name}
+                title={driver.name}
                 position={driver.position}
                 icon={createDriverIcon(driver, selectedDriver?.id === driver.id)}
-                eventHandlers={{ click: () => setSelectedId(driver.id) }}
+                eventHandlers={{ click: event => { setAnimateFocus(event.originalEvent instanceof MouseEvent && event.originalEvent.detail > 0); setSelectedId(driver.id) } }}
               >
                 <Popup>
                   <div className="driver-map-popup">

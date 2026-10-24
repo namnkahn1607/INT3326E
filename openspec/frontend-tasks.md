@@ -2,7 +2,12 @@
 
 ## 1. Trạng thái hiện tại
 
-### ✅ Tuần 1: Khởi tạo và Dựng khung giao diện (HOÀN THÀNH)
+Nguồn hiện hành: [PF SPEC 01 nội dung v1.3](../docs/spec-baseline.md), Phần VII.
+Checkbox trong mục tuần 1 dưới đây giữ ghi nhận lịch sử, không tự chứng minh lần kiểm tra mới.
+Tasks Spec Kit của lượt tái nghiệm thu nằm ở [week1-reacceptance/tasks.md](week1-reacceptance/tasks.md);
+kết quả thực tế nằm ở [acceptance.md](week1-reacceptance/acceptance.md).
+
+### Tuần 1: Khởi tạo và Dựng khung giao diện (ghi nhận lịch sử)
 - [x] Tạo `.gitignore` ở root, bảo vệ repo khỏi `node_modules` và `dist/`.
 - [x] Khởi tạo React + Vite + TypeScript + React Router.
 - [x] Tách cấu trúc thư mục module hóa độc lập theo vai trò.
@@ -17,27 +22,22 @@
 ## 2. Lộ trình các tuần tiếp theo
 
 ### 🎯 Tuần 2: Xác thực & Kết nối API Tạo đơn (VIỆC TIẾP THEO)
-
-Triển khai TV3 ngày 2026-10-18 tại [week2-customer/tasks.md](week2-customer/tasks.md).
-Client Create/List/Detail và reuse Auth đã kiểm chứng local/mock; các checkbox
-nghiệm thu tích hợp bên dưới vẫn mở tới khi có bằng chứng cloud.
-Xem [bàn giao và phụ thuộc](week2-customer/acceptance.md), không tạo lại Auth của TV6.
-
 - [ ] Tích hợp Firebase Auth cho Customer bằng tài khoản đã provision, custom claim tin cậy; không tự cấp role hoặc thêm quản lý tài khoản.
 - [ ] Truyền Bearer Token tới Backend NestJS.
-- [ ] Nối Form tạo đơn (`CustomerCreatePage.tsx`) với API `POST /shipments`.
-- [ ] Nối Danh sách đơn (`CustomerShipmentsPage.tsx`) với API `GET /shipments`.
-- [ ] Khảo sát giải pháp Geocoding cho Issue #3.
+- [ ] Nối form (`CustomerCreatePage.tsx`) với `POST /v1/shipments`, giữ Idempotency-Key cho cùng ý định/retry; có loading/error, validation và trackingNumber.
+- [ ] Nối danh sách/đơn vừa tạo (`CustomerShipmentsPage.tsx`) với `GET /v1/shipments` và `GET /v1/shipments/{id}`, theo SC01–03.
+- [ ] Đồng bộ JSON/UI/storage mapping với TV1 và user linkage/errors/CORS với TV6/TV5 trước tích hợp.
+- [ ] Nhập địa chỉ và chọn/nhập tọa độ hợp lệ theo UI01/API01; không tự thêm geocoding provider từ Issue #3 cũ.
 
 ### 📅 Tuần 3: Phân công tài xế (Admin)
-- [ ] Nối màn hình phân công (`AdminAssignmentPage.tsx`) với API `GET /shipments/unassigned` và `POST /shipments/:id/assign`.
+- [ ] Nối `AdminAssignmentPage.tsx` với `GET /v1/shipments?status=CREATED`, `GET /v1/drivers` và `POST /v1/shipments/{id}/assign`; xử lý 409, timeout thì đọc lại Detail, không tự retry Assign.
 
 ### 📅 Tuần 4: Cập nhật trạng thái theo quyền & Lịch sử
 - [ ] Thống nhất quyền cập nhật trạng thái với Backend và Driver.
 - [ ] Hoàn thiện trang Lịch sử giao hàng (`CustomerHistoryPage.tsx`).
 
 ### 📅 Tuần 5: Bản đồ Leaflet & Tracking thời gian thực (MỐC BẮT BUỘC)
-- [ ] Tích hợp Leaflet + OpenStreetMap.
+- [ ] Nối dữ liệu thật vào bản đồ Leaflet + OpenStreetMap đã có; không tạo app/map stack mới.
 - [ ] REST Polling vị trí tài xế mỗi 5–10 giây từ Backend.
 
 ### 📅 Tuần 6–10: Hoàn thiện hệ thống
@@ -50,7 +50,7 @@ Xem [bàn giao và phụ thuộc](week2-customer/acceptance.md), không tạo l�
 ---
 
 ## 3. Quy tắc cho AI Coding Assistant tiếp theo
-1. **Phân định phạm vi**: Chỉ can thiệp vào `pages/customer/`, `pages/admin/`, `layouts/CustomerLayout.tsx`, `layouts/AdminLayout.tsx`. Tuyệt đối không can thiệp sâu vào `driver/` (của Thành viên 4).
+1. **Phân định phạm vi**: TV3 phụ trách `apps/web/src/features/customer/`, `features/admin/`, `layouts/CustomerLayout.tsx`, `layouts/AdminLayout.tsx`; phối hợp cấu trúc chung với TV4, không tự sửa sâu Driver.
 2. **Luồng trạng thái**: Luôn tuân theo 5 trạng thái `CREATED → ASSIGNED → PICKED_UP → DELIVERED / DELIVERY_FAILED`.
-3. **Thư mục lệnh**: Chạy các lệnh npm trong thư mục `frontend/`.
-4. **Issue #3 (Geocoding)**: Không tự ý chọn dịch vụ trả phí hoặc đưa API key vào frontend.
+3. **Thư mục lệnh**: Trong `apps/web` dùng script package; hoặc root dùng `dev:web`, `lint:web`, `build:web` đã khai báo.
+4. **Đặc tả mới**: UI01/API01 có ưu tiên hơn lời hứa geocoding cũ; không thêm provider hoặc secret key. Accounts/Admin dashboard vẫn theo giới hạn UI03, không mở CRUD/KPI mới.

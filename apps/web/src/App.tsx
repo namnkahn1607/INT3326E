@@ -1,9 +1,12 @@
-import { Navigate, Route, Routes } from 'react-router'
+import { Route, Routes } from 'react-router'
 import { AdminLayout } from './layouts/AdminLayout'
 import { CustomerLayout } from './layouts/CustomerLayout'
 import { DriverLayout } from './layouts/DriverLayout'
 
 import { NotFoundPage } from './components/ui/NotFoundPage'
+import { LoginPage } from './features/auth/LoginPage'
+import { HomeRedirect, ProtectedRoute } from './features/auth/ProtectedRoute'
+import { StartupExperience } from './features/auth/StartupExperience'
 
 // Feature Customer
 import {
@@ -12,6 +15,7 @@ import {
   CustomerNotificationsPage,
   CustomerOverviewPage,
   CustomerShipmentsPage,
+  CustomerShipmentDetailPage,
 } from './features/customer'
 
 // Feature Admin
@@ -29,22 +33,23 @@ import { DriverPlaceholderPage } from './features/driver'
 
 export default function App() {
   return (
-    <Routes>
-      {/* Mặc định chuyển hướng sang cổng khách hàng */}
-      <Route path="/" element={<Navigate to="/customer" replace />} />
+    <StartupExperience><Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/" element={<HomeRedirect />} />
 
       {/* Cổng Khách hàng (Customer) - Tuấn phụ trách */}
-      <Route path="/customer" element={<CustomerLayout />}>
+      <Route path="/customer" element={<ProtectedRoute role="CUSTOMER"><CustomerLayout /></ProtectedRoute>}>
         <Route index element={<CustomerOverviewPage />} />
         <Route path="create" element={<CustomerCreatePage />} />
         <Route path="shipments" element={<CustomerShipmentsPage />} />
+        <Route path="shipments/:id" element={<CustomerShipmentDetailPage />} />
         <Route path="history" element={<CustomerHistoryPage />} />
         <Route path="notifications" element={<CustomerNotificationsPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
 
       {/* Cổng Quản trị & Điều phối (Admin) - Tuấn phụ trách */}
-      <Route path="/admin" element={<AdminLayout />}>
+      <Route path="/admin" element={<ProtectedRoute role="ADMIN"><AdminLayout /></ProtectedRoute>}>
         <Route index element={<AdminOverviewPage />} />
         <Route path="shipments" element={<AdminShipmentsPage />} />
         <Route path="assignment" element={<AdminAssignmentPage />} />
@@ -55,13 +60,13 @@ export default function App() {
       </Route>
 
       {/* Khung tối thiểu Cổng Tài xế (Driver) - Thành viên 4 phụ trách */}
-      <Route path="/driver" element={<DriverLayout />}>
+      <Route path="/driver" element={<ProtectedRoute role="DRIVER"><DriverLayout /></ProtectedRoute>}>
         <Route index element={<DriverPlaceholderPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
 
       {/* Trang 404 chung */}
       <Route path="*" element={<NotFoundPage />} />
-    </Routes>
+    </Routes></StartupExperience>
   )
 }
