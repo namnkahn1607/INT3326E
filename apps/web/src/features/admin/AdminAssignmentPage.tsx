@@ -1,178 +1,195 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router'
+import { ApiError } from '../../api/client'
+import { getDrivers } from '../../api/endpoints/drivers'
+import { assignShipment, getShipmentById, getShipments, isShipmentId } from '../../api/endpoints/shipments'
 import { StatusBadge } from '../../components/ui/StatusBadge'
-import { Icon } from '../../components/ui/Icon'
-
-interface UnassignedShipment {
-  id: string
-  code: string
-  pickup: string
-  destination: string
-  createdTime: string
-}
-
-interface AvailableDriver {
-  id: string
-  name: string
-  phone: string
-  vehicle: string
-  currentActiveOrders: number
-  status: 'ONLINE' | 'BUSY'
-}
-
-const mockUnassignedList: UnassignedShipment[] = [
-  {
-    id: 'u-1',
-    code: 'PF-89025',
-    pickup: '1 Đại Cồ Việt, Hai Bà Trưng',
-    destination: '144 Xuân Thủy, Cầu Giấy',
-    createdTime: '10 phút trước',
-  },
-  {
-    id: 'u-2',
-    code: 'PF-89028',
-    pickup: 'Chợ hoa Quảng Bá, Tây Hồ',
-    destination: 'Times City, Hai Bà Trưng',
-    createdTime: '25 phút trước',
-  },
-  {
-    id: 'u-3',
-    code: 'PF-89029',
-    pickup: 'Khu Đô Thị Ecopark, Văn Giang',
-    destination: 'Hồ Gươm, Hoàn Kiếm',
-    createdTime: '40 phút trước',
-  },
-]
-
-const mockDrivers: AvailableDriver[] = [
-  {
-    id: 'd-1',
-    name: 'Nguyễn Văn Hùng',
-    phone: '0981.234.567',
-    vehicle: 'Xe máy Honda Wave - 29V1-12345',
-    currentActiveOrders: 1,
-    status: 'ONLINE',
-  },
-  {
-    id: 'd-2',
-    name: 'Trần Văn Nam',
-    phone: '0912.345.678',
-    vehicle: 'Xe máy Yamaha Grande - 29X2-54321',
-    currentActiveOrders: 0,
-    status: 'ONLINE',
-  },
-  {
-    id: 'd-3',
-    name: 'Lê Văn Tài',
-    phone: '0977.889.900',
-    vehicle: 'Xe tải nhẹ 500kg - 29C-99881',
-    currentActiveOrders: 2,
-    status: 'BUSY',
-  },
-]
+import type { DriverResponse } from '../../types/driver-api'
+import type { ShipmentDetail, ShipmentResponse } from '../../types/shipment-api'
+import { useAuth } from '../auth/useAuth'
+import { AdminPageFeedback, AdminPager } from './AdminPageFeedback'
+import { adminErrorMessage } from './admin-errors'
+import { AdminShipmentDetail } from './AdminShipmentDetail'
+import { useAdminPage } from './useAdminPage'
+import './admin-api.css'
 
 export function AdminAssignmentPage() {
-  const [selectedShipment, setSelectedShipment] = useState<string>('')
-  const [selectedDriver, setSelectedDriver] = useState<string>('')
-  const reason = !selectedShipment ? 'Chọn một đơn và một tài xế để xem cặp phân công.'
-    : !selectedDriver ? 'Chọn tài xế để tiếp tục.' : 'Chưa kết nối API phân công. Lựa chọn chỉ để xem trước, chưa được lưu lên máy chủ.'
+  const { user } = useAuth()
+  return <Assignment key={user?.id ?? 'signed-out'} />
+}
 
-  return (
-    <div className="admin-page">
-      <div className="page-header">
-        <div>
-          <span className="admin-page-kicker">ĐIỀU PHỐI</span>
-          <h1 className="page-title">Phân công tài xế</h1>
-          <p className="page-subtitle">
-            Ghép đơn hàng đang chờ với tài xế phù hợp và sẵn sàng.
-          </p>
+function Assignment() {
+  const [params, setParams] = useSearchParams()
+  const id = params.get('shipmentId') ?? ''
+  const [status, setStatus] = useState<'CREATED' | 'ASSIGNED'>('CREATED')
+  const [busy, setBusy] = useState(false)
+  const load = useCallback((cursor: string | undefined, signal: AbortSignal) => getShipments({ status, cursor }, signal), [status])
+  const state = useAdminPage(load, status)
+  function clear() { setParams({}) }
+  return <div className="admin-page admin-api-page">
+    <div className="page-header"><div><span className="admin-page-kicker">ĐIỀU PHỐI</span>
+      <h1 className="page-title">Phân công tài xế</h1>
+      <p className="page-subtitle">Chọn đơn, kiểm tra thông tin và xác nhận tài xế. Chỉ phân công hoặc gán lại trước khi lấy hàng.</p>
+    </div></div>
+    <div className="assignment-split-layout">
+      <section className="assignment-col" aria-labelledby="assignment-orders-title">
+        <div className="col-header"><h2 id="assignment-orders-title">1. Chọn đơn hàng</h2>
+          <button type="button" className="btn btn-outline" disabled={busy || state.loading} onClick={() => { clear(); state.refresh() }}>Làm mới đơn</button>
         </div>
-      </div>
-
-      <div className="assignment-split-layout">
-        <div className="assignment-col">
-          <div className="col-header">
-            <h2>1. Chọn đơn chờ gán</h2>
-            <span className="badge-count">{mockUnassignedList.length} đơn</span>
-          </div>
-
-          <div className="assignment-cards-list">
-            {mockUnassignedList.map((item) => (
-              <button
-                type="button"
-                aria-pressed={selectedShipment === item.id}
-                key={item.id}
-                onClick={() => setSelectedShipment(item.id)}
-                className={`assignment-select-card ui-selection-card ${
-                  selectedShipment === item.id ? 'selected' : ''
-                }`}
-              >
-                <div className="card-top">
-                  <strong>#{item.code}</strong>
-                  <StatusBadge status="CREATED" />
-                </div>
-                <div className="card-route-info">
-                  <p><Icon name="pin" /><strong>Lấy:</strong> {item.pickup}</p>
-                  <p><Icon name="pin" /><strong>Giao:</strong> {item.destination}</p>
-                </div>
-                <span className="time-badge">{item.createdTime}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="assignment-col">
-          <div className="col-header">
-            <h2>2. Chọn tài xế</h2>
-            <span className="badge-count">Đang online</span>
-          </div>
-
-          <div className="assignment-cards-list">
-            {mockDrivers.map((driver) => (
-              <button
-                type="button"
-                aria-pressed={selectedDriver === driver.id}
-                key={driver.id}
-                onClick={() => setSelectedDriver(driver.id)}
-                className={`assignment-select-card ui-selection-card ${
-                  selectedDriver === driver.id ? 'selected' : ''
-                }`}
-              >
-                <div className="card-top">
-                  <strong>{driver.name}</strong>
-                  <span
-                    className={`driver-status-pill ${
-                      driver.status === 'ONLINE' ? 'online' : 'busy'
-                    }`}
-                  >
-                    {driver.status === 'ONLINE' ? 'Sẵn sàng' : 'Đang bận'}
-                  </span>
-                </div>
-                <div className="card-route-info">
-                  <p>Điện thoại: {driver.phone}</p>
-                  <p><Icon name="truck" />{driver.vehicle}</p>
-                  <p><Icon name="box" />Đang chở: <strong>{driver.currentActiveOrders} đơn</strong></p>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="assignment-action-bar">
-        <div className="summary-text" role="status">
-          Đang chọn đơn: <strong>{mockUnassignedList.find((x) => x.id === selectedShipment)?.code ?? 'Chưa chọn'}</strong> → Tài xế:{' '}
-          <strong>{mockDrivers.find((x) => x.id === selectedDriver)?.name ?? 'Chưa chọn'}</strong>
-          <p className="ui-disabled-reason" id="assignment-disabled">{reason}</p>
-        </div>
-        <button
-          type="button"
-          disabled
-          aria-describedby="assignment-disabled"
-          className="btn btn-primary btn-lg"
-        >
-          Xác nhận phân công tài xế
-        </button>
-      </div>
+        <label htmlFor="assignment-status">Trạng thái đơn</label>
+        <select id="assignment-status" disabled={busy} value={status} onChange={event => { setStatus(event.target.value as 'CREATED' | 'ASSIGNED'); clear() }}>
+          <option value="CREATED">Chờ phân công</option><option value="ASSIGNED">Đã phân công — có thể gán lại</option>
+        </select>
+        <AdminPageFeedback loading={state.loading} error={state.error} empty={state.page?.data.length === 0} label="đơn hàng" onRetry={state.refresh} />
+        {state.page && <>
+          <p className="ui-result-count" role="status">{state.page.data.length} đơn trong trang đang hiển thị.</p>
+          <div className="assignment-cards-list">{state.page.data.map(item => <button type="button"
+            className={'assignment-select-card ui-selection-card' + (id === item.id ? ' selected' : '')} key={item.id}
+            disabled={busy} aria-pressed={id === item.id} onClick={() => setParams({ shipmentId: item.id })}>
+            <div className="card-top"><strong>{item.trackingNumber}</strong><StatusBadge status={item.status} /></div>
+            <p>Lấy: {item.pickupAddress}</p><p>Giao: {item.dropoffAddress}</p>
+          </button>)}</div>
+          <AdminPager label="đơn hàng" number={state.number} hasMore={state.page.pagination.hasMore} disabled={busy}
+            onPrevious={() => { clear(); state.previous() }} onNext={() => { clear(); state.next() }} />
+        </>}
+      </section>
+      {!id ? <section className="assignment-col"><h2>2. Kiểm tra và chọn tài xế</h2><p className="admin-api-message">Chọn một đơn ở danh sách để đọc chi tiết hiện hành.</p></section>
+        : !isShipmentId(id) ? <section className="assignment-col admin-api-error" role="alert"><h2>Mã đơn không hợp lệ</h2><p>Chọn lại đơn từ danh sách.</p></section>
+        : <AssignmentEditor key={id} id={id} onLock={setBusy} onAssigned={state.refresh} />}
     </div>
-  )
+  </div>
+}
+
+function DriverChoices({ disabled, selected, onSelect }: { disabled: boolean; selected: string | null; onSelect: (driver: DriverResponse | null) => void }) {
+  const load = useCallback((cursor: string | undefined, signal: AbortSignal) => getDrivers({ cursor }, signal), [])
+  const state = useAdminPage(load, 'drivers')
+  function change(action: () => void) { onSelect(null); action() }
+  return <section aria-labelledby="assignment-drivers-title">
+    <div className="col-header"><h2 id="assignment-drivers-title">2. Chọn tài xế</h2>
+      <button className="btn btn-outline" type="button" disabled={disabled || state.loading} onClick={() => change(state.refresh)}>Làm mới tài xế</button></div>
+    <p>Một tài xế có thể có nhiều đơn. Số đơn active không phải trạng thái online.</p>
+    <AdminPageFeedback loading={state.loading} error={state.error} empty={state.page?.data.length === 0} label="tài xế" onRetry={() => change(state.refresh)} />
+    {state.page && <>
+      <p className="ui-result-count" role="status">{state.page.data.length} tài xế trong trang đang hiển thị.</p>
+      <div className="assignment-cards-list">{state.page.data.map(driver => <button type="button" key={driver.id}
+        className={'assignment-select-card ui-selection-card' + (selected === driver.id ? ' selected' : '')}
+        disabled={disabled} aria-pressed={selected === driver.id} onClick={() => onSelect(driver)}>
+        <strong>{driver.name}</strong><p className="admin-api-id">{driver.id}</p><p>Đơn active: {driver.activeShipmentCount}</p>
+      </button>)}</div>
+      <AdminPager label="tài xế" number={state.number} hasMore={state.page.pagination.hasMore} disabled={disabled}
+        onPrevious={() => change(state.previous)} onNext={() => change(state.next)} />
+    </>}
+  </section>
+}
+
+type Phase = 'loading' | 'idle' | 'review' | 'submitting' | 'reconciling' | 'blocked'
+
+function AssignmentEditor({ id, onLock, onAssigned }: { id: string; onLock: (locked: boolean) => void; onAssigned: () => void }) {
+  const [detail, setDetail] = useState<ShipmentResponse | ShipmentDetail | null>(null)
+  const [target, setTarget] = useState<DriverResponse | null>(null)
+  const [phase, setPhase] = useState<Phase>('loading')
+  const [error, setError] = useState<unknown>()
+  const [notice, setNotice] = useState('')
+  const [directoryVersion, setDirectoryVersion] = useState(0)
+  const reading = useRef<AbortController | null>(null)
+  const writing = useRef<AbortController | null>(null)
+  const posting = useRef(false)
+  const mounted = useRef(false)
+  const review = useRef<HTMLElement | null>(null)
+  const reviewButton = useRef<HTMLButtonElement | null>(null)
+  const previousPhase = useRef<Phase>('loading')
+  useEffect(() => {
+    mounted.current = true
+    const controller = new AbortController()
+    reading.current = controller
+    getShipmentById(id, controller.signal).then(value => {
+      if (!controller.signal.aborted) { setDetail(value); setPhase('idle') }
+    }).catch(cause => { if (!controller.signal.aborted) { setError(cause); setPhase('blocked') } })
+    return () => { mounted.current = false; reading.current?.abort(); writing.current?.abort(); onLock(false) }
+  }, [id, onLock])
+  useEffect(() => {
+    if (phase === 'review') review.current?.focus()
+    else if (previousPhase.current === 'review' && phase === 'idle') reviewButton.current?.focus()
+    previousPhase.current = phase
+  }, [phase])
+  const assignable = detail?.status === 'CREATED' || detail?.status === 'ASSIGNED'
+  const sameDriver = !!target && target.id === detail?.driverId
+  const canReview = phase === 'idle' && assignable && !!target && !sameDriver
+
+  async function readLatest(reason = 'Thông tin chi tiết cần được xác minh lại.') {
+    reading.current?.abort()
+    const controller = new AbortController()
+    reading.current = controller
+    setPhase('reconciling'); onLock(true); setTarget(null); setError(undefined); setNotice(reason)
+    try {
+      const value = await getShipmentById(id, controller.signal)
+      if (!controller.signal.aborted) {
+        setDetail(value); setPhase('idle'); setDirectoryVersion(value => value + 1)
+        setNotice(reason + ' Đã đọc lại trạng thái hiện tại. Chọn tài xế và xác nhận mới nếu vẫn muốn phân công; không tự gửi lại yêu cầu cũ.')
+      }
+    } catch (cause) {
+      if (!controller.signal.aborted) { setError(cause); setPhase('blocked'); setNotice(reason + ' Chưa đọc được kết quả hiện tại; thao tác ghi đang bị khóa.') }
+    } finally { if (mounted.current) onLock(false) }
+  }
+
+  async function submit() {
+    if (posting.current || phase !== 'review' || !detail || !target || !assignable || sameDriver) return
+    posting.current = true
+    const controller = new AbortController()
+    writing.current = controller
+    const driver = target
+    setPhase('submitting'); setError(undefined); setNotice(''); onLock(true)
+    try {
+      const result = await assignShipment(id, driver.id, controller.signal)
+      if (!mounted.current) return
+      setDetail(result); setTarget(null); setPhase('idle'); setDirectoryVersion(value => value + 1)
+      setNotice('Máy chủ đã xác nhận phân công đơn ' + result.trackingNumber + ' cho ' + driver.name + ' (' + result.driverId + ').')
+      onAssigned()
+    } catch (cause) {
+      if (!mounted.current) return
+      const uncertain = !(cause instanceof ApiError) || cause.status >= 500 ||
+        (cause.status === 409 && cause.code !== 'USER_NOT_PROVISIONED') ||
+        ['REQUEST_TIMEOUT', 'NETWORK_ERROR', 'INVALID_RESPONSE'].includes(cause.code)
+      if (uncertain) await readLatest(adminErrorMessage(cause))
+      else { setError(cause); setTarget(null); setPhase('idle') }
+    } finally {
+      posting.current = false
+      if (mounted.current) onLock(false)
+    }
+  }
+
+  return <section className="assignment-col admin-assignment-editor" aria-label="Chi tiết và xác nhận phân công">
+    {phase === 'loading' && <AdminPageFeedback loading label="chi tiết đơn" onRetry={() => void readLatest()} />}
+    {detail && <AdminShipmentDetail shipment={detail} />}
+    {notice && <p className="admin-api-message" role="status">{notice}</p>}
+    {!!error && <div className="admin-api-message admin-api-error" role="alert"><p>{adminErrorMessage(error)}</p></div>}
+    {phase === 'reconciling' && <p role="status">Đang đọc lại chi tiết, không gửi lại Assign…</p>}
+    {phase === 'blocked' && <button className="btn btn-outline" type="button" onClick={() => void readLatest()}>Đọc lại chi tiết</button>}
+    {detail && <DriverChoices key={directoryVersion} disabled={phase !== 'idle' || !assignable} selected={target?.id ?? null}
+      onSelect={driver => { if (phase === 'idle') { setTarget(driver); setError(undefined) } }} />}
+    <div className="assignment-action-bar">
+      <p id="assignment-disabled">{!detail ? 'Đang chờ chi tiết đơn.'
+        : !assignable ? 'Đơn không còn cho phép phân công vì đã lấy hàng hoặc kết thúc.'
+        : phase === 'blocked' ? 'Cần đọc lại chi tiết thành công trước khi phân công.'
+        : sameDriver ? 'Người được chọn đã là tài xế hiện hành; không cần gửi lại.'
+        : !target ? 'Chọn một tài xế để tiếp tục.' : 'Đang chọn: ' + target.name + '. Cần xem lại và xác nhận riêng.'}</p>
+      <button ref={reviewButton} className="btn btn-primary" type="button" aria-describedby="assignment-disabled"
+        disabled={!canReview} onClick={() => { if (canReview) setPhase('review') }}>Xem lại phân công</button>
+    </div>
+    {(phase === 'review' || phase === 'submitting') && detail && target && <section ref={review} tabIndex={-1}
+      className="admin-assignment-review" aria-labelledby="assignment-review-title">
+      <h2 id="assignment-review-title">{detail.driverId ? 'Gán lại tài xế' : 'Xác nhận phân công'}</h2>
+      <p>Đơn: <strong>{detail.trackingNumber}</strong></p>
+      {detail.driverId && <p className="admin-api-id">Tài xế hiện hành: {detail.driverId}</p>}
+      <p>Tài xế đích: <strong>{target.name}</strong></p>
+      <p className="admin-api-id">{target.id}</p>
+      <p>Hệ thống kiểm tra lại trạng thái khi xử lý. Không tự gửi lại nếu mất phản hồi.</p>
+      <div className="admin-api-actions">
+        <button className="btn btn-primary" type="button" disabled={phase === 'submitting'} aria-busy={phase === 'submitting'} onClick={() => void submit()}>
+          {phase === 'submitting' ? 'Đang phân công…' : 'Xác nhận phân công'}
+        </button>
+        <button className="btn btn-outline" type="button" disabled={phase === 'submitting'} onClick={() => setPhase('idle')}>Hủy xác nhận</button>
+      </div>
+    </section>}
+  </section>
 }
