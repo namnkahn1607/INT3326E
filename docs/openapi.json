@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "ParcelFlow Core Logistics API (MVP)",
-    "description": "Business operations remain Week 1 drafts, not live endpoints. Week 2 implements GET /auth/me and GET /admin/me under /v1; GET /healthz remains public outside /v1. Authentication uses verified Firebase ID Tokens and current Firebase custom claims for CUSTOMER, DRIVER and ADMIN. No public role-assignment endpoint is provided.\n\nRoles: CUSTOMER, DRIVER, ADMIN; Admin performs dispatch operations.\nBaseline shipment flow: CREATED -> ASSIGNED -> PICKED_UP -> DELIVERED / DELIVERY_FAILED.\nDraft conventions: business routes use /v1; GPS POST /locations returns 202 after Pub/Sub publish; REST uses dropoffAddress/dropoffLocation and data/pagination. See docs/api-contract.md for field mappings and pending integration decisions. Cancellation is preserved separately under x-proposals and requires team approval. GPS uses clientTimestamp for ordering and seq for diagnostics; see docs/gps-event-contract.md for the selected request/event contract and pending independent pipeline review.\n\nAuth review follow-up: HTTP errors use ProblemDetails. Business user linkage validates users.firebaseUid and current role before business handlers; missing/inconsistent linkage returns 409 USER_NOT_PROVISIONED, dependency failure returns 503. Business endpoints remain drafts; this change does not deploy schema or implement shipment logic.",
-    "version": "0.3.1-auth-week2-review"
+    "description": "Shipment/GPS operations remain drafts. Admin directory implements GET /drivers (API11/SC06) and GET /admin/customers (read-only scope requested on 23/10/2026), requiring ADMIN plus business linkage. Deployment and DATA01/02/04 migration acceptance remain separate; see docs/tv6-admin-directory.md and docs/qa-test-plan.md. Week 2 implements GET /auth/me and GET /admin/me under /v1; GET /healthz remains public outside /v1. Authentication uses verified Firebase ID Tokens and current Firebase custom claims for CUSTOMER, DRIVER and ADMIN. No public role-assignment endpoint is provided.\n\nRoles: CUSTOMER, DRIVER, ADMIN; Admin performs dispatch operations.\nBaseline shipment flow: CREATED -> ASSIGNED -> PICKED_UP -> DELIVERED / DELIVERY_FAILED.\nDraft conventions: business routes use /v1; GPS POST /locations returns 202 after Pub/Sub publish; REST uses dropoffAddress/dropoffLocation and data/pagination. See docs/api-contract.md for field mappings and pending integration decisions. Cancellation is preserved separately under x-proposals and requires team approval. GPS uses clientTimestamp for ordering and seq for diagnostics; see docs/gps-event-contract.md for the selected request/event contract and pending independent pipeline review.\n\nAuth review follow-up: HTTP errors use ProblemDetails. Business user linkage validates users.firebaseUid and current role before business handlers; missing/inconsistent linkage returns 409 USER_NOT_PROVISIONED, dependency failure returns 503. Shipment/GPS handlers remain drafts; Admin reads do not deploy schema or implement shipment logic.",
+    "version": "0.4.0-admin-directory"
   },
   "servers": [
     {
@@ -19,6 +19,14 @@
     {
       "name": "Tracking & Location",
       "description": "Async driver telemetry ingestion and consolidated tracking + ETA read-path."
+    },
+    {
+      "name": "Auth",
+      "description": "Verified Firebase account profiles."
+    },
+    {
+      "name": "Admin",
+      "description": "Read-only Admin directories; no account or custom-claim mutation."
     },
     {
       "name": "Health",
@@ -656,6 +664,128 @@
         }
       }
     },
+    "/drivers": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "List drivers for dispatching (API11)",
+        "description": "ADMIN only, with matching users business linkage. Server filters DRIVER. Keyset order createdAt DESC/id DESC; only limit/cursor query fields. Counts ASSIGNED/PICKED_UP in the same SQL snapshot as GPS. Without active shipments or current GPS, all location fields are null. Freshness uses clientTimestamp with inclusive 0–30 seconds; receivedAt is lastLocationUpdatedAt. No email, UID, onlineFlag or global total. Requires DATA01/02/04 tables and timestamps; schema/dependency failure returns 503, never fabricated empty data.",
+        "operationId": "listDrivers",
+        "x-implementation-status": "implemented",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DirectoryLimit"
+          },
+          {
+            "$ref": "#/components/parameters/DirectoryCursor"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Page of provisioned business users; empty data is valid.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedDriversResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/409Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/admin/customers": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "List Customer summaries (read-only TV6 scope)",
+        "description": "Read-only addition requested for TV6 on 23/10/2026, outside the original API01–11 catalogue. ADMIN and matching business linkage required. Server filters CUSTOMER. Returns only id/name/email/nullable phone, sorted createdAt DESC/id DESC. Only limit/cursor accepted. No account creation, role assignment or unscoped global count.",
+        "operationId": "listAdminCustomers",
+        "x-implementation-status": "implemented",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DirectoryLimit"
+          },
+          {
+            "$ref": "#/components/parameters/DirectoryCursor"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Page of provisioned business users; empty data is valid.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedCustomersResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/409Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
+          }
+        }
+      }
+    },
     "/admin/me": {
       "get": {
         "tags": [
@@ -701,6 +831,29 @@
       }
     },
     "parameters": {
+      "DirectoryLimit": {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "description": "Page size, default 20, range 1–100. Repeated/invalid values are rejected.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 20
+        }
+      },
+      "DirectoryCursor": {
+        "name": "cursor",
+        "in": "query",
+        "required": false,
+        "description": "Opaque keyset cursor from the previous response for this directory. Wrong scope/version/format returns 400. It does not grant access.",
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        }
+      },
       "ShipmentIdParam": {
         "name": "id",
         "in": "path",
@@ -1374,6 +1527,162 @@
                 }
               }
             }
+          }
+        }
+      },
+      "DirectoryPagination": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "limit",
+          "hasMore",
+          "nextCursor"
+        ],
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 512
+          }
+        },
+        "description": "SC01: hasMore=true implies a non-null nextCursor; false implies null. No total."
+      },
+      "DriverResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "activeShipmentCount",
+          "currentLocation",
+          "lastLocationUpdatedAt",
+          "locationClientTimestamp",
+          "isLocationStale"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^usr_[0-9A-HJKMNP-TV-Z]{26}$",
+            "example": "usr_01ARZ3NDEKTSV4RRFFQ69G5FAV"
+          },
+          "name": {
+            "type": "string"
+          },
+          "activeShipmentCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "currentLocation": {
+            "type": "object",
+            "nullable": true,
+            "additionalProperties": false,
+            "required": [
+              "lat",
+              "lng"
+            ],
+            "properties": {
+              "lat": {
+                "type": "number",
+                "minimum": -90,
+                "maximum": 90
+              },
+              "lng": {
+                "type": "number",
+                "minimum": -180,
+                "maximum": 180
+              }
+            }
+          },
+          "lastLocationUpdatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "receivedAt of current sample; null when hidden/missing."
+          },
+          "locationClientTimestamp": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "clientTimestamp of current sample; null when hidden/missing."
+          },
+          "isLocationStale": {
+            "type": "boolean",
+            "nullable": true,
+            "description": "False for age in [0,30] seconds, true outside; null when hidden/missing."
+          }
+        }
+      },
+      "CustomerSummaryResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "email",
+          "phone"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^usr_[0-9A-HJKMNP-TV-Z]{26}$",
+            "example": "usr_01ARZ3NDEKTSV4RRFFQ69G5FAV"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "PaginatedDriversResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "pagination"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DriverResponse"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/DirectoryPagination"
+          }
+        }
+      },
+      "PaginatedCustomersResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "pagination"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CustomerSummaryResponse"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/DirectoryPagination"
           }
         }
       },

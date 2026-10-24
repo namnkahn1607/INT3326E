@@ -220,7 +220,7 @@ export interface AuthenticatedUser {
 
 ### `AdminModule`
 
-Scaffold gồm `admin.module.ts`, `controllers/admin.controller.ts` và `services/admin.service.ts`. Module import `AuthModule` để nhận các guard qua dependency injection. Guard tuần 2 được áp dụng toàn cục; controller khai báo `@Roles(UserRole.ADMIN)`; các handler sau này trong controller dùng quyền Admin mặc định.
+Scaffold gồm `admin.module.ts`, `controllers/admin.controller.ts` và `services/admin.service.ts`. Module import `AuthModule` để nhận các guard qua dependency injection. Guard tuần 2 được áp dụng toàn cục; controller khai báo `@Roles(UserRole.ADMIN)`; các handler sau này trong controller dùng quyền Admin mặc định. Bản Admin directory ngày 23/10/2026 thêm `GET /v1/drivers` và `GET /v1/admin/customers`, đều dùng `BusinessUserGuard` cho liên kết SQL; `/admin/me` vẫn độc lập SQL. Contract và phụ thuộc ở [Admin directory](tv6-admin-directory.md), kịch bản nghiệm thu ở [QA test plan](qa-test-plan.md).
 
 Tuần 1 chưa cung cấp endpoint hoặc logic quản trị/điều phối. Tuần 2 bổ sung GET /v1/admin/me chỉ để xác minh danh tính/quyền Admin; không triển khai nghiệp vụ phân công hoặc cấp quyền qua HTTP. TV1 đăng ký `AdminModule` vào `AppModule` khi tích hợp bootstrap. Không tạo tài khoản Admin, cấp custom claim hoặc mở quyền từ frontend trong scaffold này.
 

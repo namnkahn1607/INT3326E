@@ -1,24 +1,14 @@
 import 'reflect-metadata';
-import { Controller, Get, Req, type INestApplication } from '@nestjs/common';
+import { type INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { AuthModule } from '../auth/auth.module';
 import { UserRole } from '../auth/enums/user-role.enum';
-import type { AuthenticatedRequest } from '../auth/interfaces/authenticated-request.interface';
 import { FIREBASE_AUTH } from '../auth/providers/firebase-auth.provider';
 import { AdminModule } from './admin.module';
-import { AdminController } from './controllers/admin.controller';
 
-@Controller('admin-scaffold-probe')
-class AdminScaffoldProbeController extends AdminController {
-  @Get()
-  probe(@Req() request: AuthenticatedRequest) {
-    return request.user;
-  }
-}
-
-describe('AdminModule scaffold authorization', () => {
+describe('AdminModule authorization', () => {
   let app: INestApplication;
   let endpoint: string;
   const verifyIdToken = vi.fn();
@@ -27,11 +17,10 @@ describe('AdminModule scaffold authorization', () => {
   beforeAll(async () => {
     const module = await Test.createTestingModule({
       imports: [AdminModule, AuthModule],
-      controllers: [AdminScaffoldProbeController],
     }).overrideProvider(FIREBASE_AUTH).useValue({ verifyIdToken, getUser }).compile();
     app = module.createNestApplication();
     await app.listen(0, '127.0.0.1');
-    endpoint = `${await app.getUrl()}/admin-scaffold-probe`;
+    endpoint = `${await app.getUrl()}/admin/me`;
   });
 
   afterAll(async () => { await app?.close(); });

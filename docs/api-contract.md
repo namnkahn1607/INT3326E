@@ -1,5 +1,12 @@
 # API contract — Week 1 draft
 
+Current Admin read endpoints: `GET /v1/drivers` (API11/SC06) and
+`GET /v1/admin/customers` (read-only TV6 scope requested on 23/10/2026).
+Both require ADMIN and a provisioned business user. See
+[Admin directory](tv6-admin-directory.md) for pagination, database dependencies,
+privacy and integration details; see [QA test plan](qa-test-plan.md) for acceptance.
+Historical week 1/2 draft statements below do not describe these new handlers.
+
 GPS request/event fields follow PF SPEC 01 v1.3, VI.API00/API08/EVT01. The current
 contract is [GPS event contract](gps-event-contract.md); independent review by
 the GPS pipeline owner remains pending. The endpoint remains unimplemented.
