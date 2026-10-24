@@ -1,8 +1,40 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createShipment, getShipmentById, getShipments } from './shipments'
+import { assignShipment, createShipment, getShipmentById, getShipments } from './shipments'
 import { shipmentFixture } from '../../features/customer/shipment-fixture'
 
 afterEach(() => vi.unstubAllGlobals())
+
+describe('Admin Assign contract', () => {
+  const driverId = 'usr_01ARZ3NDEKTSV4RRFFQ69G5FAX'
+  const assigned = { ...shipmentFixture, status: 'ASSIGNED', driverId }
+  it('posts only driverId, no actor/idempotency field, and waits for 200', async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify(assigned)))
+    vi.stubGlobal('fetch', fetcher)
+    expect(await assignShipment(shipmentFixture.id, driverId)).toEqual(assigned)
+    expect(new URL(fetcher.mock.calls[0][0]).pathname).toBe(`/v1/shipments/${shipmentFixture.id}/assign`)
+    const options = fetcher.mock.calls[0][1]
+    expect(options.method).toBe('POST')
+    expect(JSON.parse(options.body)).toEqual({ driverId })
+    expect(new Headers(options.headers).has('Idempotency-Key')).toBe(false)
+  })
+  it.each([
+    { ...assigned, id: 'sh_01ARZ3NDEKTSV4RRFFQ69G5FAX' },
+    { ...assigned, driverId: shipmentFixture.customerId },
+    { ...assigned, status: 'PICKED_UP' }, shipmentFixture,
+  ])('does not confirm mismatched success %j', async response => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(response))))
+    await expect(assignShipment(shipmentFixture.id, driverId)).rejects.toMatchObject({ code: 'INVALID_RESPONSE' })
+  })
+  it('rejects malformed IDs without writing and does not retry 409', async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ code: 'CONFLICT' }), { status: 409 }))
+    vi.stubGlobal('fetch', fetcher)
+    await expect(assignShipment('../admin', driverId)).rejects.toMatchObject({ status: 400 })
+    await expect(assignShipment(shipmentFixture.id, 'D01')).rejects.toMatchObject({ status: 400 })
+    expect(fetcher).not.toHaveBeenCalled()
+    await expect(assignShipment(shipmentFixture.id, driverId)).rejects.toMatchObject({ status: 409 })
+    expect(fetcher).toHaveBeenCalledTimes(1)
+  })
+})
 
 describe('Customer shipment contract', () => {
   it('sends only canonical payload and the caller intent key', async () => {
