@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState, type FormEvent, type Keyboard
 import { createPortal } from 'react-dom'
 import { AdministrativeAreaSelect } from './AdministrativeAreaSelect'
 import { administrativeAddress, resolveAdministrativeSelection, type AdministrativeSelection } from './administrative-areas'
-import type { AddressMatch } from './address-search'
+import { AddressSearchError, type AddressMatch } from './address-search'
+import { characterCount } from '../../utils'
 import { HANOI_PROVINCE } from './hanoi-map'
 import { CustomerHomeIcon } from './CustomerHomeIcon'
 import { ShipmentMapDialog } from './ShipmentMapDialog'
@@ -90,12 +91,16 @@ export function ShipmentAddressModal({ kind, value, onSave, onClose }: {
     regionRequest.current?.abort()
     const controller = new AbortController()
     regionRequest.current = controller
-    let divisions: AdministrativeSelection = { province: HANOI_PROVINCE, district: null, ward: null }
-    try { divisions = await resolveAdministrativeSelection(address.regions ?? address.area.split(','), controller.signal) }
-    catch { if (controller.signal.aborted) return }
-    if (controller.signal.aborted || selectedPoint.current.lat !== point.lat || selectedPoint.current.lng !== point.lng) return
-    setDraft(current => ({ ...current, point, street: address.street, area: administrativeAddress(divisions), divisions }))
-    setNeedsReview(false)
+    try {
+      const divisions = await resolveAdministrativeSelection(address.regions ?? address.area.split(','), controller.signal)
+      if (controller.signal.aborted || selectedPoint.current.lat !== point.lat || selectedPoint.current.lng !== point.lng) return
+      setDraft(current => ({ ...current, point, street: address.street, area: administrativeAddress(divisions), divisions }))
+      setNeedsReview(false)
+    } catch {
+      if (controller.signal.aborted) return
+      setNeedsReview(true)
+      throw new AddressSearchError('Chưa tải được quận/phường tại điểm đã chọn.')
+    }
   }
   function save(event: FormEvent) {
     event.preventDefault(); event.stopPropagation()
@@ -104,7 +109,7 @@ export function ShipmentAddressModal({ kind, value, onSave, onClose }: {
       setError('Nhập tên đường/tòa nhà và khu vực tại Hà Nội trước khi lưu.'); return
     }
     const address = [draft.details.trim(), draft.street.trim(), draft.area.trim()].filter(Boolean).join(', ')
-    if (address.length > 255 || draft.details.trim().length > 150 || draft.area.trim().length > 150) {
+    if (characterCount(address) > 255 || characterCount(draft.details.trim()) > 150 || characterCount(draft.area.trim()) > 150) {
       setError('Địa chỉ đầy đủ tối đa 255 ký tự; số nhà/chỉ dẫn và khu vực mỗi ô tối đa 150 ký tự.'); return
     }
     if (!draft.divisions?.province || !draft.divisions.district || !draft.divisions.ward) {

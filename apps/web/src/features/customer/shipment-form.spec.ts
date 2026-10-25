@@ -1,11 +1,29 @@
 import { describe, expect, it } from 'vitest'
-import { emptyShipmentDraft, validateShipmentDraft, canRetryIntent } from './shipment-form'
+import { emptyShipmentDraft, validateShipmentDraft, canRetryIntent, classifyCreateFailure } from './shipment-form'
+import { ApiError } from '../../api/client'
 
 const valid = { ...emptyShipmentDraft, pickupAddress: ' 144 Xuan Thuy ', pickupLat: '0', pickupLng: '0',
   dropoffAddress: '1 Dai Co Viet', dropoffLat: '21', dropoffLng: '105',
   recipientName: 'Nguoi nhan', recipientPhone: '+84901234567', senderName: 'Nguoi gui', senderPhone: '0901234567' }
 
 describe('Create form normalization', () => {
+  it.each([
+    [new ApiError(404, 'RESOURCE_NOT_FOUND'), 'unavailable'],
+    [new ApiError(401, 'UNAUTHENTICATED'), 'auth'],
+    [new ApiError(0, 'NETWORK_ERROR'), 'uncertain'],
+    [new ApiError(503, 'UNAVAILABLE'), 'uncertain'],
+    [new ApiError(200, 'INVALID_RESPONSE'), 'uncertain'],
+    [new ApiError(400, 'VALIDATION_ERROR'), 'rejected'],
+    [new ApiError(403, 'FORBIDDEN'), 'rejected'],
+    [new Error('Disconnected'), 'uncertain'],
+  ])('classifies create failure %s without changing retry policy', (error, expected) => {
+    expect(classifyCreateFailure(error)).toBe(expected)
+  })
+  it('counts Unicode characters consistently with backend and PostgreSQL limits', () => {
+    const result = validateShipmentDraft({ ...valid, recipientName: '😀'.repeat(100), notes: '📦'.repeat(500) })
+    expect(result.errors).toEqual({})
+    expect(validateShipmentDraft({ ...valid, notes: '📦'.repeat(501) }).errors).toHaveProperty('notes')
+  })
   it('retains coordinate zero and sends no actor or legacy fields', () => {
     const result = validateShipmentDraft(valid)
     expect(result.errors).toEqual({})

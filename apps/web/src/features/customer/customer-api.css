@@ -76,7 +76,6 @@
 .shipment-location-map { height: 300px; width: 100%; border-radius: 12px; z-index: 0; }
 .shipment-location-map .leaflet-tile { max-width: none !important; max-height: none !important; }
 .shipment-map-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-block: 12px; }
-.shipment-map-network-error { display: grid; justify-items: start; gap: 10px; margin-block: 12px; }
 .shipment-create-workspace { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
 .shipment-create-workspace > * { min-width: 0; }
 .shipment-submit-panel { background: white; padding: 20px; border: 1px solid var(--border-color); }

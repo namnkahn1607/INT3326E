@@ -58,6 +58,31 @@ async function typeSearch(value: string) {
 
 describe('Shipment map picker (mock map)', () => {
   const match: AddressMatch = { id: 'place', label: 'Duong Xuan Thuy, Ha Noi', point: { lat: 21.03, lng: 105.78 }, bounds: [[21.02, 105.77], [21.04, 105.79]] }
+  it('mounts a map when initially controlled open without requiring a separate toggle', async () => {
+    await act(async () => root.render(<ShipmentLocationPicker expanded kind="pickup" point={null} disabled={false} onSelect={map.selected} />))
+    expect(node.querySelector('[data-testid=map]')).not.toBeNull()
+  })
+  it('mounts the map when its controlled state changes from closed to open', async () => {
+    await act(async () => root.render(<ShipmentLocationPicker expanded={false} kind="pickup" point={null} disabled={false} onSelect={map.selected} />))
+    expect(node.querySelector('[data-testid=map]')).toBeNull()
+    await act(async () => root.render(<ShipmentLocationPicker expanded kind="pickup" point={null} disabled={false} onSelect={map.selected} />))
+    expect(node.querySelector('[data-testid=map]')).not.toBeNull()
+  })
+  it('does not let an old asynchronous address callback clear a newer lookup status', async () => {
+    let finishOld!: () => void
+    let finishNew!: (value: AddressMatch) => void
+    lookup.reverse.mockResolvedValueOnce({ ...match, address: { street: 'Old road', area: 'Hanoi' } })
+      .mockReturnValueOnce(new Promise(resolve => { finishNew = resolve }))
+    const onSelect = vi.fn((_point, address) => address?.street === 'Old road'
+      ? new Promise<void>(resolve => { finishOld = resolve }) : undefined)
+    await act(async () => root.render(<ShipmentLocationPicker initialOpen kind="pickup" point={null} disabled={false} onSelect={onSelect} />))
+    await act(async () => map.click!({ latlng: { wrap: () => ({ lat: 21.03, lng: 105.78 }) } }))
+    await act(async () => map.click!({ latlng: { wrap: () => ({ lat: 21.04, lng: 105.79 }) } }))
+    await act(async () => finishOld())
+    const pendingStatus = node.querySelector('.shipment-location-status')!.textContent
+    await act(async () => finishNew({ ...match, address: { street: 'New road', area: 'Hanoi' } }))
+    expect(pendingStatus).toBe('Đang lấy địa chỉ…')
+  })
   it('shows an editable search bar immediately, without searching while typing', async () => {
     expect(node.querySelector<HTMLInputElement>('input[type=search]')?.value).toBe('Duong Xuan Thuy, Ha Noi')
     expect(node.querySelector('[data-testid="pickup-address-search"]')?.textContent).toBe('')

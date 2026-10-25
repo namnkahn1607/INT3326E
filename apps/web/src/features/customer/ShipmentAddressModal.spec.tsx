@@ -61,6 +61,19 @@ async function submit() { await act(async () => dialog().querySelector('form')!.
 async function hierarchy() { await choose('address-district', '5'); await choose('address-ward', '160') }
 
 describe('Address modal (real form/directory controls; mock map and directory API)', () => {
+  it('reports directory lookup failure instead of silently replacing the current address', async () => {
+    await input('address-street', 'User-entered street'); await input('address-details', 'Private instructions')
+    await hierarchy()
+    mocks.resolve.mockRejectedValue(new Error('Private directory diagnostic'))
+    await act(async () => {
+      await expect(mocks.select!({ lat: 21.03, lng: 105.78 }, { street: 'Provider street', area: 'Provider area' }))
+        .rejects.toThrow('Chưa tải được quận/phường')
+    })
+    expect((document.getElementById('address-street') as HTMLInputElement).value).toBe('User-entered street')
+    expect((document.getElementById('address-details') as HTMLInputElement).value).toBe('Private instructions')
+    expect(document.querySelector('[data-review]')?.getAttribute('data-review')).toBe('true')
+    await submit(); expect(mocks.save).not.toHaveBeenCalled()
+  })
   it('opens an accessible dialog, labels the legacy data and defers descendant requests', () => {
     expect(dialog().open).toBe(true); expect(dialog().getAttribute('aria-labelledby')).toBe('address-modal-title')
     expect(dialog().textContent).toContain('trước 07/2025')

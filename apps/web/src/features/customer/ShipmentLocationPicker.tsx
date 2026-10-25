@@ -81,7 +81,7 @@ function LocationPicker({ kind, point, query = '', disabled, error, needsReview,
     const next = typeof value === 'function' ? value(open) : value
     setLocalOpen(next); onExpandedChange?.(next)
   }
-  const [mounted, setMounted] = useState(initialOpen)
+  const [mounted, setMounted] = useState(initialOpen || expanded === true)
   const [searchDraft, setSearchDraft] = useState<{ source: string; text: string } | null>(null)
   const searchQuery = searchDraft?.source === query ? searchDraft.text : query
   const [lookup, setLookup] = useState<{ query: string; searching: boolean; results: AddressSuggestion[] | null; error: string | null } | null>(null)
@@ -156,6 +156,7 @@ function LocationPicker({ kind, point, query = '', disabled, error, needsReview,
       if (controller.signal.aborted) return
       if (match?.address) {
         await onSelect(selected, match.address)
+        if (controller.signal.aborted || reverseRequest.current !== controller) return
         setAddressLookup({ query, loading: false, message: '' })
       } else setAddressLookup({ query, loading: false, message: 'Không tìm thấy tên đường tại điểm này.' })
     } catch (cause) {
@@ -189,7 +190,7 @@ function LocationPicker({ kind, point, query = '', disabled, error, needsReview,
     </div>
     </div>
     {error && <p id={id + '-error'} className="customer-field-error" role="alert">{error}</p>}
-    {mounted && <div id={id + '-panel'} className="shipment-location-panel" hidden={!open || disabled}>
+    {(mounted || open) && <div id={id + '-panel'} className="shipment-location-panel" hidden={!open || disabled}>
       {searching && <p role="status">Đang tìm khu vực phù hợp…</p>}
       {searchError && <p className="customer-field-error" role="alert">{searchError}</p>}
       {results && <div className="shipment-address-results">

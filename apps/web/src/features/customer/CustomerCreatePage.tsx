@@ -7,8 +7,8 @@ import { useAuth } from '../auth/useAuth'
 import { ShipmentAddressModal, type ShipmentAddressValue } from './ShipmentAddressModal'
 import { CustomerHomeIcon } from './CustomerHomeIcon'
 import type { AdministrativeSelection } from './administrative-areas'
-import { canRetryIntent, emptyShipmentDraft, shipmentErrorMessage, validateShipmentDraft,
-  type CreateIntent, type FieldErrors, type ShipmentDraft } from './shipment-form'
+import { canRetryIntent, classifyCreateFailure, emptyShipmentDraft, shipmentErrorMessage, validateShipmentDraft,
+  type CreateIntent, type CreateRequestIssue, type FieldErrors, type ShipmentDraft } from './shipment-form'
 import './customer-api.css'
 
 const labels: Record<keyof ShipmentDraft, string> = {
@@ -23,12 +23,6 @@ const labels: Record<keyof ShipmentDraft, string> = {
 }
 
 const hints: Partial<Record<keyof ShipmentDraft, string>> = {
-  pickupAddress: 'Tên đường hoặc tòa nhà công cộng để xác định khu vực trên bản đồ.',
-  dropoffAddress: 'Tên đường hoặc tòa nhà công cộng để xác định khu vực trên bản đồ.',
-  pickupArea: 'Phường/xã, tỉnh/thành phố để thu hẹp khu vực.',
-  dropoffArea: 'Phường/xã, tỉnh/thành phố để thu hẹp khu vực.',
-  pickupDetails: 'Số nhà, tầng, căn hộ, cổng vào… Được lưu cùng địa chỉ của đơn để tài xế xem; không gửi tới dịch vụ tra địa chỉ.',
-  dropoffDetails: 'Số nhà, tầng, căn hộ, cổng vào… Được lưu cùng địa chỉ của đơn để tài xế xem; không gửi tới dịch vụ tra địa chỉ.',
   packageWeightKg: 'Số lớn hơn 0, đơn vị kg. Để trống nếu chưa có.',
   packageDescription: 'Tối đa 500 ký tự.', notes: 'Tối đa 500 ký tự.',
 }
@@ -55,7 +49,7 @@ function ShipmentCreateForm({ senderName }: { senderName: string }) {
   const [intent, setIntent] = useState<CreateIntent | null>(null)
   const [created, setCreated] = useState<ShipmentResponse | null>(null)
   const [focusRequest, setFocusRequest] = useState<{ name: keyof ShipmentDraft } | null>(null)
-  const [requestIssue, setRequestIssue] = useState<'auth' | 'uncertain' | 'rejected' | 'unavailable' | null>(null)
+  const [requestIssue, setRequestIssue] = useState<CreateRequestIssue | null>(null)
   const reviewed = useRef(new Set<keyof ShipmentDraft>())
   const sending = useRef(false)
   const currentRequest = useRef<AbortController | null>(null)
@@ -114,8 +108,7 @@ function ShipmentCreateForm({ senderName }: { senderName: string }) {
       setError(cause instanceof ApiError && cause.status === 404
         ? 'Máy chủ chưa tìm thấy API tạo đơn (POST /v1/shipments, HTTP 404).'
         : shipmentErrorMessage(cause))
-      setRequestIssue(cause instanceof ApiError && cause.status === 404 ? 'unavailable' : cause instanceof ApiError && cause.status === 401 ? 'auth'
-        : !(cause instanceof ApiError) || cause.status === 0 || cause.status >= 500 || cause.code === 'INVALID_RESPONSE' ? 'uncertain' : 'rejected')
+      setRequestIssue(classifyCreateFailure(cause))
       if (cause instanceof ApiError && cause.status === 404) setLocked(false)
       if (cause instanceof ApiError && cause.status === 400) {
         setLocked(false)

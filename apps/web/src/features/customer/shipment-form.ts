@@ -1,5 +1,6 @@
 import type { CreateShipmentPayload } from '../../types/shipment-api'
 import { ApiError } from '../../api/client'
+import { characterCount } from '../../utils'
 
 export const emptyShipmentDraft = {
   pickupAddress: '', pickupLat: '', pickupLng: '', dropoffAddress: '', dropoffLat: '', dropoffLng: '',
@@ -10,13 +11,23 @@ export const emptyShipmentDraft = {
 export type ShipmentDraft = typeof emptyShipmentDraft
 export type FieldErrors = Partial<Record<keyof ShipmentDraft, string>>
 export interface CreateIntent { key: string; payload: CreateShipmentPayload; startedAt: number }
+export type CreateRequestIssue = 'auth' | 'uncertain' | 'rejected' | 'unavailable'
 export const canRetryIntent = (startedAt: number, now = Date.now()) => now - startedAt < 86_400_000 && now >= startedAt
+
+export function classifyCreateFailure(error: unknown): CreateRequestIssue {
+  if (!(error instanceof ApiError)) return 'uncertain'
+  if (error.status === 404) return 'unavailable'
+  if (error.status === 401) return 'auth'
+  if (error.status === 0 || error.status >= 500 || error.code === 'INVALID_RESPONSE') return 'uncertain'
+  return 'rejected'
+}
 
 export function validateShipmentDraft(draft: ShipmentDraft, now = Date.now()): { payload: CreateShipmentPayload; errors: FieldErrors } {
   const errors: FieldErrors = {}
   const text = (field: keyof ShipmentDraft, min: number, max: number) => {
     const value = draft[field].trim()
-    if (value.length < min || value.length > max) errors[field] = `Nhập từ ${min} đến ${max} ký tự.`
+    const length = characterCount(value)
+    if (length < min || length > max) errors[field] = `Nhập từ ${min} đến ${max} ký tự.`
     return value
   }
   const coordinate = (field: keyof ShipmentDraft, range: number) => {
@@ -29,8 +40,9 @@ export function validateShipmentDraft(draft: ShipmentDraft, now = Date.now()): {
     const area = text(kind === 'pickup' ? 'pickupArea' : 'dropoffArea', 0, 150)
     const details = text(kind === 'pickup' ? 'pickupDetails' : 'dropoffDetails', 0, 150)
     const value = [details, street, area].filter(Boolean).join(', ')
-    if (value.length < 5) errors[kind === 'pickup' ? 'pickupAddress' : 'dropoffAddress'] = 'Bổ sung khu vực để địa chỉ đầy đủ và khớp với vị trí đã chọn.'
-    else if (value.length > 255) errors[kind === 'pickup' ? 'pickupAddress' : 'dropoffAddress'] = 'Địa chỉ đầy đủ tối đa 255 ký tự.'
+    const length = characterCount(value)
+    if (length < 5) errors[kind === 'pickup' ? 'pickupAddress' : 'dropoffAddress'] = 'Bổ sung khu vực để địa chỉ đầy đủ và khớp với vị trí đã chọn.'
+    else if (length > 255) errors[kind === 'pickup' ? 'pickupAddress' : 'dropoffAddress'] = 'Địa chỉ đầy đủ tối đa 255 ký tự.'
     return value
   }
   const payload: CreateShipmentPayload = {
