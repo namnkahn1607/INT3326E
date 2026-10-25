@@ -45,13 +45,22 @@ npm run lint:web
 npm run build:web
 ```
 
+## Kiểm chứng tích hợp develop ngày 26/10/2026
+
+Đã merge `origin/develop` tại `c00c42d` vào nhánh Driver, không có xung đột.
+Trên bản tích hợp: toàn bộ frontend đạt 351/351 test trong 27 file;
+`npm run lint:web` và `npm run build:web` đều exit 0.
+Người dùng đã cho phép merge qua PR vào develop trong lượt này; kết quả local
+không đóng W605 hoặc thay thế nghiệm thu Firebase/API/Pub/Sub thật bên dưới.
+
 ## Tích hợp và nghiệm thu thật còn mở
 
 Chưa kiểm tra trực quan trong trình duyệt, đăng nhập Firebase thật hoặc pipeline
 Driver → API → Pub/Sub cloud trong lượt này. Trong checkout, controller/service
 GPS của API còn trống; mock không chứng minh endpoint đó hoạt động.
-Review contract độc lập G206 vẫn chờ người phụ trách. Chưa deploy. Người dùng đã
-cho phép commit/push nhánh tính năng và mở Draft PR vào develop; chưa cho phép merge.
+Review contract độc lập G206 vẫn chờ người phụ trách. Chưa deploy. Tại lần bàn giao
+24/10, người dùng cho phép commit/push nhánh và mở Draft PR, chưa cho phép merge;
+quyền merge đã được cập nhật ngày 26/10 như ghi ở trên.
 
 1. TV2 cung cấp `POST /v1/locations`, xác thực DRIVER, validation, enrich và trả
    202 sau broker-confirmed publish; response theo `AsyncAcceptedResponse` trong
