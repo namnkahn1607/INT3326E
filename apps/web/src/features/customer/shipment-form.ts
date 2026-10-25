@@ -4,6 +4,7 @@ import { ApiError } from '../../api/client'
 export const emptyShipmentDraft = {
   pickupAddress: '', pickupLat: '', pickupLng: '', dropoffAddress: '', dropoffLat: '', dropoffLng: '',
   pickupArea: '', pickupDetails: '', dropoffArea: '', dropoffDetails: '',
+  senderName: '', senderPhone: '',
   recipientName: '', recipientPhone: '', notes: '', packageDescription: '', packageWeightKg: '', expectedDeliveryAt: '',
 }
 export type ShipmentDraft = typeof emptyShipmentDraft
@@ -24,11 +25,12 @@ export function validateShipmentDraft(draft: ShipmentDraft, now = Date.now()): {
     return value
   }
   const address = (kind: 'pickup' | 'dropoff') => {
-    const street = text(kind === 'pickup' ? 'pickupAddress' : 'dropoffAddress', 5, 255)
+    const street = text(kind === 'pickup' ? 'pickupAddress' : 'dropoffAddress', 0, 255)
     const area = text(kind === 'pickup' ? 'pickupArea' : 'dropoffArea', 0, 150)
     const details = text(kind === 'pickup' ? 'pickupDetails' : 'dropoffDetails', 0, 150)
     const value = [details, street, area].filter(Boolean).join(', ')
-    if (value.length > 255) errors[kind === 'pickup' ? 'pickupAddress' : 'dropoffAddress'] = 'Địa chỉ đầy đủ, gồm chi tiết và khu vực, tối đa 255 ký tự.'
+    if (value.length < 5) errors[kind === 'pickup' ? 'pickupAddress' : 'dropoffAddress'] = 'Bổ sung khu vực để địa chỉ đầy đủ và khớp với vị trí đã chọn.'
+    else if (value.length > 255) errors[kind === 'pickup' ? 'pickupAddress' : 'dropoffAddress'] = 'Địa chỉ đầy đủ tối đa 255 ký tự.'
     return value
   }
   const payload: CreateShipmentPayload = {
@@ -39,6 +41,8 @@ export function validateShipmentDraft(draft: ShipmentDraft, now = Date.now()): {
     recipientName: text('recipientName', 2, 100), recipientPhone: draft.recipientPhone.trim(),
   }
   if (!/^\+?\d{9,15}$/.test(payload.recipientPhone)) errors.recipientPhone = 'Nhập 9–15 chữ số, có thể bắt đầu bằng dấu +.'
+  text('senderName', 1, 100)
+  if (!/^\+?\d{9,15}$/.test(draft.senderPhone.trim())) errors.senderPhone = 'Nhập 9–15 chữ số, có thể bắt đầu bằng dấu +.'
   for (const field of ['notes', 'packageDescription'] as const) {
     if (draft[field].trim()) payload[field] = text(field, 0, 500)
   }

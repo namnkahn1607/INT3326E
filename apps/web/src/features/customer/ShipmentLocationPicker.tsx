@@ -1,15 +1,34 @@
 import { useEffect, useRef, useState } from 'react'
-import type { Map as LeafletMap, TileLayer as LeafletTileLayer } from 'leaflet'
-import { Circle, CircleMarker, MapContainer, Rectangle, TileLayer, Tooltip, useMapEvents } from 'react-leaflet'
+import { Circle, CircleMarker, MapContainer, Rectangle, Tooltip, useMapEvents } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import { CustomerHomeIcon } from './CustomerHomeIcon'
-import { AddressSearchError, searchAddress, type AddressMatch } from './address-search'
+import { AddressSearchError, resolveAddressSuggestion, reverseAddress, searchAddress, type AddressMatch, type AddressSuggestion } from './address-search'
+import { OsmBaseLayer } from '../../components/map/OsmBaseLayer'
+import { HANOI_CENTER, HANOI_VIEW_BOUNDS } from './hanoi-map'
 
 type Point = { lat: number; lng: number }
 type Kind = 'pickup' | 'dropoff'
 
-function MapSelection({ kind, area, onSelect }: { kind: Kind; area: AddressMatch | null; onSelect: (point: Point) => void }) {
-  const map = useMapEvents({ click: event => onSelect(event.latlng.wrap()) })
+function MapSelection({ kind, area, districtArea, active, onSelect }: { kind: Kind; area: AddressMatch | null; districtArea?: AddressMatch | null; active: boolean; onSelect: (point: Point) => void }) {
+  const interacted = useRef(false)
+  const map = useMapEvents({ click: event => { if (active) { interacted.current = true; onSelect(event.latlng.wrap()) } },
+    dragstart: () => { interacted.current = true }, zoomstart: () => { interacted.current = true } })
+  useEffect(() => {
+    if (!active) return
+    interacted.current = false
+    const resize = () => {
+      if (map.getContainer().getClientRects().length) map.invalidateSize({ pan: false, debounceMoveend: true })
+    }
+    resize()
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(resize)
+    observer?.observe(map.getContainer())
+    return () => observer?.disconnect()
+  }, [map, active])
+  useEffect(() => {
+    if (!active || !districtArea || area || interacted.current) return
+    if (districtArea.bounds) map.fitBounds(districtArea.bounds, { padding: [24, 24], maxZoom: 14, animate: false })
+    else map.setView(districtArea.point, 13, { animate: false })
+  }, [map, active, districtArea, area])
   useEffect(() => {
     if (!area) return
     if (area.bounds) map.fitBounds(area.bounds, { padding: [24, 24], maxZoom: 17, animate: false })
@@ -17,106 +36,175 @@ function MapSelection({ kind, area, onSelect }: { kind: Kind; area: AddressMatch
     map.getContainer().focus()
   }, [map, area])
   useEffect(() => {
+    if (!active) return
     const element = map.getContainer()
     element.setAttribute('role', 'region')
     element.setAttribute('aria-label', 'Bản đồ chọn điểm ' + (kind === 'pickup' ? 'lấy' : 'giao') + ' hàng')
-    element.setAttribute('aria-describedby', kind + '-map-help')
     const pan = (event: KeyboardEvent) => {
       const offset: Record<string, [number, number]> = { ArrowLeft: [-80, 0], ArrowRight: [80, 0], ArrowUp: [0, -80], ArrowDown: [0, 80] }
-      if (event.target !== element || event.altKey || event.ctrlKey || event.metaKey || !offset[event.key]) return
+      if (event.target !== element || event.altKey || event.ctrlKey || event.metaKey) return
+      if (event.key === 'Enter') {
+        event.preventDefault(); event.stopPropagation(); interacted.current = true
+        onSelect(map.getCenter().wrap()); return
+      }
+      if (!offset[event.key]) return
       event.preventDefault(); event.stopPropagation()
+      interacted.current = true
       map.panBy(offset[event.key], { animate: false })
     }
     element.addEventListener('keydown', pan, true)
     return () => element.removeEventListener('keydown', pan, true)
-  }, [map, kind])
+  }, [map, kind, active, onSelect])
   return null
 }
 
 interface PickerProps {
-  kind: Kind; point: Point | null; query?: string; disabled: boolean; error?: string; onSelect: (point: Point) => void
+  hideToggle?: boolean
+  districtArea?: AddressMatch | null
+  idPrefix?: string
+  initialOpen?: boolean
+  expanded?: boolean
+  onExpandedChange?: (expanded: boolean) => void
+  kind: Kind; point: Point | null; query?: string; disabled: boolean; error?: string; needsReview?: boolean
+  onSelect: (point: Point, address?: AddressMatch['address']) => void | Promise<void>
+  onResolvingChange?: (kind: Kind, resolving: boolean) => void
 }
 
 export function ShipmentLocationPicker(props: PickerProps) {
-  return <LocationPicker key={(props.query ?? '') + ':' + props.disabled} {...props} />
+  return <LocationPicker key={props.kind} {...props} />
 }
 
-function LocationPicker({ kind, point, query = '', disabled, error, onSelect }: PickerProps) {
-  const [open, setOpen] = useState(false)
-  const [tileError, setTileError] = useState(false)
-  const [searching, setSearching] = useState(false)
-  const [results, setResults] = useState<AddressMatch[] | null>(null)
-  const [searchError, setSearchError] = useState<string | null>(null)
-  const [area, setArea] = useState<AddressMatch | null>(null)
+function LocationPicker({ kind, point, query = '', disabled, error, needsReview, onSelect, onResolvingChange, idPrefix = 'shipment-', initialOpen = false, expanded, onExpandedChange, hideToggle = false, districtArea }: PickerProps) {
+  const [localOpen, setLocalOpen] = useState(initialOpen)
+  const open = expanded ?? localOpen
+  function setOpen(value: boolean | ((previous: boolean) => boolean)) {
+    const next = typeof value === 'function' ? value(open) : value
+    setLocalOpen(next); onExpandedChange?.(next)
+  }
+  const [mounted, setMounted] = useState(initialOpen)
+  const [searchDraft, setSearchDraft] = useState<{ source: string; text: string } | null>(null)
+  const searchQuery = searchDraft?.source === query ? searchDraft.text : query
+  const [lookup, setLookup] = useState<{ query: string; searching: boolean; results: AddressSuggestion[] | null; error: string | null } | null>(null)
+  const [chosenArea, setChosenArea] = useState<{ query: string; match: AddressMatch } | null>(null)
+  const area = chosenArea?.query === searchQuery ? chosenArea.match : null
   const request = useRef<AbortController | null>(null)
-  const map = useRef<LeafletMap | null>(null)
-  const tiles = useRef<LeafletTileLayer | null>(null)
+  const reverseRequest = useRef<AbortController | null>(null)
+  const [addressLookup, setAddressLookup] = useState<{ query: string; loading: boolean; message: string } | null>(null)
   const trigger = useRef<HTMLButtonElement>(null)
+  const searching = lookup?.query === searchQuery && lookup.searching && !disabled
+  const results = lookup?.query === searchQuery ? lookup.results : null
+  const searchError = lookup?.query === searchQuery ? lookup.error : null
+  const resolving = addressLookup?.query === query && addressLookup.loading && !disabled
+  const selectionStatus = resolving ? 'Đang lấy địa chỉ…' : addressLookup?.query === query && addressLookup.message
+    ? addressLookup.message : point ? needsReview ? 'Địa chỉ đã thay đổi.' : 'Đã chọn điểm.' : 'Chưa chọn điểm.'
   const label = kind === 'pickup' ? 'lấy' : 'giao'
-  const id = 'shipment-' + kind + 'Location'
-  useEffect(() => () => request.current?.abort(), [])
+  const id = idPrefix + kind + 'Location'
+  useEffect(() => () => { request.current?.abort(); request.current = null }, [searchQuery, disabled])
+  useEffect(() => () => {
+    reverseRequest.current?.abort(); reverseRequest.current = null
+    onResolvingChange?.(kind, false)
+  }, [query, disabled, kind, onResolvingChange])
   async function search() {
-    if (disabled || request.current) return
+    if (disabled || request.current || searchQuery.trim().length < 3) return
     const controller = new AbortController()
     request.current = controller
-    setSearching(true); setOpen(true); setResults(null); setSearchError(null)
+    setLookup({ query: searchQuery, searching: true, results: null, error: null }); setOpen(true); setMounted(true)
     try {
-      const matches = await searchAddress(query, controller.signal)
-      if (!controller.signal.aborted) setResults(matches)
+      const matches = await searchAddress(searchQuery, controller.signal)
+      if (!controller.signal.aborted) setLookup({ query: searchQuery, searching: false, results: matches, error: null })
     } catch (cause) {
-      if (!controller.signal.aborted) setSearchError(cause instanceof AddressSearchError ? cause.message : 'Chưa tìm được địa chỉ. Thử lại hoặc chọn điểm thủ công.')
+      if (!controller.signal.aborted) setLookup({ query: searchQuery, searching: false, results: null, error: cause instanceof AddressSearchError ? cause.message : 'Chưa tìm được địa chỉ.' })
     } finally {
-      if (!controller.signal.aborted) { setSearching(false); request.current = null }
+      if (request.current === controller) request.current = null
+    }
+  }
+  async function chooseArea(result: AddressSuggestion) {
+    request.current?.abort()
+    reverseRequest.current?.abort()
+    const controller = new AbortController()
+    request.current = controller
+    setLookup(previous => previous ? { ...previous, searching: true, error: null } : null)
+    try {
+      const match = await resolveAddressSuggestion(result, controller.signal)
+      if (!controller.signal.aborted) setChosenArea({ query: searchQuery, match })
+    } catch (cause) {
+      if (!controller.signal.aborted) setLookup(previous => previous ? { ...previous, error: cause instanceof AddressSearchError ? cause.message : 'Chưa lấy được vị trí địa chỉ.' } : null)
+    } finally {
+      if (request.current === controller) {
+        request.current = null
+        setLookup(previous => previous ? { ...previous, searching: false } : null)
+      }
     }
   }
   function select(value: Point) {
     if (!disabled && Number.isFinite(value.lat) && Number.isFinite(value.lng) && Math.abs(value.lat) <= 90 && Math.abs(value.lng) <= 180) {
-      request.current?.abort(); request.current = null; setSearching(false)
-      onSelect({ lat: Number(value.lat.toFixed(6)), lng: Number(value.lng.toFixed(6)) })
+      request.current?.abort(); request.current = null
+      setLookup(previous => previous ? { ...previous, searching: false } : null)
+      const selected = { lat: Number(value.lat.toFixed(6)), lng: Number(value.lng.toFixed(6)) }
+      onSelect(selected)
+      void resolveAddress(selected)
+    }
+  }
+  async function resolveAddress(selected: Point) {
+    reverseRequest.current?.abort()
+    const controller = new AbortController()
+    reverseRequest.current = controller
+    setAddressLookup({ query, loading: true, message: '' })
+    onResolvingChange?.(kind, true)
+    try {
+      const match = await reverseAddress(selected, controller.signal)
+      if (controller.signal.aborted) return
+      if (match?.address) {
+        await onSelect(selected, match.address)
+        setAddressLookup({ query, loading: false, message: '' })
+      } else setAddressLookup({ query, loading: false, message: 'Không tìm thấy tên đường tại điểm này.' })
+    } catch (cause) {
+      if (!controller.signal.aborted) setAddressLookup({ query, loading: false, message: cause instanceof AddressSearchError ? cause.message : 'Chưa lấy được tên đường.' })
+    } finally {
+      if (reverseRequest.current === controller) { reverseRequest.current = null; onResolvingChange?.(kind, false) }
     }
   }
   function close() { setOpen(false); trigger.current?.focus() }
 
   return <div className="shipment-location-picker full-width">
     <div className="shipment-location-heading">
-      <div><p className="shipment-location-label">Vị trí {label} hàng *</p>
-        <p id={id + '-status'} className="customer-field-hint" role="status">
-          {point ? 'Đã chọn điểm trên bản đồ.' : 'Chưa chọn vị trí. Không cần nhập kinh độ, vĩ độ.'}
-        </p>
+      <div><p className="shipment-location-label">Vị trí {label} hàng<span className="shipment-required"> *</span></p>
+        <p id={id + '-status'} className="customer-field-hint shipment-location-status" role="status" title={selectionStatus}>{selectionStatus}</p>
       </div>
-      <div className="shipment-location-actions">
-      <button type="button" className="btn btn-secondary" disabled={disabled || searching || query.trim().length < 3}
-        aria-busy={searching} onClick={search} data-testid={kind + '-address-search'}>
-        <CustomerHomeIcon name="search" />{searching ? 'Đang tìm…' : 'Tìm trên bản đồ'}
-      </button>
-      <button ref={trigger} id={id} type="button" className="btn btn-outline" disabled={disabled}
+      {!hideToggle && <div className="shipment-location-actions"><button ref={trigger} id={id} type="button" className="btn btn-outline" disabled={disabled}
         aria-expanded={open && !disabled} aria-controls={open && !disabled ? id + '-panel' : undefined}
         aria-invalid={!!error} aria-describedby={id + (error ? '-error' : '-status')}
-        onClick={() => setOpen(value => !value)}>
+        onClick={() => { setMounted(true); setOpen(value => !value) }}>
         <CustomerHomeIcon name="pin" />{point ? 'Đổi vị trí ' : 'Chọn vị trí '}{label} hàng
+      </button></div>}
+    <div className="shipment-map-search" role="search" aria-label="Tìm địa chỉ trên bản đồ">
+      <label className="ui-visually-hidden" htmlFor={id + '-search'}>Tìm địa chỉ trên bản đồ</label>
+      <input id={id + '-search'} type="search" value={searchQuery} disabled={disabled} autoComplete="off"
+        onChange={event => setSearchDraft({ source: query, text: event.target.value })}
+        onKeyDown={event => { if (event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); event.stopPropagation(); void search() } }} />
+      <button type="button" disabled={disabled || searching || searchQuery.trim().length < 3} aria-label="Tìm địa chỉ trên bản đồ"
+        aria-busy={searching} onClick={search} data-testid={kind + '-address-search'}>
+        {searching ? <span className="ui-button-spinner" aria-hidden="true" /> : <CustomerHomeIcon name="search" />}
       </button>
-      </div>
     </div>
-    <p className="customer-field-hint shipment-search-privacy">Nhấn tìm sẽ gửi tên đường/tòa nhà và khu vực tới <a href="https://photon.komoot.io" target="_blank" rel="noreferrer">Photon</a> (dữ liệu OpenStreetMap). Không gửi ô địa chỉ chi tiết hay thông tin người nhận.</p>
+    </div>
     {error && <p id={id + '-error'} className="customer-field-error" role="alert">{error}</p>}
-    {open && !disabled && <div id={id + '-panel'} className="shipment-location-panel">
+    {mounted && <div id={id + '-panel'} className="shipment-location-panel" hidden={!open || disabled}>
       {searching && <p role="status">Đang tìm khu vực phù hợp…</p>}
       {searchError && <p className="customer-field-error" role="alert">{searchError}</p>}
       {results && <div className="shipment-address-results">
-        <p role="status">{results.length ? 'Chọn kết quả để khoanh vùng, sau đó chọn điểm chính xác trên bản đồ.' : 'Không tìm thấy địa chỉ. Thử thêm khu vực hoặc chọn điểm thủ công.'}</p>
+        <p role="status">{results.length ? results.length + ' kết quả.' : 'Không tìm thấy địa chỉ.'}</p>
         {results.length > 0 && <ul aria-label="Kết quả tìm địa chỉ">{results.map(result => <li key={result.id}>
           <button type="button" className="shipment-address-result" aria-pressed={area?.id === result.id}
-            onClick={() => setArea(result)}>{result.label}<CustomerHomeIcon name="arrow" /></button>
+            disabled={!!searching} onClick={() => void chooseArea(result)}>{result.label}<CustomerHomeIcon name="arrow" /></button>
         </li>)}</ul>}
       </div>}
-      <p id={kind + '-map-help'} className="customer-field-hint">Chạm vào vị trí đúng với địa chỉ đã nhập. Dùng bàn phím: Tab vào bản đồ, di chuyển bằng phím mũi tên, sau đó chọn điểm ở giữa.</p>
       <div className="shipment-location-map-wrap">
-        <MapContainer ref={map} className="shipment-location-map" center={point ?? { lat: 21.0285, lng: 105.8542 }} zoom={13}
+        <MapContainer className="shipment-location-map" center={point ?? HANOI_CENTER} zoom={15} minZoom={10} maxZoom={20}
+          maxBounds={HANOI_VIEW_BOUNDS} maxBoundsViscosity={1}
           scrollWheelZoom={false} zoomAnimation={false} fadeAnimation={false} markerZoomAnimation={false}>
-          <TileLayer ref={tiles} url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            eventHandlers={{ tileerror: () => setTileError(true), tileload: () => setTileError(false) }} />
-          <MapSelection kind={kind} area={area} onSelect={select} />
+          <OsmBaseLayer />
+          <MapSelection kind={kind} area={area} districtArea={districtArea} active={open && !disabled} onSelect={select} />
           {area && (area.bounds
             ? <Rectangle bounds={area.bounds} pathOptions={{ color: '#7c3aed', weight: 2, fillOpacity: .06, dashArray: '6 6' }} />
             : <Circle center={area.point} radius={250} pathOptions={{ color: '#7c3aed', weight: 2, fillOpacity: .06, dashArray: '6 6' }} />)}
@@ -124,20 +212,11 @@ function LocationPicker({ kind, point, query = '', disabled, error, onSelect }: 
             <Tooltip permanent direction="top">Điểm {label} hàng</Tooltip>
           </CircleMarker>}
         </MapContainer>
-        <span className="shipment-map-center" aria-hidden="true"><CustomerHomeIcon name="pin" /></span>
       </div>
-      {tileError && <div className="shipment-map-network-error" role="status">
-        <p className="customer-field-error">Chưa tải được đầy đủ nền bản đồ. Kiểm tra kết nối trước khi xác nhận vị trí.</p>
-        <button type="button" className="btn btn-outline" onClick={() => { setTileError(false); tiles.current?.redraw() }}>Thử tải lại bản đồ</button>
-      </div>}
       <div className="shipment-map-actions">
-        <button type="button" className="btn btn-secondary" onClick={() => {
-          const center = map.current?.getCenter().wrap()
-          if (center) { select(center); close() }
-        }}>Chọn điểm ở giữa bản đồ</button>
+        {point && needsReview && <button type="button" className="btn btn-secondary" disabled={disabled || resolving} onClick={() => onSelect(point)}>Xác nhận điểm đã chọn</button>}
         <button type="button" className="btn btn-outline" onClick={close}>Xong</button>
       </div>
-      <p className="customer-field-hint">{area ? 'Vùng đánh dấu chỉ để tham khảo, không phải ranh giới nhà hay vị trí đã xác nhận. ' : ''}Địa chỉ không tự đổi khi di chuyển ghim; chỉ dùng tọa độ sau khi bạn chọn điểm.</p>
     </div>}
   </div>
 }
