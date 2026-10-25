@@ -12,6 +12,12 @@ beforeEach(() => { service = new GeocodingService(key); upstream.mockReset(); vi
 afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); vi.restoreAllMocks(); });
 
 describe('VIETMAP adapter (mock upstream)', () => {
+  it('does not cache a malformed response and allows recovery on the next request', async () => {
+    upstream.mockResolvedValueOnce(Response.json({})).mockResolvedValueOnce(Response.json([feature]));
+    await expect(service.search('uid', 'Địa điểm')).rejects.toMatchObject({ status: 503 });
+    await expect(service.search('uid', 'Địa điểm')).resolves.toHaveLength(1);
+    expect(upstream).toHaveBeenCalledTimes(2);
+  });
   it('requests legacy format on a fixed provider URL without forwarding Firebase tokens or cookies', async () => {
     upstream.mockResolvedValueOnce(Response.json([{ ...feature, apikey: key, privateDiagnostic: 'secret' }]));
     const result = await service.search('uid', 'Đường Cầu Giấy');

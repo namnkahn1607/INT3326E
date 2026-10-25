@@ -43,7 +43,7 @@ export class GeocodingService {
         credentials: 'omit', headers: { Accept: 'application/json' } });
       if (!response.ok) throw unavailable();
       const value: unknown = await response.json();
-      if (!Array.isArray(value) && !object(value)) throw unavailable();
+      if (operation === 'place' ? !object(value) : !Array.isArray(value)) throw unavailable();
       if (this.cache.size >= 300) this.cache.delete(this.cache.keys().next().value!);
       this.cache.set(key, { expires: Date.now() + 300_000, value });
       return value;
