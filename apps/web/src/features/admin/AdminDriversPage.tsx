@@ -1,99 +1,37 @@
+import { useCallback } from 'react'
+import { getDrivers } from '../../api/endpoints/drivers'
+import { useAuth } from '../auth/useAuth'
+import { formatDateTime } from '../../utils'
+import { AdminPageFeedback, AdminPager } from './AdminPageFeedback'
+import { useAdminPage } from './useAdminPage'
+import './admin-api.css'
+
 export function AdminDriversPage() {
-  const drivers = [
-    {
-      id: 'D01',
-      name: 'Lê Văn Tài',
-      phone: '0981.112.233',
-      vehicle: 'Xe máy Suzuki Raider',
-      status: 'Đang hoạt động',
-      lastGpsTime: '20 giây trước',
-      totalDelivered: 45,
-    },
-    {
-      id: 'D02',
-      name: 'Nguyễn Văn Hùng',
-      phone: '0981.234.567',
-      vehicle: 'Honda Wave Alpha',
-      status: 'Đang hoạt động',
-      lastGpsTime: '8 giây trước',
-      totalDelivered: 78,
-    },
-    {
-      id: 'D03',
-      name: 'Trần Văn Nam',
-      phone: '0912.345.678',
-      vehicle: 'Yamaha Grande',
-      status: 'Sẵn sàng',
-      lastGpsTime: '2 phút trước',
-      totalDelivered: 62,
-    },
-    {
-      id: 'D04',
-      name: 'Phạm Văn Nam',
-      phone: '0933.445.566',
-      vehicle: 'Xe tải Suzuki 500kg',
-      status: 'Ngoại tuyến',
-      lastGpsTime: '1 giờ trước',
-      totalDelivered: 31,
-    },
-  ]
+  const { user } = useAuth()
+  return <DriverDirectory key={user?.id ?? 'signed-out'} />
+}
 
-  return (
-    <div className="admin-page">
-      <div className="page-header">
-        <div>
-          <span className="admin-page-kicker">NHÂN SỰ VẬN HÀNH</span>
-          <h1 className="page-title">Đội ngũ tài xế</h1>
-          <p className="page-subtitle">
-            Theo dõi trạng thái hoạt động và hiệu suất giao hàng.
-          </p>
-        </div>
-      </div>
-
-      <div className="section-block">
-        <div className="data-table-wrapper" role="region" aria-label="Tài xế minh họa, cuộn ngang để xem đầy đủ" tabIndex={0}>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Mã TX</th>
-                <th>Họ và tên</th>
-                <th>Số điện thoại</th>
-                <th>Phương tiện</th>
-                <th>Trạng thái</th>
-                <th>Gửi GPS gần nhất</th>
-                <th className="ui-numeric">Đơn đã giao</th>
-              </tr>
-            </thead>
-            <tbody>
-              {drivers.map((d) => (
-                <tr key={d.id}>
-                  <td><strong>#{d.id}</strong></td>
-                  <td><strong>{d.name}</strong></td>
-                  <td>{d.phone}</td>
-                  <td>{d.vehicle}</td>
-                  <td>
-                    <span
-                      className={`driver-state ${
-                        d.status === 'Đang hoạt động'
-                          ? 'active'
-                          : d.status === 'Sẵn sàng'
-                            ? 'ready'
-                            : 'offline'
-                      }`}
-                    >
-                      {d.status}
-                    </span>
-                  </td>
-                  <td>
-                    <span className="text-muted">{d.lastGpsTime}</span>
-                  </td>
-                  <td className="ui-numeric"><strong>{d.totalDelivered}</strong> đơn</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  )
+function DriverDirectory() {
+  const load = useCallback((cursor: string | undefined, signal: AbortSignal) => getDrivers({ cursor }, signal), [])
+  const state = useAdminPage(load, 'drivers')
+  return <div className="admin-page admin-api-page">
+    <div className="page-header"><div><span className="admin-page-kicker">ĐỘI NGŨ GIAO NHẬN</span>
+      <h1 className="page-title">Tài xế</h1>
+      <p className="page-subtitle">Danh sách từ API. Số đơn active không phải trạng thái online; tài xế có thể nhận nhiều đơn.</p>
+    </div><button className="btn btn-outline" type="button" disabled={state.loading} onClick={state.refresh}>Làm mới</button></div>
+    <AdminPageFeedback loading={state.loading} error={state.error} empty={state.page?.data.length === 0} label="tài xế" onRetry={state.refresh} />
+    {state.page && <>
+      <p className="ui-result-count" role="status">{state.page.data.length} tài xế trong trang đang hiển thị, không phải tổng đội xe.</p>
+      {!!state.page.data.length && <div className="data-table-wrapper" role="region" aria-label="Danh sách tài xế, cuộn ngang để xem đầy đủ" tabIndex={0}>
+        <table className="data-table"><thead><tr><th>Tài xế</th><th>Đơn active</th><th>Thông tin vị trí</th><th>Server tiếp nhận lúc</th></tr></thead>
+          <tbody>{state.page.data.map(driver => <tr key={driver.id}>
+            <td><strong>{driver.name}</strong><p className="admin-api-id">{driver.id}</p></td>
+            <td>{driver.activeShipmentCount}</td>
+            <td>{driver.currentLocation === null ? 'Chưa có vị trí được phép hiển thị' : driver.isLocationStale ? 'Vị trí đã cũ' : 'Có vị trí gần đây'}</td>
+            <td>{formatDateTime(driver.lastLocationUpdatedAt)}</td>
+          </tr>)}</tbody>
+        </table></div>}
+      <AdminPager label="tài xế" number={state.number} hasMore={state.page.pagination.hasMore} onPrevious={state.previous} onNext={state.next} />
+    </>}
+  </div>
 }

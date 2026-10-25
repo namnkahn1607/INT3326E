@@ -30,6 +30,12 @@ kết quả thực tế nằm ở [acceptance.md](week1-reacceptance/acceptance.
 - [ ] Nhập địa chỉ và chọn/nhập tọa độ hợp lệ theo UI01/API01; không tự thêm geocoding provider từ Issue #3 cũ.
 
 ### 📅 Tuần 3: Phân công tài xế (Admin)
+
+Triển khai TV3 tiếp tại [Admin assignment tasks](../specs/001-admin-assignment/tasks.md),
+gồm kiểm tra phần TV1/TV6, API client, list/detail/driver, xác nhận và recovery.
+Kết quả local/mock và phần nghiệm thu tích hợp còn mở ở
+[acceptance](../specs/001-admin-assignment/acceptance.md); không đánh dấu tuần 3 hoàn tất chỉ từ mock.
+
 - [ ] Nối `AdminAssignmentPage.tsx` với `GET /v1/shipments?status=CREATED`, `GET /v1/drivers` và `POST /v1/shipments/{id}/assign`; xử lý 409, timeout thì đọc lại Detail, không tự retry Assign.
 
 ### 📅 Tuần 4: Cập nhật trạng thái theo quyền & Lịch sử

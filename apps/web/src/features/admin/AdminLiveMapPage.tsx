@@ -4,12 +4,12 @@ import {
   MapContainer as LeafletMap,
   Marker,
   Popup,
-  TileLayer,
   ZoomControl,
   useMap,
 } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import { AppliedFilters } from '../../components/ui/AppliedFilters'
+import { OsmBaseLayer } from '../../components/map/OsmBaseLayer'
 import { useReducedMotion } from '../auth/motion'
 
 type DriverState = 'DELIVERING' | 'AVAILABLE' | 'PAUSED'
@@ -194,14 +194,15 @@ export function AdminLiveMapPage() {
           <LeafletMap
             center={[21.0285, 105.8342]}
             zoom={13}
+            minZoom={1}
+            maxZoom={20}
+            maxBounds={[[-85, -180], [85, 180]]}
+            maxBoundsViscosity={1}
             zoomControl={false}
             scrollWheelZoom
             className="admin-leaflet-map"
           >
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
+            <OsmBaseLayer />
             <ZoomControl position="bottomright" />
             <FocusDriver driver={selectedDriver} animate={animateFocus} />
             {visibleDrivers.map((driver) => (

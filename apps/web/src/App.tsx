@@ -1,4 +1,5 @@
 import { Route, Routes } from 'react-router'
+import { lazy, Suspense } from 'react'
 import { AdminLayout } from './layouts/AdminLayout'
 import { CustomerLayout } from './layouts/CustomerLayout'
 import { DriverLayout } from './layouts/DriverLayout'
@@ -19,14 +20,12 @@ import {
 } from './features/customer'
 
 // Feature Admin
-import {
-  AdminAccountsPage,
-  AdminAssignmentPage,
-  AdminDriversPage,
-  AdminLiveMapPage,
-  AdminOverviewPage,
-  AdminShipmentsPage,
-} from './features/admin'
+import { AdminAccountsPage } from './features/admin/AdminAccountsPage'
+import { AdminAssignmentPage } from './features/admin/AdminAssignmentPage'
+import { AdminDriversPage } from './features/admin/AdminDriversPage'
+import { AdminOverviewPage } from './features/admin/AdminOverviewPage'
+import { AdminShipmentsPage } from './features/admin/AdminShipmentsPage'
+const AdminLiveMapPage = lazy(() => import('./features/admin/AdminLiveMapPage').then(module => ({ default: module.AdminLiveMapPage })))
 
 // Feature Driver
 import { DriverPlaceholderPage } from './features/driver'
@@ -53,7 +52,7 @@ export default function App() {
         <Route index element={<AdminOverviewPage />} />
         <Route path="shipments" element={<AdminShipmentsPage />} />
         <Route path="assignment" element={<AdminAssignmentPage />} />
-        <Route path="live-map" element={<AdminLiveMapPage />} />
+        <Route path="live-map" element={<Suspense fallback={<p role="status">Đang mở bản đồ…</p>}><AdminLiveMapPage /></Suspense>} />
         <Route path="drivers" element={<AdminDriversPage />} />
         <Route path="accounts" element={<AdminAccountsPage />} />
         <Route path="*" element={<NotFoundPage />} />

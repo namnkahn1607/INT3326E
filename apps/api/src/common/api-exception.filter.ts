@@ -15,9 +15,10 @@ const errors: Record<number, [string, string]> = {
 export class ApiExceptionFilter implements ExceptionFilter {
   catch(error: unknown, host: ArgumentsHost): void {
     const status = error instanceof HttpException ? error.getStatus() : 500;
+    let fieldErrors: { field: string; message: string }[] | undefined;
     let [code, title] = errors[status] ?? ['INTERNAL_SERVER_ERROR', 'Internal server error'];
     if (error instanceof ApiProblem) {
-      ({ code, title } = error.getResponse() as { code: string; title: string });
+      ({ code, title, errors: fieldErrors } = error.getResponse() as { code: string; title: string; errors?: { field: string; message: string }[] });
     }
     const http = host.switchToHttp();
     const request = http.getRequest<{ originalUrl?: string; url?: string }>();
@@ -28,6 +29,7 @@ export class ApiExceptionFilter implements ExceptionFilter {
       type: 'about:blank', title, status, code,
       instance: (request.originalUrl ?? request.url ?? '/').split('?')[0],
       timestamp: new Date().toISOString(),
+      ...(fieldErrors ? { errors: fieldErrors } : {}),
     });
   }
 }

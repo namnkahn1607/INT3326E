@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from 'react-router'
+import { NavLink, Outlet, useLocation } from 'react-router'
 import { Navigation, type NavigationItem } from '../components/ui/Navigation'
 import { SessionControls } from '../features/auth/SessionControls'
 import { DemoNotice } from '../components/ui/DemoNotice'
@@ -13,6 +13,8 @@ const adminNavItems: NavigationItem[] = [
 ]
 
 export function AdminLayout() {
+  const { pathname } = useLocation()
+  const apiPage = ['/admin/shipments', '/admin/assignment', '/admin/drivers'].includes(pathname.replace(/\/$/, ''))
   return (
     <div className="admin-layout">
       <a href="#admin-main" className="ui-skip-link">Đến nội dung chính</a>
@@ -56,7 +58,7 @@ export function AdminLayout() {
         </header>
 
         <main className="admin-content-area" id="admin-main" tabIndex={-1}>
-          <div className="ui-admin-demo"><DemoNotice>Đơn, tài xế, thống kê và bản đồ Admin hiện dùng dữ liệu mẫu; chưa có thay đổi nghiệp vụ được gửi lên máy chủ.</DemoNotice></div>
+          {!apiPage && <div className="ui-admin-demo"><DemoNotice>Màn hình này dùng dữ liệu mẫu, chưa phải dữ liệu vận hành thật. Đơn hàng, Phân công và Tài xế đã dùng API; các trang minh họa còn lại chưa được kết nối.</DemoNotice></div>}
           <Outlet />
         </main>
       </div>

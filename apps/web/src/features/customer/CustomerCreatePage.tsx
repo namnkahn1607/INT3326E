@@ -4,29 +4,25 @@ import { createShipment } from '../../api/endpoints/shipments'
 import { ApiError } from '../../api/client'
 import type { ShipmentResponse } from '../../types/shipment-api'
 import { useAuth } from '../auth/useAuth'
-import { ShipmentLocationPicker } from './ShipmentLocationPicker'
-import { canRetryIntent, emptyShipmentDraft, shipmentErrorMessage, validateShipmentDraft,
-  type CreateIntent, type FieldErrors, type ShipmentDraft } from './shipment-form'
+import { ShipmentAddressModal, type ShipmentAddressValue } from './ShipmentAddressModal'
+import { CustomerHomeIcon } from './CustomerHomeIcon'
+import type { AdministrativeSelection } from './administrative-areas'
+import { canRetryIntent, classifyCreateFailure, emptyShipmentDraft, shipmentErrorMessage, validateShipmentDraft,
+  type CreateIntent, type CreateRequestIssue, type FieldErrors, type ShipmentDraft } from './shipment-form'
 import './customer-api.css'
 
 const labels: Record<keyof ShipmentDraft, string> = {
   pickupAddress: 'Tên đường / tòa nhà lấy hàng', pickupLat: 'Vị trí lấy hàng', pickupLng: 'Vị trí lấy hàng',
   dropoffAddress: 'Tên đường / tòa nhà giao hàng', dropoffLat: 'Vị trí giao hàng', dropoffLng: 'Vị trí giao hàng',
-  pickupArea: 'Khu vực lấy hàng', pickupDetails: 'Địa chỉ chi tiết lấy hàng',
-  dropoffArea: 'Khu vực giao hàng', dropoffDetails: 'Địa chỉ chi tiết giao hàng',
+  pickupArea: 'Khu vực lấy hàng', pickupDetails: 'Số nhà / chỉ dẫn lấy hàng cho tài xế',
+  dropoffArea: 'Khu vực giao hàng', dropoffDetails: 'Số nhà / chỉ dẫn giao hàng cho tài xế',
   recipientName: 'Họ tên người nhận', recipientPhone: 'Số điện thoại người nhận',
+  senderName: 'Họ tên người gửi / Cửa hàng', senderPhone: 'Số điện thoại người gửi / Cửa hàng',
   packageDescription: 'Mô tả bưu kiện', packageWeightKg: 'Khối lượng (kg)', notes: 'Ghi chú',
   expectedDeliveryAt: 'Hạn giao dự kiến',
 }
 
 const hints: Partial<Record<keyof ShipmentDraft, string>> = {
-  pickupAddress: 'Tên đường hoặc tòa nhà công cộng để xác định khu vực trên bản đồ.',
-  dropoffAddress: 'Tên đường hoặc tòa nhà công cộng để xác định khu vực trên bản đồ.',
-  pickupArea: 'Phường/xã, tỉnh/thành phố để thu hẹp khu vực.',
-  dropoffArea: 'Phường/xã, tỉnh/thành phố để thu hẹp khu vực.',
-  pickupDetails: 'Số nhà, tầng, căn hộ… Chỉ gửi cùng đơn hàng, không gửi cho dịch vụ tìm địa chỉ.',
-  dropoffDetails: 'Số nhà, tầng, căn hộ… Chỉ gửi cùng đơn hàng, không gửi cho dịch vụ tìm địa chỉ.',
-  recipientName: 'Từ 2–100 ký tự.', recipientPhone: '9–15 chữ số, có thể bắt đầu bằng dấu +.',
   packageWeightKg: 'Số lớn hơn 0, đơn vị kg. Để trống nếu chưa có.',
   packageDescription: 'Tối đa 500 ký tự.', notes: 'Tối đa 500 ký tự.',
 }
@@ -35,23 +31,25 @@ function startIntent(payload: CreateIntent['payload']): CreateIntent {
   return { key: crypto.randomUUID(), payload, startedAt: Date.now() }
 }
 
-const fieldId = (name: keyof ShipmentDraft) => 'shipment-' + name.replace(/Lat$|Lng$/, 'Location')
+const fieldId = (name: keyof ShipmentDraft) => 'shipment-' + (/^(pickup|dropoff)/.test(name) ? name.startsWith('pickup') ? 'pickupLocation' : 'dropoffLocation' : name)
 
 export function CustomerCreatePage() {
   const { user } = useAuth()
-  return <ShipmentCreateForm key={user?.id ?? 'signed-out'} />
+  return <ShipmentCreateForm key={user?.id ?? 'signed-out'} senderName={user?.displayName ?? ''} />
 }
 
-function ShipmentCreateForm() {
-  const [draft, setDraft] = useState<ShipmentDraft>({ ...emptyShipmentDraft })
+function ShipmentCreateForm({ senderName }: { senderName: string }) {
+  const [draft, setDraft] = useState<ShipmentDraft>({ ...emptyShipmentDraft, senderName })
   const [errors, setErrors] = useState<FieldErrors>({})
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [locked, setLocked] = useState(false)
+  const [editing, setEditing] = useState<'pickup' | 'dropoff' | null>(null)
+  const [divisions, setDivisions] = useState<Record<'pickup' | 'dropoff', AdministrativeSelection | null>>({ pickup: null, dropoff: null })
   const [intent, setIntent] = useState<CreateIntent | null>(null)
   const [created, setCreated] = useState<ShipmentResponse | null>(null)
   const [focusRequest, setFocusRequest] = useState<{ name: keyof ShipmentDraft } | null>(null)
-  const [requestIssue, setRequestIssue] = useState<'auth' | 'uncertain' | 'rejected' | null>(null)
+  const [requestIssue, setRequestIssue] = useState<CreateRequestIssue | null>(null)
   const reviewed = useRef(new Set<keyof ShipmentDraft>())
   const sending = useRef(false)
   const currentRequest = useRef<AbortController | null>(null)
@@ -76,7 +74,7 @@ function ShipmentCreateForm() {
 
   async function submit(event: FormEvent) {
     event.preventDefault()
-    if (sending.current || created) return
+    if (sending.current || created || editing) return
     let nextIntent = intent
     if (locked && intent) {
       if (!canRetryIntent(intent.startedAt)) {
@@ -108,10 +106,10 @@ function ShipmentCreateForm() {
     } catch (cause) {
       if (!alive.current) return
       setError(cause instanceof ApiError && cause.status === 404
-        ? 'Máy chủ chưa tìm thấy API tạo đơn (POST /v1/shipments, HTTP 404). Nhóm backend cần kiểm tra endpoint và bản triển khai.'
+        ? 'Máy chủ chưa tìm thấy API tạo đơn (POST /v1/shipments, HTTP 404).'
         : shipmentErrorMessage(cause))
-      setRequestIssue(cause instanceof ApiError && cause.status === 401 ? 'auth'
-        : !(cause instanceof ApiError) || cause.status === 0 || cause.status >= 500 || cause.code === 'INVALID_RESPONSE' ? 'uncertain' : 'rejected')
+      setRequestIssue(classifyCreateFailure(cause))
+      if (cause instanceof ApiError && cause.status === 404) setLocked(false)
       if (cause instanceof ApiError && cause.status === 400) {
         setLocked(false)
         const fields: Record<string, keyof ShipmentDraft> = {
@@ -149,20 +147,17 @@ function ShipmentCreateForm() {
     const numeric = /Lat$|Lng$/.test(name) || name === 'packageWeightKg'
     const id = 'shipment-' + name
     return <div className={'form-group' + (name.endsWith('Address') ? ' full-width' : '')} key={name}>
-      <label htmlFor={id}>{labels[name]}{required ? ' *' : ' (không bắt buộc)'}</label>
+      <label htmlFor={id}>{labels[name]}{required ? <span className="shipment-required"> *</span> : ' (không bắt buộc)'}</label>
       <input id={id} name={name} value={draft[name]} required={required} disabled={locked || busy}
-        type={name === 'expectedDeliveryAt' ? 'datetime-local' : name === 'recipientPhone' ? 'tel' : numeric ? 'number' : 'text'}
+        type={name === 'expectedDeliveryAt' ? 'datetime-local' : name.endsWith('Phone') ? 'tel' : numeric ? 'number' : 'text'}
         step={numeric ? 'any' : undefined} inputMode={numeric ? 'decimal' : undefined}
-        autoComplete={name === 'recipientName' ? 'section-recipient name' : name === 'recipientPhone' ? 'section-recipient tel' : 'off'}
+        autoComplete={name === 'recipientName' ? 'section-recipient name' : name === 'recipientPhone' ? 'section-recipient tel' : name === 'senderName' ? 'section-sender name' : name === 'senderPhone' ? 'section-sender tel' : 'off'}
         placeholder={placeholder} aria-invalid={!!errors[name]}
         aria-describedby={[hints[name] ? id + '-hint' : '', errors[name] ? id + '-error' : ''].filter(Boolean).join(' ') || undefined}
         onBlur={event => { reviewed.current.add(name); reviewField(name, event.currentTarget.value) }}
         onChange={event => {
           const value = event.target.value
-          setDraft(previous => ({ ...previous, [name]: value,
-            ...(['pickupAddress', 'pickupArea', 'pickupDetails'].includes(name) ? { pickupLat: '', pickupLng: '' }
-              : ['dropoffAddress', 'dropoffArea', 'dropoffDetails'].includes(name) ? { dropoffLat: '', dropoffLng: '' } : {}),
-          }))
+          setDraft(previous => ({ ...previous, [name]: value }))
           if (reviewed.current.has(name)) reviewField(name, value)
         }} />
       {hints[name] && <span id={id + '-hint'} className="customer-field-hint">{hints[name]}</span>}
@@ -170,21 +165,51 @@ function ShipmentCreateForm() {
     </div>
   }
 
-  function location(kind: 'pickup' | 'dropoff') {
-    const lat = kind === 'pickup' ? 'pickupLat' : 'dropoffLat'
-    const lng = kind === 'pickup' ? 'pickupLng' : 'dropoffLng'
-    const point = draft[lat] && draft[lng] ? { lat: Number(draft[lat]), lng: Number(draft[lng]) } : null
-    const query = [draft[kind === 'pickup' ? 'pickupAddress' : 'dropoffAddress'], draft[kind === 'pickup' ? 'pickupArea' : 'dropoffArea']].map(value => value.trim()).filter(Boolean).join(', ')
-    return <ShipmentLocationPicker kind={kind} point={point} query={query} disabled={locked || busy} error={errors[lat] ?? errors[lng]}
-      onSelect={value => {
-        setDraft(previous => ({ ...previous, [lat]: String(value.lat), [lng]: String(value.lng) }))
-        setErrors(previous => { const next = { ...previous }; delete next[lat]; delete next[lng]; return next })
-      }} />
+  function addressValue(kind: 'pickup' | 'dropoff'): ShipmentAddressValue {
+    return { street: draft[`${kind}Address`], area: draft[`${kind}Area`], details: draft[`${kind}Details`], divisions: divisions[kind],
+      point: draft[`${kind}Lat`] && draft[`${kind}Lng`] ? { lat: Number(draft[`${kind}Lat`]), lng: Number(draft[`${kind}Lng`]) } : null }
   }
 
-  return <div className="page-container customer-api-page">
+  function addressField(kind: 'pickup' | 'dropoff') {
+    const value = addressValue(kind)
+    const id = 'shipment-' + kind + 'Location'
+    const message = (Object.keys(errors) as (keyof ShipmentDraft)[]).filter(name => name.startsWith(kind)).map(name => errors[name])[0]
+    const text = [value.details, value.street, value.area].filter(Boolean).join(', ')
+    return <div className="form-group shipment-address-field">
+      <label id={id + '-label'} htmlFor={id}>{kind === 'pickup' ? 'Địa chỉ gửi / cửa hàng' : 'Địa chỉ người nhận'}<span className="shipment-required"> *</span></label>
+      <button type="button" id={id} className={'shipment-address-trigger' + (text ? ' has-address' : '')}
+        disabled={locked || busy} aria-haspopup="dialog" aria-invalid={!!message} title={text || undefined}
+        aria-labelledby={id + '-label ' + id + '-value'} aria-describedby={message ? id + '-error' : id + '-hint'} onClick={() => setEditing(kind)}>
+        <CustomerHomeIcon name="pin" /><span id={id + '-value'}>{text || 'Nhập địa chỉ ' + (kind === 'pickup' ? 'gửi hàng' : 'người nhận')}</span><CustomerHomeIcon name="chevron" />
+      </button>
+      <span className="customer-field-hint" id={id + '-hint'}>{value.point ? 'Đã lưu địa chỉ và điểm trên bản đồ. Bấm để chỉnh sửa.' : 'Chọn quận/huyện, phường/xã tại Hà Nội và xác nhận vị trí.'}</span>
+      {message && <span id={id + '-error'} className="customer-field-error" role="alert">{message}</span>}
+    </div>
+  }
+
+  function saveAddress(value: ShipmentAddressValue) {
+    if (!editing || !value.point) return
+    const kind = editing
+    const updated = { ...draft, [`${kind}Address`]: value.street, [`${kind}Area`]: value.area, [`${kind}Details`]: value.details,
+      [`${kind}Lat`]: String(value.point.lat), [`${kind}Lng`]: String(value.point.lng) }
+    setDraft(updated)
+    setDivisions(previous => ({ ...previous, [kind]: value.divisions }))
+    const validation = validateShipmentDraft(updated).errors
+    setErrors(previous => {
+      const next = { ...previous }
+      for (const name of Object.keys(updated) as (keyof ShipmentDraft)[]) {
+        if (!name.startsWith(kind)) continue
+        delete next[name]
+        if (validation[name]) next[name] = validation[name]
+      }
+      return next
+    })
+    setEditing(null)
+  }
+
+  return <div className="page-container customer-api-page shipment-create-page">
     <div className="page-header">
-      <div><h1 className="page-title">Tạo đơn giao hàng</h1><p className="page-subtitle">Thông tin rõ ràng, gửi hàng thuận tiện.</p></div>
+      <h1 className="page-title">Tạo đơn giao hàng</h1>
       <Link to="/customer/shipments" className="btn btn-secondary">Danh sách đơn</Link>
     </div>
     {created ? <section className="customer-result">
@@ -195,10 +220,11 @@ function ShipmentCreateForm() {
       <div className="form-actions">
         <Link className="btn btn-primary" to={'/customer/shipments/' + created.id}>Xem đơn vừa tạo</Link>
         <button type="button" className="btn btn-outline" onClick={() => {
-          setCreated(null); setIntent(null); setLocked(false); setDraft({ ...emptyShipmentDraft }); setError(null); setErrors({}); reviewed.current.clear(); setFocusRequest(null); setRequestIssue(null)
+          setCreated(null); setIntent(null); setLocked(false); setDraft({ ...emptyShipmentDraft, senderName }); setError(null); setErrors({}); reviewed.current.clear(); setFocusRequest(null); setRequestIssue(null); setDivisions({ pickup: null, dropoff: null })
         }}>Tạo đơn khác</button>
       </div>
-    </section> : <form onSubmit={submit} className="form-card" noValidate aria-busy={busy}>
+    </section> : <form onSubmit={submit} className="shipment-create-card shipment-create-workspace" noValidate aria-busy={busy}>
+      <div className="form-card shipment-party-card">
       {(error || Object.keys(errors).length > 0) && <div className="customer-error" role="alert" tabIndex={-1} ref={summary}>
         <h2>{error ?? 'Kiểm tra lại thông tin'}</h2>
         {Object.keys(errors).length > 0 && <ul>{(Object.keys(errors) as (keyof ShipmentDraft)[])
@@ -206,23 +232,26 @@ function ShipmentCreateForm() {
           <li key={name}><a href={'#' + fieldId(name)}>{labels[name]}: {errors[name]}</a></li>)}</ul>}
         {error && requestIssue === 'uncertain' && <p>Chưa xác định được kết quả. Nếu thử lại, hệ thống giữ nguyên mã yêu cầu và thông tin đã gửi; không tạo đơn khác trước khi đối chiếu.</p>}
         {error && requestIssue === 'rejected' && <p>Yêu cầu bị từ chối. Kiểm tra thông tin hoặc liên hệ quản trị viên theo thông báo trên.</p>}
+        {error && requestIssue === 'unavailable' && <p>Đơn chưa được tạo. Thông tin đã nhập vẫn được giữ lại. API trên máy chủ cần được cập nhật; sửa địa chỉ không giải quyết lỗi này.</p>}
         {requestIssue === 'auth' && <Link to="/login">Kiểm tra phiên đăng nhập</Link>}
       </div>}
-      <p className="customer-form-intro">Nhập tên đường/tòa nhà và khu vực → tìm trên bản đồ → chọn kết quả và xác nhận điểm lấy/giao. Số nhà, căn hộ được nhập riêng. Các mục có dấu * là bắt buộc.</p>
-      <fieldset className="form-section"><legend>Điểm lấy hàng</legend><div className="form-grid">
-        {field('pickupAddress', true, 'Ví dụ: đường Xuân Thủy hoặc tên tòa nhà…')}
-        {field('pickupArea', false, 'Ví dụ: Cầu Giấy, Hà Nội')}{field('pickupDetails', false, 'Ví dụ: số 144, tầng 2, cửa bên trái')}
-        {location('pickup')}
+      <p className="customer-form-intro">Các mục có dấu <span className="shipment-required">*</span> là bắt buộc. Bấm vào địa chỉ để chọn vị trí giao nhận.</p>
+      <fieldset className="form-section shipment-party-section"><legend>Bên gửi</legend><div className="shipment-party-grid">
+        <div className="shipment-recipient-fields">{field('senderPhone', true)}{field('senderName', true)}</div>
+        {addressField('pickup')}
+      </div><p className="customer-helper" id="shipment-sender-notice">Tên/SĐT bên gửi chỉ giữ trong bản nháp, chưa được gửi lên máy chủ; đang chờ API hỗ trợ.</p></fieldset>
+      <fieldset className="form-section shipment-party-section"><legend>Bên nhận</legend><div className="shipment-party-grid">
+        <div className="shipment-recipient-fields">{field('recipientPhone', true)}{field('recipientName', true)}</div>
+        {addressField('dropoff')}
       </div></fieldset>
-      <fieldset className="form-section"><legend>Điểm giao và người nhận</legend><div className="form-grid">
-        {field('dropoffAddress', true, 'Ví dụ: đường Đại Cồ Việt hoặc tên tòa nhà…')}
-        {field('dropoffArea', false, 'Ví dụ: Bạch Mai, Hà Nội')}{field('dropoffDetails', false, 'Ví dụ: số 1, cổng chính')}
-        {location('dropoff')}
-        {field('recipientName', true)}{field('recipientPhone', true)}
-      </div></fieldset>
+      </div>
+      <div className="form-card shipment-extra-card">
       <fieldset className="form-section"><legend>Thông tin bổ sung</legend><div className="form-grid">
         {field('packageDescription')}{field('packageWeightKg')}{field('notes')}{field('expectedDeliveryAt')}
       </div><p className="customer-helper">Hạn giao dùng giờ trên thiết bị, được gửi dưới dạng UTC. Đây không phải ETA.</p></fieldset>
+      </div>
+      <aside className="shipment-submit-panel" aria-label="Thao tác tạo đơn">
+      <div className="shipment-submit-footer">
       {locked && <p className="customer-pending-note" role="status">Thông tin đã khóa cho lần gửi này. Giữ trang để thử lại cùng yêu cầu; không tạo đơn khác trước khi đối chiếu nếu kết quả chưa xác định.</p>}
       <div className="form-actions">
         <button type="submit" disabled={busy} aria-busy={busy} aria-describedby={busy ? 'shipment-sending' : undefined} className="btn btn-primary ui-submit">
@@ -231,6 +260,9 @@ function ShipmentCreateForm() {
       </div>
       {busy && <p className="ui-disabled-reason" id="shipment-sending" role="status">Đang gửi thông tin đến máy chủ. Vui lòng chờ kết quả trước khi gửi lại.</p>}
       <p className="customer-helper">Thông tin nhập chỉ giữ trên trang này. Rời trang hoặc tải lại sẽ mất bản nháp.</p>
+      </div>
+      </aside>
     </form>}
+    {editing && <ShipmentAddressModal kind={editing} value={addressValue(editing)} onSave={saveAddress} onClose={() => setEditing(null)} />}
   </div>
 }

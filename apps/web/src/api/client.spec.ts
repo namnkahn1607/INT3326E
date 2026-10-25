@@ -5,6 +5,14 @@ import { setTokenReader } from '../features/auth/session'
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); setTokenReader(async () => null) })
 
 describe('API boundary', () => {
+  it('does not refresh a token or send an already cancelled request', async () => {
+    const read = vi.fn().mockResolvedValue('unused-token')
+    const fetcher = vi.fn()
+    setTokenReader(read); vi.stubGlobal('fetch', fetcher)
+    const controller = new AbortController(); controller.abort()
+    await expect(apiClient('/probe', { signal: controller.signal })).rejects.toMatchObject({ name: 'AbortError' })
+    expect(read).not.toHaveBeenCalled(); expect(fetcher).not.toHaveBeenCalled()
+  })
   it('uses a fresh token and merges Headers without losing custom headers', async () => {
     setTokenReader(async () => 'fresh-token')
     const fetcher = vi.fn().mockResolvedValue(new Response('{"ok":true}'))

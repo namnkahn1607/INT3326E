@@ -1,3 +1,8 @@
+// Match the API and PostgreSQL char_length, which count Unicode code points.
+export function characterCount(value: string): number {
+  return [...value].length
+}
+
 /**
  * Format currency in VND.
  */

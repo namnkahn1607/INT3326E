@@ -5,7 +5,7 @@ import type { Coordinates, CreateShipmentPayload, ShipmentDetail, ShipmentPage, 
 export type { CreateShipmentPayload } from '../../types/shipment-api'
 const ulid = '[0-7][0-9A-HJKMNP-TV-Z]{25}'
 export const isShipmentId = (value: unknown): value is string => typeof value === 'string' && new RegExp('^sh_' + ulid + '$').test(value)
-const isUserId = (value: unknown) => typeof value === 'string' && new RegExp('^usr_' + ulid + '$').test(value)
+export const isUserId = (value: unknown): value is string => typeof value === 'string' && new RegExp('^usr_' + ulid + '$').test(value)
 const object = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value)
 const nullableText = (value: unknown) => value === null || typeof value === 'string'
 const date = (value: unknown) => typeof value === 'string' && /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(value) && Number.isFinite(Date.parse(value))
@@ -87,5 +87,15 @@ export async function createShipment(payload: CreateShipmentPayload, idempotency
     headers: { 'Idempotency-Key': idempotencyKey }, signal, expectedStatus: 201 })
   const result = shipment(value)
   if (result.status !== 'CREATED') throw invalid()
+  return result
+}
+
+export async function assignShipment(id: string, driverId: string, signal?: AbortSignal): Promise<ShipmentResponse> {
+  if (!isShipmentId(id) || !isUserId(driverId)) throw new ApiError(400, 'INVALID_ASSIGNMENT_ID')
+  const value = await apiClient<unknown>(`/shipments/${encodeURIComponent(id)}/assign`, {
+    method: 'POST', body: JSON.stringify({ driverId }), signal, expectedStatus: 200,
+  })
+  const result = shipment(value)
+  if (result.id !== id || result.driverId !== driverId || result.status !== 'ASSIGNED') throw invalid()
   return result
 }

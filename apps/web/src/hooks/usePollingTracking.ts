@@ -6,27 +6,40 @@ export function usePollingTracking(
   token?: string | null,
   intervalMs = 5000
 ) {
-  const [data, setData] = useState<TrackingData | null>(null)
-  const [error, setError] = useState<Error | null>(null)
-  const [loading, setLoading] = useState<boolean>(false)
+  const [result, setResult] = useState<{
+    shipmentId: string
+    token?: string | null
+    data: TrackingData | null
+    error: Error | null
+    loading: boolean
+  } | null>(null)
 
   useEffect(() => {
     if (!shipmentId) return
 
-    let isMounted = true
+    let active = true
+    let pending = false
+    const controller = new AbortController()
 
     const fetchTracking = async () => {
+      if (!active || pending) return
+      pending = true
+      setResult(previous => ({
+        shipmentId, token,
+        data: previous?.shipmentId === shipmentId && previous.token === token ? previous.data : null,
+        error: null, loading: true,
+      }))
       try {
-        setLoading(true)
-        const result = await getShipmentTracking(shipmentId, token)
-        if (isMounted) {
-          setData(result)
-          setError(null)
-        }
+        const data = await getShipmentTracking(shipmentId, token, controller.signal)
+        if (active) setResult({ shipmentId, token, data, error: null, loading: false })
       } catch (err) {
-        if (isMounted) setError(err instanceof Error ? err : new Error(String(err)))
+        if (active) setResult(previous => ({
+          shipmentId, token,
+          data: previous?.shipmentId === shipmentId && previous.token === token ? previous.data : null,
+          error: err instanceof Error ? err : new Error(String(err)), loading: false,
+        }))
       } finally {
-        if (isMounted) setLoading(false)
+        pending = false
       }
     }
 
@@ -34,10 +47,13 @@ export function usePollingTracking(
     const timer = setInterval(fetchTracking, intervalMs)
 
     return () => {
-      isMounted = false
+      active = false
+      controller.abort()
       clearInterval(timer)
     }
   }, [shipmentId, token, intervalMs])
 
-  return { data, error, loading }
+  return result && result.shipmentId === shipmentId && result.token === token
+    ? { data: result.data, error: result.error, loading: result.loading }
+    : { data: null, error: null, loading: false }
 }
