@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "ParcelFlow Core Logistics API (MVP)",
-    "description": "Shipment/GPS operations remain drafts. Admin directory implements GET /drivers (API11/SC06) and GET /admin/customers (read-only scope requested on 23/10/2026), requiring ADMIN plus business linkage. Deployment and DATA01/02/04 migration acceptance remain separate; see docs/tv6-admin-directory.md and docs/qa-test-plan.md. Week 2 implements GET /auth/me and GET /admin/me under /v1; GET /healthz remains public outside /v1. Authentication uses verified Firebase ID Tokens and current Firebase custom claims for CUSTOMER, DRIVER and ADMIN. No public role-assignment endpoint is provided.\n\nRoles: CUSTOMER, DRIVER, ADMIN; Admin performs dispatch operations.\nBaseline shipment flow: CREATED -> ASSIGNED -> PICKED_UP -> DELIVERED / DELIVERY_FAILED.\nDraft conventions: business routes use /v1; GPS POST /locations returns 202 after Pub/Sub publish; REST uses dropoffAddress/dropoffLocation and data/pagination. See docs/api-contract.md for field mappings and pending integration decisions. Cancellation is preserved separately under x-proposals and requires team approval. GPS uses clientTimestamp for ordering and seq for diagnostics; see docs/gps-event-contract.md for the selected request/event contract and pending independent pipeline review.\n\nAuth review follow-up: HTTP errors use ProblemDetails. Business user linkage validates users.firebaseUid and current role before business handlers; missing/inconsistent linkage returns 409 USER_NOT_PROVISIONED, dependency failure returns 503. Shipment/GPS handlers remain drafts; Admin reads do not deploy schema or implement shipment logic.",
-    "version": "0.4.0-admin-directory"
+    "description": "POST /shipments implements PF SPEC 01 v1.3 API01/SC02 on the test branch; List/Detail/state actions/GPS remain drafts. Admin directory implements GET /drivers (API11/SC06) and GET /admin/customers (read-only scope requested on 23/10/2026), requiring ADMIN plus business linkage. Deployment and DATA01/02/04 migration acceptance remain separate; see docs/tv6-admin-directory.md and docs/qa-test-plan.md. Week 2 implements GET /auth/me and GET /admin/me under /v1; GET /healthz remains public outside /v1. Authentication uses verified Firebase ID Tokens and current Firebase custom claims for CUSTOMER, DRIVER and ADMIN. No public role-assignment endpoint is provided.\n\nRoles: CUSTOMER, DRIVER, ADMIN; Admin performs dispatch operations.\nBaseline shipment flow: CREATED -> ASSIGNED -> PICKED_UP -> DELIVERED / DELIVERY_FAILED.\nDraft conventions: business routes use /v1; GPS POST /locations returns 202 after Pub/Sub publish; REST uses dropoffAddress/dropoffLocation and data/pagination. See docs/api-contract.md for field mappings and pending integration decisions. Cancellation is preserved separately under x-proposals and requires team approval. GPS uses clientTimestamp for ordering and seq for diagnostics; see docs/gps-event-contract.md for the selected request/event contract and pending independent pipeline review.\n\nAuth review follow-up: HTTP errors use ProblemDetails. Business user linkage validates users.firebaseUid and current role before business handlers; missing/inconsistent linkage returns 409 USER_NOT_PROVISIONED, dependency failure returns 503. Create shipment, the listed Auth/Admin reads and VIETMAP geocoding are implemented locally; shared schema/cloud acceptance is separate; Admin reads do not deploy schema or implement shipment logic.",
+    "version": "0.5.0-create-shipment-test"
   },
   "servers": [
     {
@@ -12,6 +12,10 @@
     }
   ],
   "tags": [
+    {
+      "name": "Geocoding",
+      "description": "Server-side VIETMAP address lookup for Hanoi in the legacy administrative format."
+    },
     {
       "name": "Shipments",
       "description": "Shipment lifecycle creation, inspection, and state machine transitions."
@@ -34,13 +38,303 @@
     }
   ],
   "paths": {
+    "/geocoding/search": {
+      "post": {
+        "tags": [
+          "Geocoding"
+        ],
+        "summary": "VIETMAP search (Hanoi, legacy administrative format)",
+        "description": "Authenticated read-only lookup through ParcelFlow; POST keeps public address/coordinates out of request URLs. Reject unknown body/query fields. No database linkage or writes. Provider key never leaves the server. Missing key, provider errors/quota or timeout -> 503 GEOCODING_UNAVAILABLE. Per instance: 30 requests/account/minute, 300 total/minute, four concurrent upstream calls; excess -> 429. Cache five minutes. Not deployed automatically.",
+        "operationId": "geocodingSearch",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "query"
+                ],
+                "properties": {
+                  "query": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 255
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Mapped result; search returns references, place resolves only the selected reference; reverse may return result:null. Cache-Control:no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "maxItems": 5,
+                  "items": {
+                    "$ref": "#/components/schemas/GeocodingSuggestion"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/429TooManyRequests"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/geocoding/reverse": {
+      "post": {
+        "tags": [
+          "Geocoding"
+        ],
+        "summary": "VIETMAP reverse (Hanoi, legacy administrative format)",
+        "description": "Authenticated read-only lookup through ParcelFlow; POST keeps public address/coordinates out of request URLs. Reject unknown body/query fields. No database linkage or writes. Provider key never leaves the server. Missing key, provider errors/quota or timeout -> 503 GEOCODING_UNAVAILABLE. Per instance: 30 requests/account/minute, 300 total/minute, four concurrent upstream calls; excess -> 429. Cache five minutes. Not deployed automatically.",
+        "operationId": "geocodingReverse",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "lat",
+                  "lng"
+                ],
+                "properties": {
+                  "lat": {
+                    "type": "number",
+                    "minimum": -90,
+                    "maximum": 90
+                  },
+                  "lng": {
+                    "type": "number",
+                    "minimum": -180,
+                    "maximum": 180
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Mapped result; search returns references, place resolves only the selected reference; reverse may return result:null. Cache-Control:no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "result"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "result": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "id",
+                        "label",
+                        "point",
+                        "address"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "label": {
+                          "type": "string"
+                        },
+                        "reference": {
+                          "type": "string",
+                          "maxLength": 2048
+                        },
+                        "point": {
+                          "$ref": "#/components/schemas/Coordinates"
+                        },
+                        "address": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "street",
+                            "area",
+                            "regions"
+                          ],
+                          "properties": {
+                            "street": {
+                              "type": "string"
+                            },
+                            "area": {
+                              "type": "string"
+                            },
+                            "regions": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/429TooManyRequests"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/geocoding/place": {
+      "post": {
+        "tags": [
+          "Geocoding"
+        ],
+        "summary": "VIETMAP place (Hanoi, legacy administrative format)",
+        "description": "Authenticated read-only lookup through ParcelFlow; POST keeps public address/coordinates out of request URLs. Reject unknown body/query fields. No database linkage or writes. Provider key never leaves the server. Missing key, provider errors/quota or timeout -> 503 GEOCODING_UNAVAILABLE. Per instance: 30 requests/account/minute, 300 total/minute, four concurrent upstream calls; excess -> 429. Cache five minutes. Not deployed automatically.",
+        "operationId": "geocodingPlace",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "reference"
+                ],
+                "properties": {
+                  "reference": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2048
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Mapped result; search returns references, place resolves only the selected reference; reverse may return result:null. Cache-Control:no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "id",
+                    "label",
+                    "point",
+                    "address"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "reference": {
+                      "type": "string",
+                      "maxLength": 2048
+                    },
+                    "point": {
+                      "$ref": "#/components/schemas/Coordinates"
+                    },
+                    "address": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "street",
+                        "area",
+                        "regions"
+                      ],
+                      "properties": {
+                        "street": {
+                          "type": "string"
+                        },
+                        "area": {
+                          "type": "string"
+                        },
+                        "regions": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/429TooManyRequests"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
+          }
+        }
+      }
+    },
     "/shipments": {
       "post": {
         "tags": [
           "Shipments"
         ],
         "summary": "Create a new shipment (Customer only)",
-        "description": "Creates a shipment in `CREATED` status. Requires `CUSTOMER` role.\n\nClients MUST provide an `Idempotency-Key` header to safely retry on transient network failures without creating duplicate orders.",
+        "description": "PF SPEC 01 v1.3 API01. CUSTOMER + provisioned usr_ULID required. Reject unknown body/query fields. One transaction commits CREATED shipment, history, notification and 201 snapshot. Idempotency-Key UUID v4 scoped by business actor/CREATE_SHIPMENT/key; stable normalized hash. Same key/hash replays original201 body before dynamic deadline validation, even after state/deadline changes; different payload409. Default window24h, SHIPMENT_IDEMPOTENCY_TTL_SECONDS integer1..31536000 (default86400); expired keys may create a new shipment. Text trim; optional missing/null→null; timestamps valid ISO timezone normalized UTC milliseconds by truncation. No automatic DB migration or cloud acceptance.",
         "operationId": "createShipment",
         "parameters": [
           {
@@ -59,7 +353,7 @@
         },
         "responses": {
           "201": {
-            "description": "Shipment created successfully",
+            "description": "Committed CREATED shipment or original201 snapshot replay, exact SC02 keys",
             "content": {
               "application/json": {
                 "schema": {
@@ -95,7 +389,8 @@
             "BearerAuth": []
           }
         ],
-        "x-implementation-status": "draft"
+        "x-implementation-status": "implemented-test-branch",
+        "x-acceptance": "Local tests only; see specs/002-create-shipment/acceptance.md. Shared migration/cloud/Firebase E2E require separate review."
       },
       "get": {
         "tags": [
@@ -869,11 +1164,12 @@
         "name": "Idempotency-Key",
         "in": "header",
         "required": true,
-        "description": "Client-generated UUID v4 token. If a duplicate request with this key arrives, the cached original response is returned without creating duplicate side effects.",
+        "description": "Single UUID v4; actor/operation scoped. Replay201 snapshot within configured24h default; changed normalized payload409. Missing, invalid or duplicate header400 IDEMPOTENCY_KEY_MISSING.",
         "schema": {
           "type": "string",
           "format": "uuid",
-          "example": "e4eaaaf2-d142-11e1-b3e4-080027620cdd"
+          "example": "e4eaaaf2-d142-41e1-b3e4-080027620cdd",
+          "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
         }
       }
     },
@@ -960,6 +1256,53 @@
       }
     },
     "schemas": {
+      "GeocodingSuggestion": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "label",
+          "address"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "reference": {
+            "type": "string",
+            "maxLength": 2048
+          },
+          "point": {
+            "$ref": "#/components/schemas/Coordinates"
+          },
+          "address": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "street",
+              "area",
+              "regions"
+            ],
+            "properties": {
+              "street": {
+                "type": "string"
+              },
+              "area": {
+                "type": "string"
+              },
+              "regions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
       "ShipmentStatus": {
         "type": "string",
         "description": "Five-state baseline from the project scope. Cancellation is a separate unapproved proposal.",
@@ -974,6 +1317,7 @@
       },
       "Coordinates": {
         "type": "object",
+        "additionalProperties": false,
         "required": [
           "lat",
           "lng"
@@ -1039,9 +1383,30 @@
           "notes": {
             "type": "string",
             "maxLength": 500,
-            "example": "Fragile items. Handle with care."
+            "example": "Fragile items. Handle with care.",
+            "nullable": true
+          },
+          "packageDescription": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500
+          },
+          "packageWeightKg": {
+            "type": "number",
+            "nullable": true,
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "description": "Finite positive kg; optional."
+          },
+          "expectedDeliveryAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Valid ISO8601 with timezone, UTC ms truncated before hashing; must be after server creation time for a NEW create. Not revalidated on valid replay."
           }
-        }
+        },
+        "additionalProperties": false,
+        "description": "Trim text before validation/hash. Unknown fields rejected. Optional missing/null canonicalize to null. Finite numbers only; no coercion."
       },
       "AssignShipmentRequest": {
         "type": "object",
@@ -1097,6 +1462,7 @@
           "id",
           "trackingNumber",
           "customerId",
+          "driverId",
           "status",
           "pickupAddress",
           "pickupLocation",
@@ -1110,29 +1476,33 @@
           "failedByUserId",
           "proofOfDeliveryNotes",
           "createdAt",
-          "updatedAt"
+          "updatedAt",
+          "packageDescription",
+          "packageWeightKg",
+          "expectedDeliveryAt",
+          "isLate"
         ],
         "properties": {
           "id": {
             "type": "string",
-            "pattern": "^sh_[0-9A-HJKMNP-TV-Z]{26}$",
+            "pattern": "^sh_[0-7][0-9A-HJKMNP-TV-Z]{25}$",
             "example": "sh_01J7Z8K9M3Q4T5V6W7X8Y9Z012"
           },
           "trackingNumber": {
             "type": "string",
-            "pattern": "^PF-[0-9]{8}-[0-9A-HJKMNP-TV-Z]{6}$",
-            "description": "Unique tracking number with 8 date digits and 6 Crockford Base32 characters (>1 billion daily entropy).",
-            "example": "PF-20261005-7K9M3Q"
+            "pattern": "^PF[0-9]{8}[0-9A-HJKMNP-TV-Z]{6}$",
+            "description": "UTC date + six Crockford Base32 characters, unique with bounded collision retry.",
+            "example": "PF202610247K9M3Q"
           },
           "customerId": {
             "type": "string",
-            "pattern": "^usr_[0-9A-HJKMNP-TV-Z]{26}$",
+            "pattern": "^usr_[0-7][0-9A-HJKMNP-TV-Z]{25}$",
             "example": "usr_01J7Z8K9M3Q4T5V6W7X8Y9A001"
           },
           "driverId": {
             "type": "string",
             "nullable": true,
-            "pattern": "^usr_[0-9A-HJKMNP-TV-Z]{26}$",
+            "pattern": "^usr_[0-7][0-9A-HJKMNP-TV-Z]{25}$",
             "example": "usr_01J7Z8K9M3Q4T5V6W7X8Y9D002"
           },
           "status": {
@@ -1182,7 +1552,7 @@
           },
           "failedByUserId": {
             "type": "string",
-            "pattern": "^usr_[0-9A-HJKMNP-TV-Z]{26}$",
+            "pattern": "^usr_[0-7][0-9A-HJKMNP-TV-Z]{25}$",
             "nullable": true,
             "description": "User ID of the actor who declared delivery failure.",
             "example": null
@@ -1195,14 +1565,39 @@
           "createdAt": {
             "type": "string",
             "format": "date-time",
-            "example": "2026-10-05T08:30:00Z"
+            "example": "2026-10-24T08:30:00.123Z",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
           },
           "updatedAt": {
             "type": "string",
             "format": "date-time",
-            "example": "2026-10-05T08:35:00Z"
+            "example": "2026-10-24T08:30:00.123Z",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+          },
+          "packageDescription": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500
+          },
+          "packageWeightKg": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "expectedDeliveryAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "isLate": {
+            "type": "boolean",
+            "nullable": true,
+            "description": "Deadline null→null; otherwise new Create=false. Replay preserves original value."
           }
-        }
+        },
+        "additionalProperties": false,
+        "description": "PF v1.3 SC02, every key required; null is a value, not permission to omit a property. Create replay returns original snapshot."
       },
       "PaginatedShipmentsResponse": {
         "type": "object",
@@ -1496,6 +1891,7 @@
               "IDEMPOTENCY_KEY_CONFLICT",
               "RATE_LIMIT_EXCEEDED",
               "SERVICE_UNAVAILABLE",
+              "GEOCODING_UNAVAILABLE",
               "INTERNAL_SERVER_ERROR",
               "USER_NOT_PROVISIONED"
             ],
