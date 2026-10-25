@@ -33,6 +33,7 @@ export async function apiClient<T>(
     throw new Error('VITE_API_URL is required for a production build')
   }
   const { token: suppliedToken, headers, signal, timeoutMs = 15_000, expectedStatus, ...restOptions } = options
+  if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
   const token = suppliedToken === undefined ? await readSessionToken() : suppliedToken
   const reqHeaders = new Headers(headers)
   if (restOptions.body !== undefined && !reqHeaders.has('Content-Type')) reqHeaders.set('Content-Type', 'application/json')
