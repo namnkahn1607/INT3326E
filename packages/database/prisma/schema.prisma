@@ -7,10 +7,16 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// ==========================================
+// ENUMS
+// ==========================================
+
 enum Role {
   CUSTOMER
   DRIVER
   ADMIN
+
+  @@map("user_role")
 }
 
 enum ShipmentStatus {
@@ -19,69 +25,188 @@ enum ShipmentStatus {
   PICKED_UP
   DELIVERED
   DELIVERY_FAILED
+
+  @@map("shipment_status")
 }
 
+enum ShipmentAction {
+  CREATED
+  ASSIGNED
+  REASSIGNED
+  PICKED_UP
+  DELIVERED
+  DELIVERY_FAILED
+
+  @@map("shipment_action")
+}
+
+// ==========================================
+// MODELS (DATA01 - DATA07)
+// ==========================================
+
+// DATA01: Users
 model User {
-  id          String   @id @default(uuid())
-  firebaseUid String   @unique
+  id          String   @id
+  firebaseUid String   @unique @map("firebase_uid")
   email       String   @unique
   role        Role     @default(CUSTOMER)
   name        String
   phone       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  createdShipments Shipment[] @relation("CustomerShipments")
-  assignedShipments Shipment[] @relation("DriverShipments")
+  // Relations
+  createdShipments          Shipment[]            @relation("CustomerShipments")
+  assignedShipments         Shipment[]            @relation("DriverShipments")
+  failedShipments           Shipment[]            @relation("FailedByShipments")
+  actorStatusEvents         ShipmentStatusEvent[] @relation("ActorStatusEvents")
+  previousDriverEvents      ShipmentStatusEvent[] @relation("PreviousDriverEvents")
+  newDriverEvents           ShipmentStatusEvent[] @relation("NewDriverEvents")
+  notifications             Notification[]
+  idempotencyRequests       IdempotencyRequest[]
+  currentLocation           CurrentLocation?
+  locationHistories         LocationHistory[]
 
   @@map("users")
 }
 
+// DATA02: Shipments
 model Shipment {
-  id                 String         @id @default(uuid())
-  trackingCode       String         @unique
-  senderId           String
-  driverId           String?
-  status             ShipmentStatus @default(CREATED)
-  pickupAddress      String
-  pickupLat          Float
-  pickupLng          Float
-  deliveryAddress    String
-  deliveryLat        Float
-  deliveryLng        Float
-  packageDescription String
-  packageWeightKg    Float
-  createdAt          DateTime       @default(now())
-  updatedAt          DateTime       @updatedAt
+  id                   String         @id
+  trackingCode         String         @unique @map("tracking_code")
+  senderId             String         @map("sender_id")
+  driverId             String?        @map("driver_id")
+  status               ShipmentStatus @default(CREATED)
+  pickupAddress        String         @map("pickup_address") @db.VarChar(255)
+  pickupLat            Float          @map("pickup_lat")
+  pickupLng            Float          @map("pickup_lng")
+  deliveryAddress      String         @map("delivery_address") @db.VarChar(255)
+  deliveryLat          Float          @map("delivery_lat")
+  deliveryLng          Float          @map("delivery_lng")
+  recipientName        String         @map("recipient_name")
+  recipientPhone       String         @map("recipient_phone")
+  packageDescription   String?        @map("package_description")
+  packageWeightKg      Float?         @map("package_weight_kg")
+  notes                String?        @db.VarChar(500)
+  expectedDeliveryAt   DateTime?      @map("expected_delivery_at") @db.Timestamptz(3)
+  failureReason        String?        @map("failure_reason") @db.VarChar(500)
+  failedByUserId       String?        @map("failed_by_user_id")
+  failedByRole         Role?          @map("failed_by_role")
+  proofOfDeliveryNotes String?        @map("proof_of_delivery_notes") @db.VarChar(255)
+  createdAt            DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  sender User  @relation("CustomerShipments", fields: [senderId], references: [id])
-  driver User? @relation("DriverShipments", fields: [driverId], references: [id])
+  // Relations
+  sender               User                  @relation("CustomerShipments", fields: [senderId], references: [id], onDelete: Restrict)
+  driver               User?                 @relation("DriverShipments", fields: [driverId], references: [id], onDelete: SetNull)
+  failedByUser         User?                 @relation("FailedByShipments", fields: [failedByUserId], references: [id], onDelete: SetNull)
+  statusEvents         ShipmentStatusEvent[]
+  notifications        Notification[]
 
-  @@index([status])
-  @@index([senderId])
-  @@index([driverId])
+  @@index([senderId, createdAt(sort: Desc), id])
+  @@index([driverId, createdAt(sort: Desc), id])
+  @@index([status, createdAt(sort: Desc), id])
   @@map("shipments")
 }
 
+// DATA03: Shipment Status Events
+model ShipmentStatusEvent {
+  id                 String         @id @default(uuid()) @db.Uuid
+  shipmentId         String         @map("shipment_id")
+  action             ShipmentAction
+  fromStatus         ShipmentStatus?@map("from_status")
+  toStatus           ShipmentStatus @map("to_status")
+  actorUserId        String         @map("actor_user_id")
+  actorRole          Role           @map("actor_role")
+  previousDriverId   String?        @map("previous_driver_id")
+  newDriverId        String?        @map("new_driver_id")
+  reason             String?
+  occurredAt         DateTime       @default(now()) @map("occurred_at") @db.Timestamptz(3)
+
+  // Relations
+  shipment           Shipment       @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  actor              User           @relation("ActorStatusEvents", fields: [actorUserId], references: [id], onDelete: Restrict)
+  previousDriver     User?          @relation("PreviousDriverEvents", fields: [previousDriverId], references: [id], onDelete: SetNull)
+  newDriver          User?          @relation("NewDriverEvents", fields: [newDriverId], references: [id], onDelete: SetNull)
+  notifications      Notification[]
+
+  @@index([shipmentId, occurredAt(sort: Desc), id])
+  @@map("shipment_status_events")
+}
+
+// DATA04: Current Locations
 model CurrentLocation {
-  driverId  String   @id
-  lat       Float
-  lng       Float
-  seq       Int
-  updatedAt DateTime @updatedAt
+  driverId        String    @id @map("driver_id")
+  lat             Float
+  lng             Float
+  clientTimestamp DateTime  @map("client_timestamp") @db.Timestamptz(3)
+  receivedAt      DateTime  @map("received_at") @db.Timestamptz(3)
+  eventId         String    @map("event_id")
+  sessionId       String?   @map("session_id") @db.Uuid
+  seq             Int?
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  driver          User      @relation(fields: [driverId], references: [id], onDelete: Cascade)
 
   @@map("current_locations")
 }
 
+// DATA05: Location History
 model LocationHistory {
-  id              BigInt   @id @default(autoincrement())
-  driverId        String
+  id              BigInt    @id @default(autoincrement())
+  driverId        String    @map("driver_id")
   lat             Float
   lng             Float
-  seq             Int
-  clientTimestamp DateTime
-  receivedAt      DateTime @default(now())
+  clientTimestamp DateTime  @map("client_timestamp") @db.Timestamptz(3)
+  receivedAt      DateTime  @map("received_at") @db.Timestamptz(3)
+  eventId         String    @map("event_id")
+  sessionId       String?   @map("session_id") @db.Uuid
+  seq             Int?
+  persistedAt     DateTime  @default(now()) @map("persisted_at") @db.Timestamptz(3)
 
-  @@index([driverId, receivedAt(sort: Desc)])
+  driver          User      @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  @@unique([driverId, clientTimestamp], name: "uq_driver_client_timestamp")
+  @@index([driverId, clientTimestamp(sort: Desc)])
+  @@index([persistedAt])
   @@map("location_history")
+}
+
+// DATA06: Notifications
+model Notification {
+  id            String              @id @default(uuid()) @db.Uuid
+  customerId    String              @map("customer_id")
+  shipmentId    String              @map("shipment_id")
+  statusEventId String              @map("status_event_id") @db.Uuid
+  kind          String
+  title         String
+  body          String
+  createdAt     DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  // Relations
+  customer      User                @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  shipment      Shipment            @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  statusEvent   ShipmentStatusEvent @relation(fields: [statusEventId], references: [id], onDelete: Cascade)
+
+  @@unique([customerId, statusEventId])
+  @@index([customerId, createdAt(sort: Desc), id])
+  @@map("notifications")
+}
+
+// DATA07: Idempotency Requests
+model IdempotencyRequest {
+  actorUserId    String   @map("actor_user_id")
+  operation      String
+  key            String   @db.Uuid
+  requestHash    String   @map("request_hash")
+  responseStatus Int      @map("response_status")
+  responseBody   Json     @map("response_body")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  expiresAt      DateTime @map("expires_at") @db.Timestamptz(3)
+
+  actor          User     @relation(fields: [actorUserId], references: [id], onDelete: Cascade)
+
+  @@id([actorUserId, operation, key])
+  @@index([expiresAt])
+  @@map("idempotency_requests")
 }
