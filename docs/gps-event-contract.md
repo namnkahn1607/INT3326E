@@ -66,7 +66,7 @@ Giữ nguyên event khi retry publish. Pub/Sub gán `messageId` riêng; `message
 
 ## Ánh xạ và bàn giao
 
-Emitter mẫu trên `/driver` tạo bốn trường request, hiển thị định danh mẫu riêng và chưa gọi REST. API bổ sung ba trường server trước publish. Worker cần dùng cùng type/validation khi triển khai consumer nghiệp vụ. `CurrentLocation` hiện chưa có `clientTimestamp`, lịch sử chưa có unique constraint theo cặp dedupe; contract không coi schema Prisma hiện tại đã đáp ứng các invariant này. Không sửa migration hoặc triển khai worker trong phạm vi tuần 2.
+Emitter độc lập tạo bốn trường request và có thể chỉ xem payload. Dashboard `/driver` hiện nối callback gửi REST bằng phiên Driver, hiển thị trạng thái HTTP 202 theo `AsyncAcceptedResponse`; API ingest vẫn chưa được triển khai trong checkout này. Xem [bàn giao Driver/GPS](driver-dashboard-gps.md) để kiểm chứng và phân biệt mock/local/cloud. API bổ sung ba trường server trước publish. Worker cần dùng cùng type/validation khi triển khai consumer nghiệp vụ. `CurrentLocation` hiện chưa có `clientTimestamp`, lịch sử chưa có unique constraint theo cặp dedupe; contract không coi schema Prisma hiện tại đã đáp ứng các invariant này. Không sửa migration hoặc triển khai worker trong phạm vi tuần 2.
 
 Các mục cần review độc lập: định danh nội bộ từ Auth, ánh xạ timestamp vào schema lưu trữ, constraint dedupe và việc áp dụng chính sách clock skew đã chốt. Người phụ trách GPS pipeline xác nhận review qua quy trình nhóm; tài liệu này không ghi nhận thay cho người đó.
 
