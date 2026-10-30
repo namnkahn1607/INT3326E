@@ -131,4 +131,17 @@ describe('Customer reads (mock only)', () => {
     expect(node.querySelector('[role="alert"]')).not.toBeNull()
     expect(node.textContent).not.toContain(shipmentFixture.trackingNumber)
   })
+  it('shows server lifecycle audit on Customer Detail without any mutation controls', async () => {
+    api.detail.mockResolvedValue({ ...shipmentFixture, status: 'DELIVERY_FAILED', driverId: shipmentFixture.customerId,
+      failureReason: 'Người nhận từ chối', failedByRole: 'ADMIN', failedByUserId: shipmentFixture.customerId,
+      statusHistory: [{ id: 'event', action: 'DELIVERY_FAILED', fromStatus: 'PICKED_UP', toStatus: 'DELIVERY_FAILED',
+        actorRole: 'ADMIN', actorUserId: shipmentFixture.customerId, previousDriverId: shipmentFixture.customerId,
+        newDriverId: shipmentFixture.customerId, reason: 'Người nhận từ chối', occurredAt: shipmentFixture.updatedAt }] })
+    await mount('/customer/shipments/' + shipmentFixture.id)
+    expect(node.querySelector('.shipment-history li')?.textContent).toContain('Giao thất bại')
+    expect(node.textContent).toContain('Người nhận từ chối')
+    expect(node.textContent).toContain('Quản trị viên')
+    expect(node.querySelector('textarea')).toBeNull()
+    expect(node.textContent).not.toContain('Xác nhận giao thất bại')
+  })
 })

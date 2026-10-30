@@ -1,6 +1,7 @@
 import { ApiError, apiClient } from '../client'
 import { SHIPMENT_STATUS_MAP, type ShipmentStatus } from '../../types/shipment'
 import type { Coordinates, CreateShipmentPayload, ShipmentDetail, ShipmentPage, ShipmentResponse, StatusEventResponse } from '../../types/shipment-api'
+import { characterCount } from '../../utils'
 
 export type { CreateShipmentPayload } from '../../types/shipment-api'
 const ulid = '[0-7][0-9A-HJKMNP-TV-Z]{25}'
@@ -97,5 +98,24 @@ export async function assignShipment(id: string, driverId: string, signal?: Abor
   })
   const result = shipment(value)
   if (result.id !== id || result.driverId !== driverId || result.status !== 'ASSIGNED') throw invalid()
+  return result
+}
+
+export function normalizeFailureReason(reason: string): string {
+  const value = reason.trim()
+  if (characterCount(value) < 5 || characterCount(value) > 500) {
+    throw new ApiError(400, 'VALIDATION_ERROR', [{ field: 'reason', message: 'Nhập lý do từ 5 đến 500 ký tự.' }])
+  }
+  return value
+}
+
+export async function failShipment(id: string, reason: string, signal?: AbortSignal): Promise<ShipmentResponse> {
+  if (!isShipmentId(id)) throw new ApiError(400, 'INVALID_SHIPMENT_ID')
+  const body = JSON.stringify({ reason: normalizeFailureReason(reason) })
+  const value = await apiClient<unknown>(`/shipments/${encodeURIComponent(id)}/fail`, {
+    method: 'POST', body, signal, expectedStatus: 200,
+  })
+  const result = shipment(value)
+  if (result.id !== id || result.status !== 'DELIVERY_FAILED') throw invalid()
   return result
 }
