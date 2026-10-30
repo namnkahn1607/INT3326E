@@ -9,6 +9,7 @@ import { shipmentFixture } from '../customer/shipment-fixture'
 import { AdminShipmentDetailPage } from './AdminShipmentDetailPage'
 
 vi.mock('../auth/useAuth', () => ({ useAuth: () => ({ user: { id: 'admin' } }) }))
+vi.mock('../../components/shipment/ShipmentTracking', () => ({ ShipmentTracking: () => null }))
 vi.mock('../../api/endpoints/shipments', async original => ({ ...await original<object>(), getShipmentById: vi.fn(), failShipment: vi.fn() }))
 const driver = 'usr_01ARZ3NDEKTSV4RRFFQ69G5FAX'
 const picked: ShipmentDetail = { ...shipmentFixture, status: 'PICKED_UP', driverId: driver, statusHistory: [] }

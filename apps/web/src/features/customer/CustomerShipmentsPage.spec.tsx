@@ -11,6 +11,7 @@ import { ApiError } from '../../api/client'
 const api = vi.hoisted(() => ({ list: vi.fn(), detail: vi.fn() }))
 vi.mock('../../api/endpoints/shipments', () => ({ getShipments: api.list, getShipmentById: api.detail }))
 vi.mock('../auth/useAuth', () => ({ useAuth: () => ({ user: { id: 'customer-a' } }) }))
+vi.mock('../../components/shipment/ShipmentTracking', () => ({ ShipmentTracking: () => null }))
 let node: HTMLDivElement
 let root: Root
 beforeEach(() => {

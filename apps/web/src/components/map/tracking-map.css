@@ -1,0 +1,29 @@
+.tracking-leaflet-map { width: 100%; height: 360px; background: var(--dashboard-raised); border: 1px solid var(--dashboard-line); border-radius: 10px; z-index: 0; }
+.tracking-pin-shell { background: transparent; border: 0; }
+.tracking-pin { display: block; width: 24px; height: 24px; margin: 2px; border: 3px solid white; border-radius: 50%; box-shadow: 0 1px 6px #0005; background: #4338ca; }
+.tracking-pin--dropoff { background: #b42339; border-radius: 4px; }
+.tracking-pin--fresh { background: #176842; }
+.tracking-pin--stale { background: #805300; border-style: dashed; }
+.shipment-tracking { margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--dashboard-line); }
+.tracking-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.tracking-toolbar h2 { margin: 0; font-size: 18px; font-weight: 500; }
+.tracking-meta { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-block: 12px; font-size: 13px; color: var(--dashboard-muted); }
+.tracking-gps-state { color: var(--dashboard-text); }
+.tracking-gps-state[data-gps=fresh] { color: var(--dashboard-success); }
+.tracking-gps-state[data-gps=stale] { color: var(--dashboard-warning); }
+.tracking-message { padding-block: 12px; color: var(--dashboard-muted); font-size: 14px; }
+.tracking-message[role=alert] { color: var(--dashboard-danger); }
+.tracking-points { display: flex; gap: 16px 28px; flex-wrap: wrap; margin: 12px 0 0; font-size: 13px; }
+.tracking-points > div { display: grid; gap: 4px; }
+.tracking-points dt { color: var(--dashboard-muted); }
+.tracking-points dd { margin: 0; color: var(--dashboard-text); font-variant-numeric: tabular-nums; }
+.tracking-fleet-stats { display: flex; flex-wrap: wrap; gap: 12px 24px; margin: 16px 0; color: var(--dashboard-muted); font-size: 14px; }
+.tracking-fleet-stats strong { color: var(--dashboard-text); margin-right: 6px; }
+.tracking-driver-meta { display: block; margin-top: 4px; font-size: 12px; color: var(--dashboard-muted); }
+.tracking-fleet-empty { margin-block: 12px; color: var(--dashboard-muted); }
+.pf-dark .live-map-workspace { min-height: 0; background: var(--dashboard-surface); border-color: var(--dashboard-line); box-shadow: none; }
+.pf-dark .live-map-canvas { min-height: 440px; }
+.admin-map-page .tracking-leaflet-map { height: 100%; min-height: 440px; border: 0; border-radius: 0; }
+.pf-dark .live-map-canvas:not(:has(.tracking-leaflet-map)) { min-height: 180px; display: grid; place-items: center; padding: 24px; }
+.admin-map-page .map-filter-tabs button { white-space: normal; font-size: 12px; min-height: 44px; }
+@media (max-width: 600px) { .tracking-leaflet-map { height: 300px; } .shipment-tracking { margin-top: 20px; padding-top: 20px; } }

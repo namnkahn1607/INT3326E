@@ -7,6 +7,7 @@ import type { ShipmentDetail, ShipmentResponse } from '../../types/shipment-api'
 import { useAuth } from '../auth/useAuth'
 import { adminErrorMessage } from './admin-errors'
 import { AdminShipmentDetail } from './AdminShipmentDetail'
+import { ShipmentTracking } from '../../components/shipment/ShipmentTracking'
 import './admin-api.css'
 
 type Phase = 'loading' | 'ready' | 'review' | 'submitting' | 'reconciling' | 'blocked'
@@ -106,6 +107,7 @@ function Detail({ id }: { id: string }) {
   return <section className="admin-detail-panel" aria-busy={busy}>
     {phase === 'loading' && <DataSkeleton label="Đang tải chi tiết đơn…" detail />}
     {shipment && <AdminShipmentDetail shipment={shipment} />}
+    {shipment && <ShipmentTracking key={shipment.driverId + ':' + shipment.status} id={shipment.id} status={shipment.status} />}
     {notice && <p className="shipment-action-notice" role="status">{notice}</p>}
     {!!error && <p className="shipment-action-error" role="alert">{error instanceof ApiError && error.status === 400
       ? 'Thông tin không hợp lệ. Kiểm tra mã đơn và lý do.' : adminErrorMessage(error)}</p>}

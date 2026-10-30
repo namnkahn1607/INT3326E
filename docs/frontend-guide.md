@@ -28,7 +28,7 @@ Backend hiện có Create và Admin directory; danh sách/chi tiết/Assign ship
 vẫn cần được hoàn thiện. Giao diện gọi API không chứng minh endpoint đã deploy.
 Admin Overview đọc cùng API danh sách, chỉ đếm trên tối đa 20 đơn vừa tải;
 không coi là số liệu toàn hệ thống. Customer History/Notifications và Admin
-Accounts/LiveMap còn dữ liệu mẫu; phải phân biệt rõ với dữ liệu tài khoản.
+Accounts còn dữ liệu mẫu; phải phân biệt rõ với dữ liệu tài khoản.
 Driver chưa có danh sách đơn thật.
 
 Theme tập trung tại `apps/web/src/dark-dashboard.css`, giới hạn trong `.pf-dark`.
@@ -47,6 +47,8 @@ không thay đổi API contract, cơ chế xác thực hoặc quyền thao tác.
 
 Phần bổ sung tuần 4 frontend có [chi tiết/lịch sử cơ bản và báo thất bại Admin](shipment-lifecycle.md).
 Backend Detail/Fail vẫn là điều kiện cần để nghiệm thu luồng thật.
+Phần tuần 5 nối [tracking và bản đồ tài xế](live-tracking.md) qua API09/11;
+LiveMap không còn danh sách mẫu, chỉ hiển thị trang tài xế API đã tải.
 
 Luồng trạng thái dùng chung là CREATED → ASSIGNED → PICKED_UP → DELIVERED hoặc
 DELIVERY_FAILED. Không thêm DISPATCHER, CANCELLED hoặc thao tác sửa enum tùy ý.

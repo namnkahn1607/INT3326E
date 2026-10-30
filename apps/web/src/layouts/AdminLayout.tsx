@@ -13,7 +13,7 @@ const items = [
 
 export function AdminLayout() {
   const { pathname } = useLocation()
-  const demoPage = ['/admin/live-map', '/admin/accounts'].includes(pathname.replace(/\/$/, ''))
+  const demoPage = pathname.replace(/\/$/, '') === '/admin/accounts'
   return <div className="admin-layout dashboard-layout pf-dark">
     <a href="#admin-main" className="ui-skip-link">Đến nội dung chính</a>
     <DashboardNavigation home="/admin" workspace="Quản trị vận hành" items={[...items]} navClass="admin-nav" />

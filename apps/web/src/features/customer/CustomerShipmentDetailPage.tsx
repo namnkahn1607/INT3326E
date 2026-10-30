@@ -4,6 +4,7 @@ import { getShipmentById } from '../../api/endpoints/shipments'
 import { StatusBadge } from '../../components/ui/StatusBadge'
 import { DataSkeleton } from '../../components/ui/DataSkeleton'
 import { ShipmentLifecycleDetails } from '../../components/shipment/ShipmentLifecycleDetails'
+import { ShipmentTracking } from '../../components/shipment/ShipmentTracking'
 import { formatDateTime, formatNumber } from '../../utils'
 import type { ShipmentDetail } from '../../types/shipment-api'
 import { useAuth } from '../auth/useAuth'
@@ -50,6 +51,7 @@ function DetailData({ id, onRetry }: { id: string; onRetry: () => void }) {
     <StatusBadge status={shipment.status} /><h2 className="customer-tracking-number">{shipment.trackingNumber}</h2>
     <dl className="customer-detail-grid">{rows.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
     <ShipmentLifecycleDetails shipment={shipment} />
+    <ShipmentTracking key={shipment.driverId + ':' + shipment.status} id={shipment.id} status={shipment.status} />
     <p className="customer-helper">“—” là thông tin chưa có. Hạn giao dự kiến không phải ETA hoặc cam kết giao đúng giờ.</p>
     <div className="form-actions"><button type="button" className="btn btn-outline" onClick={onRetry}>Tải lại thông tin</button>
       <Link className="btn btn-primary" to="/customer/create">Tạo đơn mới</Link></div>

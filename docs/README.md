@@ -16,6 +16,7 @@ tại một thời điểm, không thay thế đặc tả hoặc nghiệm thu m�
 | [Customer frontend](customer-frontend.md) | Đăng nhập, tạo đơn, danh sách/chi tiết và chọn địa chỉ |
 | [Admin phân công](admin-assignment.md) | Chọn đơn/tài xế, xác nhận và xử lý kết quả chưa rõ |
 | [Vòng đời Customer/Admin](shipment-lifecycle.md) | Trạng thái, lịch sử cơ bản và báo thất bại sau pickup |
+| [Tracking Customer/Admin](live-tracking.md) | Polling, GPS mới/cũ/thiếu và bản đồ tài xế theo trang |
 | [Tạo đơn](create-shipment.md) | Phạm vi API01, chống trùng và transaction |
 | [Admin directory](tv6-admin-directory.md) | Danh sách tài xế/khách hàng và điều kiện SQL |
 
@@ -33,6 +34,7 @@ tại một thời điểm, không thay thế đặc tả hoặc nghiệm thu m�
 | [Customer tuần 2](customer-frontend-handoff.md) | Bằng chứng frontend tại các checkpoint ghi trong báo cáo |
 | [Admin tuần 3](admin-assignment-handoff.md) | Kiểm chứng frontend; cập nhật sau merge 30/10/2026 |
 | [Vòng đời tuần 4](shipment-lifecycle-handoff.md) | Frontend Customer/Admin; giới hạn tích hợp backend |
+| [Tracking tuần 5](live-tracking-handoff.md) | Frontend, readiness Driver/API/Worker và phần Cloud chưa nghiệm thu |
 | [Create handoff](create-shipment-handoff.md) | Kiểm chứng API/SQL local 24–25/10/2026 |
 
 Các file hiện có được giữ nguyên phạm vi sở hữu. Khi đọc nhận định như
