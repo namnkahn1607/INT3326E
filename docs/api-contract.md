@@ -73,7 +73,7 @@ client retains its key. All SC02 keys are explicit, including nullable fields.
 
 This is **test-branch implementation, not a deployed Cloud SQL acceptance**.
 Baseline SQL requires an empty schema; see [DB safety](../packages/database/README.md)
-and [Spec Kit/verification](../specs/002-create-shipment/quickstart.md).
+and [Create shipment handoff](create-shipment-handoff.md).
 GET List/Detail, Assign and GPS remain unimplemented; preserving the frontend does
 not activate those routes. Historical draft statements below are retained, not current
 Create requirements. No migration, seed, IAM, deploy or auth changes run automatically.

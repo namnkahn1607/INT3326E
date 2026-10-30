@@ -1,8 +1,10 @@
 # Kết quả tái nghiệm thu tuần 1 — TV3 và phối hợp frontend
 
+> B?o c?o l?ch s? theo ng?y v? source ghi b?n d??i. K?t qu? mock/local kh?ng x?c nh?n revision Cloud hi?n t?i; c?c script browser ri?ng kh?ng ???c ph?t h?nh c?ng t?i li?u.
+
 **Ngày kiểm tra**: 2026-10-18, Asia/Saigon.
 **Nguồn yêu cầu**: [PF SPEC 01, nội dung v1.3 ngày 11/10/2026](https://docs.google.com/document/d/1S9gY8a08d8-9Rd4bhTOeT_IAJUrYtFnZtDKjKKEpuq8/edit),
-đặc biệt VII.2; [chỉ dẫn nguồn](../../docs/spec-baseline.md).
+đặc biệt VII.2; [chỉ dẫn nguồn](spec-baseline.md).
 **Scope**: Công việc TV3 tuần 1, emitter mẫu phối hợp TV4 và đối chiếu checkpoint chung chỉ đọc.
 
 ## 1. Kết luận
@@ -32,7 +34,7 @@ Không kết luận toàn bộ sản phẩm đã hoàn thành hoặc nghiệp v�
 | Cloud source/revision metadata hiện tại | Chưa đọc trực tiếp; không suy ra source SHA từ health 200 hoặc hash FE |
 
 Nguồn Google Doc đã đọc đủ bảy tab để phân biệt yêu cầu toàn dự án và mốc tuần 1.
-Revision nguồn được ghi trong [research.md](research.md); tên file v1.2 không thay phiên bản nội dung 1.3.
+Revision nguồn được ghi trong [t?i li?u chung](README.md); tên file v1.2 không thay phiên bản nội dung 1.3.
 Không sửa Google Doc, repo remote hoặc resource cloud trong lượt nghiệm thu.
 
 ## 3. Ma trận yêu cầu audit
@@ -65,11 +67,11 @@ SC-005 có danh sách phụ thuộc nhưng chưa thực thi tuần 2.
 | `apps/api`: `npm run typecheck` | Source + test typecheck với compiler package | PASS |
 | `apps/api`: `npm test` | 63 tests/8 files, test Auth dùng mock | PASS |
 | `apps/api`: `npm run build` | TypeScript build riêng API | PASS |
-| `node openspec/week1-reacceptance/verify-browser.mjs` | HTTP/hash/browser/emitter matrix bên dưới | PASS sau sửa mô phỏng focus/Enter của test harness |
+| `node specs/week1-reacceptance/verify-browser.mjs` | HTTP/hash/browser/emitter matrix bên dưới | PASS sau sửa mô phỏng focus/Enter của test harness |
 
 Tổng regression API/Worker: **65 test đạt**. Không chạy lại clean install trong lượt này:
 cài sạch đã được ghi ở #10; source không đổi dependency/lockfile. Lệnh tái hiện theo
-[quickstart.md](quickstart.md), không giả là mọi phiên bản trên develop mới đều đã được test.
+[quickstart.md](frontend-guide.md), không giả là mọi phiên bản trên develop mới đều đã được test.
 
 ### Browser/Hosting
 
@@ -150,23 +152,3 @@ Lần audit không tự merge hoặc nghiệm thu implementation trên SHA mới
 
 Chưa bắt đầu tuần 2: không thêm Firebase SDK hoặc login mới trên nhánh này, không nối form/DB,
 không đổi contract runtime, không chạy seed/migration, không commit/push/deploy.
-
-## 8. Quy trình Spec Kit và tính toàn vẹn
-
-- Specify: spec audit riêng tham chiếu nguồn/các frontend docs hiện có, không tạo frontend hay spec nghiệp vụ trùng.
-- Clarify: 0 câu hỏi, scope tuần 1 đã rõ; phiên bản/source/môi trường được tách.
-- Plan: reuse kiến trúc, research nguồn và cloud chỉ đọc; không đổi constitution.
-- Checklist: 12/12 built-in + 10/10 custom đạt chất lượng yêu cầu trong review riêng, không là checkbox code.
-- Tasks: 12 task có owner/phạm vi và thứ tự; Analyze read-only bao phủ 8 FR + 5 SC, 0 finding nghiêm trọng.
-- Implement: chạy kiểm chứng trên source đã ghi, sửa các tài liệu lệch path/scope/contract; không đổi runtime.
-- Converge: **converged**, không có actionable gap trong phạm vi audit. Đối chiếu 8 FR,
-  5 SC, 10 acceptance scenarios, 12 task và 5 gate constitution. Không thêm task hoặc
-  thay tasks.md trong bước converge; SHA256 giữ nguyên
-  `d7991e7215ccac107b7d55a5f6963d3f8620bcfef1d7440762d0f49b4a9497fd`.
-
-Kiểm tra hồ sơ cuối: Markdown relative links hợp lệ, 12 task có ID duy nhất/đúng format,
-22 checklist quality items đã review; diff không có thay đổi ứng dụng/lockfile/runtime.
-Trạng thái đóng audit được ghi sau pha converge, không phải sửa requirement trong pha chỉ đọc.
-
-Các file thay đổi chỉ là README, frontend docs, source map và hồ sơ/test harness audit.
-Ứng dụng, package/lockfile, Git branch, AGENTS và constitution được bảo toàn.

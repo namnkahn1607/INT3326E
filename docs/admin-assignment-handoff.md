@@ -1,23 +1,9 @@
 # Admin assignment — local acceptance and handoff
 
+> B?o c?o l?ch s? theo ng?y v? source ghi b?n d??i. K?t qu? mock/local kh?ng x?c nh?n revision Cloud hi?n t?i; c?c script browser ri?ng kh?ng ???c ph?t h?nh c?ng t?i li?u.
+
 Date: 2026-10-24. Base inspected: a2c245f trên feature/frontend (working changes,
 chưa commit). Không thay AGENTS.md hoặc source backend/Worker/Driver/Customer.
-
-## Spec Kit review
-
-- Specify: tạo bộ riêng sau khi tìm các spec cũ, không ghi đè week1/week2.
-- Clarify: 0 câu hỏi quan trọng còn thiếu; nguồn FR02/API04/UI03 đã giải quyết
-  reassign, no-op, actor và mất response. Không giả lập quyết định người dùng.
-- Plan: reuse một app, Auth/apiClient/Shipment parser và shell; không thêm deps.
-- Checklist: tạo unchecked, sau đó review riêng theo AGENTS.md. Requirements7/7
-  và integration10/10 đạt về chất lượng yêu cầu, không phải chứng minh code hoàn thành.
-  Bằng chứng từng item đã trỏ tại checklist: scope/source, US1–3, FR001–010,
-  SC001–006, plan/contracts. Implement không đổi marker checklist.
-- Tasks: 17 task T001–T017, US1/US2/US3 và dependency rõ.
-- Analyze read-only: 10 FR có task, SC001–006 có coverage T003–T017; không orphan
-  task, không CRITICAL/HIGH về requirement, không thay constitution. SC006 là gate
-  ngoài frontend. Không chạy extension hooks vì .specify/extensions.yml không có.
-- Implement: test contract đỏ trước helper; 15 test Assign đỏ trước thay mock UI.
 
 ## Results
 
@@ -33,7 +19,7 @@ chưa commit). Không thay AGENTS.md hoặc source backend/Worker/Driver/Custome
 | git diff --check | PASS ở lượt kiểm tra |
 | AGENTS.md SHA256 | Giữ nguyên 1FBB04859CFCCDBEAAB94F01755BEAB0443C279044B6A7C609C8C47B27FD65E6 |
 
-Browser harness: [verify-browser.mjs](verify-browser.mjs). Auth và responses mock chỉ
+Browser harness: [t?i li?u chung](README.md). Auth và responses mock chỉ
 được CDP inject vào tab test; production app vẫn dùng Auth/API thật, không fallback.
 Ảnh kiểm tra được ghi vào temp, không thêm asset/test dependency vào app.
 Hai lần harness đầu cần sửa React CJS import và giả định redirect role; không sửa
@@ -60,14 +46,31 @@ Browser: Vite dev localhost5174 và Edge CDP localhost9232 với profile test ri
 node --experimental-strip-types specs/001-admin-assignment/verify-browser.mjs.
 Harness chỉ nhận localhost và không dùng Firebase/credentials thật.
 
-## Convergence review
+## Kiểm tra lại sau tích hợp — 2026-10-30
 
-Lượt 1 đối chiếu 10 FR, 6 SC, các acceptance scenario và 6 quyết định thiết kế:
-không tìm gap behavior mới trong code đã implement; thấy thiếu regression cụ thể
-cho Detail đến muộn/rời editor (FR008), thêm duy nhất T018 ở cuối tasks.md.
-SC006 vẫn partial với task T017 đã có, không thêm task duplicate hoặc mở scope backend.
+Đã merge `origin/develop` tại `9ee7c10` vào nhánh đang làm việc; merge commit
+`6d75d53`, không có xung đột. Phạm vi được xác nhận lại là frontend; không bổ sung
+API, migration hoặc deploy. Không có lỗi frontend mới cần sửa trong phạm vi
+đã kiểm tra; giữ implementation hiện có, không tạo lại giao diện phân công.
 
-Implement tiếp T018: thêm 2 regression, full suite tăng từ221 lên223 pass;
-lint/build chạy lại PASS. Code bỏ qua response cũ và abort request khi rời editor,
-không phát lại POST hoặc cập nhật success trên editor đã unmount. Không đổi checklist
-markers trong implement. Không có bằng chứng cloud để đóng T017.
+| Kiểm tra | Kết quả / giới hạn |
+| --- | --- |
+| Test Admin và contract Shipment/Driver | 57/57 đạt, 4 file; API mock |
+| Toàn bộ frontend | 351/351 đạt, 27 file; kiểm tra local |
+| `npm run lint:web` | Exit 0 |
+| `npm run build:web` | Exit 0, gồm TypeScript; bundle chính 495.88 kB |
+| Browser local | Shipments/Drivers/Assignment ở 375×812, 1440×900, 812×375 không tràn ngang; 5 POST mock, không gửi phân công thật |
+| Recovery và accessibility | 409/503 chỉ GET lại; focus review/cancel/Enter, reduced motion, chữ 200%, chặn CUSTOMER; 0 runtime exceptions |
+| File được bảo toàn | SHA256 AGENTS.md và thay đổi local `.env.example` không đổi |
+
+Analyze kiểm tra lại 10 FR và 6 SC với tasks T001–T018: không có mâu thuẫn
+nghiêm trọng hoặc yêu cầu frontend thiếu task. Checklist requirements 7/7 và
+integration 10/10 giữ nguyên; đây là review chất lượng yêu cầu. Converge không
+phát hiện việc frontend còn thiếu cần thêm task, không đổi tasks/checklist.
+T017/SC006 tiếp tục mở: backend hiện có POST Create nhưng chưa có handler GET
+danh sách/chi tiết hoặc Assign, nên kết quả mock không chứng minh phân công thật.
+
+Lần test đầu trong sandbox bị `spawn EPERM` trước khi chạy; chạy lại với quyền
+tạo tiến trình con thì đạt. Lần khởi động Vite qua script lồng không truyền đúng
+tham số; chạy trực tiếp script workspace thì browser harness đạt. Không sửa
+script, dependency hoặc Auth chỉ để vượt kiểm tra.

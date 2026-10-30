@@ -1,6 +1,8 @@
 # Bàn giao frontend Customer tuần 2 — 2026-10-18
 
-Branch `feature/tuan/week2-customer`, base `d38c598`; implementation hiện trong
+> B?o c?o l?ch s? theo ng?y v? source ghi b?n d??i. K?t qu? mock/local kh?ng x?c nh?n revision Cloud hi?n t?i; c?c script browser ri?ng kh?ng ???c ph?t h?nh c?ng t?i li?u.
+
+Branch `nh?nh tri?n khai Customer`, base `d38c598`; implementation hiện trong
 working tree, chưa commit/push/deploy. Hồ sơ này không thay nguồn yêu cầu chính thức.
 
 ## Trạng thái
@@ -44,29 +46,6 @@ Browser mock intercept chỉ tồn tại trong harness CDP; không thêm cờ de
 vào ứng dụng. Lần đầu harness lỗi import React CJS, đã sửa harness; siết điều kiện
 đợi đúng route/content sau reload rồi chạy lại toàn bộ. Không coi lượt lỗi là PASS.
 
-## Review Spec Kit và UI
-
-Specify → clarify (0 câu hỏi, nguồn đã chốt) → plan/research/design → checklist
-chất lượng 17/17 → tasks 16 → analyze: FR1–9/SC1–4 đều có coverage, 0 critical →
-implement local. Không có extension hook. Quy trình AGENTS ưu tiên: không commit
-theo template, checklist review riêng, task cloud giữ mở, không tự tạo lại constitution.
-
-Converge đã đối chiếu 9 FR, 4 SC, 8 acceptance scenarios, các quyết định plan và
-5 nguyên tắc constitution. Một finding partial/HIGH: thiếu readiness cloud cho
-FR-009/SC-001/002; thêm T017 ở Phase7 làm prerequisite T016, giữ ID/task cũ.
-Implement follow-up kiểm tra an toàn: không có giá trị VITE_API_URL và bốn Firebase
-Web config trong các file env local được Vite dùng; controller/service Shipment
-vẫn rỗng. T017/T016 tiếp tục mở; không còn sửa code client độc lập được xác định
-trong phạm vi. Chờ bàn giao môi trường, không kết luận converged toàn tuần 2.
-
-UI UX Pro Max search validation/cleanup dùng được; design-system search lệch
-landing/education sau retry nên bỏ output, fallback giữ theme đã chốt.
-Motion skill dẫn đến chọn không animation cho form/navigation tần suất cao.
-Web Design Guidelines đã rà label/name/autocomplete/focus/overflow/reduced-motion,
-sửa tên field Login, cảnh báo trước reload mất draft, skip link và vùng bấm Customer.
-Scope review chỉ màn hình thay đổi; filter/cursor hiện ở state RAM, URL chi tiết
-deep-link được. Không coi đây là audit khả năng truy cập toàn ứng dụng.
-
 ## Phần còn mở / phối hợp
 
 - **T016 — chưa đạt cloud**: TV1 cung cấp API01–03/DTO/mapping, transaction Create,
@@ -86,14 +65,14 @@ deep-link được. Không coi đây là audit khả năng truy cập toàn ứn
 
 ## Chạy lại
 
-Theo [quickstart.md](quickstart.md). Dùng npm run dev:web để xem; không có Firebase
+Theo [quickstart.md](customer-frontend.md). Dùng npm run dev:web để xem; không có Firebase
 config thì Login báo thiếu cấu hình, không có demo login thay thế.
 Browser mock cần Node24, Edge headless profile tạm/cổng CDP9232 và Vite local5174,
-chạy node openspec/week2-customer/verify-browser.mjs; không trỏ vào Hosting/cloud.
+chạy node specs/week2-customer/verify-browser.mjs; không trỏ vào Hosting/cloud.
 
 ## Home bổ sung theo prompt JSON
 
-Xem [home-design.md](home-design.md) cho yêu cầu/giới hạn và prompt asset.
+Xem [home-design.md](customer-frontend.md) cho yêu cầu/giới hạn và prompt asset.
 Home đổi sang cam/trắng riêng theo yêu cầu mới, không đổi Auth/Admin/Driver hoặc
 theme những màn hình Customer khác. Thêm T018–020; T016/017 giữ mở như cũ.
 Lượt kiểm chứng Home: **85 tests / 9 files PASS**, lint/build PASS; WebP 138.51kB

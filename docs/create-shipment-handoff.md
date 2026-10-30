@@ -1,5 +1,7 @@
 # Create Shipment — verification and handoff
 
+> B?o c?o l?ch s? theo ng?y v? source ghi b?n d??i. K?t qu? mock/local kh?ng x?c nh?n revision Cloud hi?n t?i; c?c script browser ri?ng kh?ng ???c ph?t h?nh c?ng t?i li?u.
+
 Initial checkpoint: 2026-10-24. Test implementation based on `915e5ed` (already includes develop integration at `a2c245f`). At that checkpoint the implementation was uncommitted, with no push, merge to develop, shared migration, seed, IAM or deploy performed. Source: PF SPEC 01 **content v1.3**, read via Drive on this date; the file name still says v1.2. This report records evidence, not additional requirements.
 
 ## Follow-up checkpoint — 2026-10-25
@@ -58,12 +60,6 @@ Frontend checks from `apps/web`: `npm test` **223 passed/20 files**, `npm run li
 | TC01.5 | Event/notification/snapshot failure injection and an actual notification CHECK violation; four writes rollback, samekey retry recovers; unknown COMMIT response case stores one set and retries snapshot |
 | TC01.6 API01 portion | Fixture changes persisted state to ASSIGNED; repository clock advances past original deadline but within TTL; replay remains CREATED201, a new key with now-past deadline400. SQL proves current state still ASSIGNED. **GET Detail portion not claimed: API03 remains absent and outside Create scope.** |
 
-## Spec Kit review
-
-Specify/clarify: requirements checklist6/6; no unresolved critical requirement questions. Plan follows existing architecture and no shared DB writes. Custom API checklist10/10 reviewed separately before implement, not used as implementation evidence. Analyze: FR-001–008 all mapped to tasks, zero critical/high findings. T001–T015 have the corresponding implementation/test/handoff evidence above. Converge: inspected8 functional requirements,3 user stories,15 tasks,6 design decisions and5 governing principles against present code/tests. Zero actionable missing/partial/contradicting/unrequested findings **within the explicit Create test-branch scope**; no convergence tasks appended and tasks.md left unchanged by converge. This does not certify the external gates listed below. No extension hooks configured and no agent-context updater ran.
-
-`AGENTS.md` unchanged: SHA256 `1FBB04859CFCCDBEAAB94F01755BEAB0443C279044B6A7C609C8C47B27FD65E6`. No changes in apps/web, Auth module, Driver/GPS/Worker, IAM or existing Prisma schema.
-
 ## Still open outside this test-branch implementation
 
 1. **TV1 + TV6** inspect the actual shared users/shipments schema and data, reconcile Prisma/draft and own a non-destructive in-place migration/provisioning plan. Do not apply the empty-schema baseline to an existing shared database. Existing UUID business IDs are incompatible with usr_ULID and must not be silently relabeled.
@@ -71,4 +67,4 @@ Specify/clarify: requirements checklist6/6; no unresolved critical requirement q
 3. **TV1** implements API02/03 and API04 separately; they are still skeletons. The form can POST to the configured local implementation after correct DB/Auth setup, but navigating to order details/list can still fail until read APIs exist.
 4. **TV3 + TV1 + TV6** perform real Firebase/browser/Cloud SQL end-to-end Create/retry and TC01.6 Detail acceptance after integration; NF03 p95<500ms must be measured under agreed workload, not inferred from unit/HTTP test runtime.
 
-Rerun instructions: [quickstart.md](quickstart.md). Native DB helper is not a production service or permanent new project dependency; supply your own isolated loopback DB URL when rerunning native tests.
+Rerun instructions: [quickstart.md](create-shipment.md). Native DB helper is not a production service or permanent new project dependency; supply your own isolated loopback DB URL when rerunning native tests.

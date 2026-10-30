@@ -4,8 +4,11 @@
 
 Yêu cầu hiện hành: [PF SPEC 01, nội dung v1.3 và thứ tự ưu tiên nguồn](docs/spec-baseline.md).
 Tuần 1 được bảo toàn theo VII.2; Auth/API thật từ tuần 2. Xem
-[hồ sơ tái nghiệm thu tuần 1](openspec/week1-reacceptance/acceptance.md)
+[hồ sơ tái nghiệm thu tuần 1](docs/frontend-week1-handoff.md)
 để phân biệt kết quả hiện tại, bằng chứng lịch sử và việc còn mở.
+
+Đặc tả tính năng, contract và báo cáo bàn giao dùng chung được dẫn tại
+[docs/README.md](docs/README.md).
 
 | | |
 |---|---|

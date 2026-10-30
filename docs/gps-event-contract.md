@@ -72,6 +72,6 @@ Các mục cần review độc lập: định danh nội bộ từ Auth, ánh x�
 
 ## Kiểm chứng và tham chiếu
 
-Xem [quy trình kiểm thử Pub/Sub](gps-pipeline-validation.md) cho lệnh chạy, ma trận kiểm thử và mức bằng chứng. Phạm vi và tác vụ nằm ở mục 10 của [đặc tả Driver và GPS emitter](../openspec/driver-gps-emitter-draft.md).
+Xem [quy trình kiểm thử Pub/Sub](gps-pipeline-validation.md) cho lệnh chạy, ma trận kiểm thử và mức bằng chứng; [Driver dashboard/GPS](driver-dashboard-gps.md) mô tả phần client, còn [baseline](spec-baseline.md) dẫn nguồn yêu cầu và lịch triển khai.
 
 Pub/Sub emulator cung cấp môi trường thử cục bộ và có thể khác dịch vụ thật; cấu hình Node.js dùng `PUBSUB_EMULATOR_HOST` theo [hướng dẫn Google Cloud](https://docs.cloud.google.com/pubsub/docs/emulator). Việc NACK để yêu cầu giao lại dùng `modifyAckDeadline` với deadline bằng 0 theo [Pub/Sub API](https://docs.cloud.google.com/pubsub/docs/reference/rest/v1/projects.subscriptions/modifyAckDeadline).

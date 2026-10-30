@@ -45,8 +45,8 @@ thực sự phải xử lý bằng amendment riêng trước implementation, kh�
 
 ## Hồ sơ tuần 1
 
-- [Spec Kit tái nghiệm thu](../openspec/week1-reacceptance/spec.md).
-- [Kết quả và phụ thuộc tuần 2](../openspec/week1-reacceptance/acceptance.md).
+- [Frontend chung](frontend-guide.md).
+- [Kết quả tái nghiệm thu và phụ thuộc tuần 2](frontend-week1-handoff.md).
 - Bằng chứng nhóm đã chốt: [#8](https://github.com/namnkahn1607/INT3326E/issues/8),
   [#9](https://github.com/namnkahn1607/INT3326E/issues/9),
   [#10](https://github.com/namnkahn1607/INT3326E/issues/10).

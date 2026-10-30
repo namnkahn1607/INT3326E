@@ -2,7 +2,8 @@
 
 Phạm vi: TV4 tuần 6 lịch nhóm (26/10–01/11/2026), tương ứng VII.4/tuần 3
 lộ trình sản phẩm. Branch `feature/driver-dashboard-gps`, base develop `8038c83`.
-Yêu cầu và tasks: mục 11 của [đặc tả Driver](../openspec/driver-gps-emitter-draft.md).
+Nguồn yêu cầu: [PF SPEC 01 nội dung v1.3](spec-baseline.md), VII.4/UI02;
+contract GPS dùng chung tại [GPS event contract](gps-event-contract.md).
 
 ## Hành vi
 
