@@ -38,6 +38,8 @@ tra cứu gọn cạnh lời chào trên desktop và chuyển hàng trên mobile
 Tổng quan Customer dùng banner mở hòa vào nền và một thẻ đơn đang giao,
 đọc trên tối đa 20 đơn vừa tải; không thêm danh sách đơn trùng hoặc số liệu mẫu.
 Đường giao nhận động nằm trong banner; thông tin dịch vụ được gom vào chân trang.
+Menu tài khoản Customer có nút giao diện sáng/tối, lưu lựa chọn trên trình duyệt;
+form và cửa sổ chọn địa chỉ dùng cùng chế độ màu với trang.
 Admin dùng `DashboardNavigation` với sidebar 240px có thể thu/mở và drawer mobile.
 Tên trang chỉ xuất hiện trong nội dung; mục điều hướng active theo route.
 Form, bảng, trạng thái, skeleton, hộp thoại và intro đăng nhập cùng bảng màu;

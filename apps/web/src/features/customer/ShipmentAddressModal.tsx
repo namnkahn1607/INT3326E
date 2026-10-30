@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { useCallback, useContext, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { AdministrativeAreaSelect } from './AdministrativeAreaSelect'
 import { administrativeAddress, resolveAdministrativeSelection, type AdministrativeSelection } from './administrative-areas'
@@ -7,6 +7,7 @@ import { characterCount } from '../../utils'
 import { HANOI_PROVINCE } from './hanoi-map'
 import { CustomerHomeIcon } from './CustomerHomeIcon'
 import { ShipmentMapDialog } from './ShipmentMapDialog'
+import { CustomerThemeContext } from './customer-theme'
 
 export interface ShipmentAddressValue {
   street: string
@@ -22,6 +23,7 @@ export function ShipmentAddressModal({ kind, value, onSave, onClose }: {
   onSave: (value: ShipmentAddressValue) => void
   onClose: () => void
 }) {
+  const theme = useContext(CustomerThemeContext)
   const initial = { ...value, divisions: value.divisions ?? { province: HANOI_PROVINCE, district: null, ward: null } }
   const [draft, setDraft] = useState(initial)
   const [needsReview, setNeedsReview] = useState(false)
@@ -119,7 +121,7 @@ export function ShipmentAddressModal({ kind, value, onSave, onClose }: {
     onSave({ ...draft, street: draft.street.trim(), area: administrativeAddress(draft.divisions), details: draft.details.trim() })
   }
   const divisions = draft.divisions ?? { province: null, district: null, ward: null }
-  return createPortal(<div className="pf-dark"><dialog ref={dialog} className="shipment-address-dialog customer-api-page" aria-labelledby="address-modal-title"
+  return createPortal(<div className="pf-dark" data-theme={theme}><dialog ref={dialog} className="shipment-address-dialog customer-api-page" aria-labelledby="address-modal-title"
     onCancel={event => { event.preventDefault(); close() }} onKeyDown={containFocus}>
     <form onSubmit={save} noValidate>
       <header className="shipment-address-dialog-header"><div><p className="customer-section-kicker">{kind === 'pickup' ? 'Bên gửi' : 'Bên nhận'}</p>

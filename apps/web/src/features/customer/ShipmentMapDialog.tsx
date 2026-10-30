@@ -1,8 +1,9 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useContext, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { resolveAddressSuggestion, searchAddress, type AddressMatch } from './address-search'
 import type { AdministrativeArea } from './administrative-areas'
 import { HANOI_PROVINCE, HANOI_VIEW_BOUNDS } from './hanoi-map'
+import { CustomerThemeContext } from './customer-theme'
 
 const ShipmentLocationPicker = lazy(() => import('./ShipmentLocationPicker').then(module => ({ default: module.ShipmentLocationPicker })))
 const normalize = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/đ/g, 'd').replace(/^(quan|huyen|thi xa)\s+/, '').trim()
@@ -18,6 +19,7 @@ export function ShipmentMapDialog({ open, kind, point, query, district, needsRev
   onSelect: (point: { lat: number; lng: number }, address?: AddressMatch['address']) => void | Promise<void>
   onResolvingChange: (kind: 'pickup' | 'dropoff', loading: boolean) => void
 }) {
+  const theme = useContext(CustomerThemeContext)
   const dialog = useRef<HTMLDialogElement>(null)
   const [viewport, setViewport] = useState<{ query: string; area: AddressMatch | null } | null>(null)
   const districtName = district?.name ?? ''
@@ -47,7 +49,7 @@ export function ShipmentMapDialog({ open, kind, point, query, district, needsRev
     return () => controller.abort()
   }, [open, districtName, districtQuery, locate])
   const area = viewport?.query === districtQuery ? viewport.area : null
-  return createPortal(<div className="pf-dark"><dialog ref={dialog} className="shipment-address-dialog shipment-map-dialog customer-api-page" aria-labelledby="shipment-map-title"
+  return createPortal(<div className="pf-dark" data-theme={theme}><dialog ref={dialog} className="shipment-address-dialog shipment-map-dialog customer-api-page" aria-labelledby="shipment-map-title"
     onCancel={event => { event.preventDefault(); event.stopPropagation(); onClose() }} onKeyDown={event => {
       event.stopPropagation()
       if (event.key === 'Escape') { event.preventDefault(); onClose() }

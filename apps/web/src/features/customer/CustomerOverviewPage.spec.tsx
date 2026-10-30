@@ -226,6 +226,32 @@ describe('Customer ambient background', () => {
     </Routes></MemoryRouter>))
   }
 
+  it('switches theme, keeps it across routes and restores the choice on remount', async () => {
+    await mountShell()
+    const themeButton = () => node.querySelector<HTMLButtonElement>('.customer-theme-toggle')!
+    expect(themeButton().getAttribute('aria-pressed')).toBe('false')
+    await act(async () => themeButton().click())
+    expect(node.querySelector('.customer-layout')?.getAttribute('data-theme')).toBe('light')
+    expect(themeButton().getAttribute('aria-pressed')).toBe('true')
+    expect(localStorage.getItem('parcelflow:customer-theme')).toBe('light')
+    await act(async () => node.querySelector<HTMLAnchorElement>('.pf-home-nav a[href="/customer/history"]')!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 })))
+    expect(node.querySelector('.customer-layout')?.getAttribute('data-theme')).toBe('light')
+    await act(async () => root.render(<p>Reload</p>))
+    await mountShell()
+    expect(node.querySelector('.customer-layout')?.getAttribute('data-theme')).toBe('light')
+    await act(async () => themeButton().click())
+    expect(node.querySelector('.customer-layout')?.getAttribute('data-theme')).toBe('dark')
+    expect(localStorage.getItem('parcelflow:customer-theme')).toBe('dark')
+  })
+
+  it('can switch themes when browser storage is unavailable', async () => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new DOMException('Blocked', 'SecurityError') })
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new DOMException('Blocked', 'SecurityError') })
+    await mountShell()
+    await act(async () => node.querySelector<HTMLButtonElement>('.customer-theme-toggle')!.click())
+    expect(node.querySelector('.customer-layout')?.getAttribute('data-theme')).toBe('light')
+  })
+
   it('keeps decoration hidden from screen readers and lets the user pause and resume', async () => {
     await mountShell()
     expect(node.querySelector('.pf-customer-backdrop')?.getAttribute('aria-hidden')).toBe('true')

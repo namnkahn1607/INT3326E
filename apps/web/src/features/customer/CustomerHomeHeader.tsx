@@ -12,7 +12,10 @@ const items = [
   { path: '/customer/notifications', label: 'Thông báo', end: false },
 ] as const
 
-export function CustomerHomeHeader() {
+export function CustomerHomeHeader({ theme = 'dark', onToggleTheme }: {
+  theme?: 'dark' | 'light'
+  onToggleTheme?: () => void
+}) {
   const { user } = useAuth()
   const account = useRef<HTMLDetailsElement>(null)
   const initials = (user?.displayName ?? 'PF').split(/[\s@]+/).filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase()
@@ -32,6 +35,9 @@ export function CustomerHomeHeader() {
         }}>
           <summary aria-label="Tài khoản" title={user?.displayName ?? 'Tài khoản'}><span aria-hidden="true">{initials}</span></summary>
           <div className="customer-account-panel"><strong>{user?.displayName ?? 'Tài khoản'}</strong>
+            {onToggleTheme && <button type="button" className="customer-theme-toggle" aria-pressed={theme === 'light'} onClick={onToggleTheme}>
+              <Icon name="sun" /><span>Giao diện sáng</span><span className="customer-theme-state" aria-hidden="true">{theme === 'light' ? 'Bật' : 'Tắt'}</span>
+            </button>}
             <SessionControls />
           </div>
         </details>
