@@ -118,8 +118,6 @@
 .pf-shipment-skeleton { width: 100%; display: grid; gap: 12px; margin-top: 24px; }
 .pf-shipment-skeleton span { height: 14px; border-radius: 8px; background: var(--pf-soft); }
 .pf-shipment-skeleton span:last-child { width: 65%; }
-.pf-promo-caption { position: absolute; bottom: 23px; right: 28px; display: flex; align-items: center; gap: 6px; color: var(--pf-primary-hover); font-size: 12px; letter-spacing: .01em; }
-.pf-promo-caption svg { width: 13px; height: 13px; }
 .pf-active-shipment { background: white; border: 1px solid #ecece8; border-radius: 24px; padding: 26px 28px 20px; min-width: 0; box-shadow: 0 5px 16px #20201e03; }
 .pf-active-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .pf-active-heading h2 { font-family: 'Satoshi', var(--font-sans); font-size: 20px; letter-spacing: -.5px; font-weight: 700; }
@@ -153,11 +151,6 @@
 .pf-shipment-state h3 { font-family: 'Satoshi', var(--font-sans); font-size: 20px; line-height: 1.3; }
 .pf-shipment-state > p { font-size: 15px; color: var(--pf-muted); margin-top: 10px; line-height: 1.7; max-width: 28ch; }
 .pf-shipment-state .pf-shipment-detail { width: 100%; margin-top: 22px; }
-.pf-home-assurance { display: flex; justify-content: space-around; gap: 32px; margin-top: 38px; padding: 28px 0 12px; }
-.pf-home-assurance > div { display: flex; align-items: center; gap: 13px; }
-.pf-home-assurance > div > svg { color: #92918a; width: 24px; height: 24px; }
-.pf-home-assurance strong { font-size: 15px; font-weight: 600; }
-.pf-home-assurance small { display: block; color: var(--pf-muted); font-size: 14px; margin-top: 4px; }
 .pf-home-footer { border-top: 1px solid var(--pf-border); display: flex; align-items: center; justify-content: space-between; padding-block: 24px; font-size: 14px; color: var(--pf-muted); gap: 16px; }
 .customer-layout--premium .page-container { width: min(1200px, calc(100% - 80px)); max-width: 1200px; padding: 48px 0 56px; font-size: 16px; }
 .customer-layout--premium .page-header { align-items: flex-start; gap: 24px; margin-bottom: 32px; }
@@ -280,13 +273,11 @@
   .pf-promo-copy > p:not(.pf-eyebrow) { font-size: 15px; max-width: 100%; }
   .pf-promo-visual { position: relative; top: auto; right: auto; width: 84%; max-width: 320px; align-self: flex-end; margin: -16px -10px -12px 0; }
   .pf-promo-cta { margin-top: 15px; }
-  .pf-promo-caption { display: none; }
   .pf-promo-controls { position: relative; left: auto; bottom: auto; align-self: flex-start; }
   .pf-active-shipment { border-radius: 20px; padding: 22px; }
   .pf-shipment-progress { display: block; margin-bottom: 8px; }
   .pf-shipment-progress li { flex-direction: row; min-height: 43px; }
   .pf-shipment-progress li:not(:last-child)::before { width: 1px; height: auto; left: 8px; top: 20px; bottom: 3px; }
-  .pf-home-assurance { flex-direction: column; gap: 22px; margin-top: 10px; padding: 22px 8px 0; }
   .pf-home-footer { padding-block: 22px; gap: 16px; font-size: 13px; flex-wrap: wrap; }
 }
 @media (prefers-reduced-motion: reduce) {

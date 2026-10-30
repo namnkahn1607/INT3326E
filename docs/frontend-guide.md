@@ -3,7 +3,8 @@
 Nguồn: [PF SPEC 01 nội dung v1.3](spec-baseline.md), UI01–03.
 Frontend dùng chung tại `apps/web`; cấu trúc code theo [ARCHITECTURE](../ARCHITECTURE.md).
 Không tạo app riêng cho từng role. React/Vite/TypeScript, Firebase Authentication
-và Hosting được giữ theo package hiện có; Customer/Admin dùng tông tím.
+và Hosting được giữ theo package hiện có. Login, Customer và Admin dùng giao diện
+Dark Minimal: nền đen than, bề mặt xám tối và điểm nhấn tím tiết chế. Driver giữ theme riêng.
 
 ## Routing và trách nhiệm
 
@@ -25,8 +26,22 @@ hoặc Pub/Sub trực tiếp, không giả lập phiên thành công trong ứng
 Overview/List/Detail và Admin Shipments/Assignment/Drivers đã có API client.
 Backend hiện có Create và Admin directory; danh sách/chi tiết/Assign shipment
 vẫn cần được hoàn thiện. Giao diện gọi API không chứng minh endpoint đã deploy.
-Customer History/Notifications và Admin Overview/Accounts/LiveMap còn dữ liệu
-mẫu; phải phân biệt rõ với dữ liệu tài khoản. Driver chưa có danh sách đơn thật.
+Admin Overview đọc cùng API danh sách, chỉ đếm trên tối đa 20 đơn vừa tải;
+không coi là số liệu toàn hệ thống. Customer History/Notifications và Admin
+Accounts/LiveMap còn dữ liệu mẫu; phải phân biệt rõ với dữ liệu tài khoản.
+Driver chưa có danh sách đơn thật.
+
+Theme tập trung tại `apps/web/src/dark-dashboard.css`, giới hạn trong `.pf-dark`.
+Customer dùng thanh điều hướng ngang phía trên, menu tài khoản và một nút tạo đơn.
+Header và nội dung Customer căn cùng khung tối đa 1200px; menu nằm cạnh logo,
+tra cứu gọn cạnh lời chào trên desktop và chuyển hàng trên mobile.
+Tổng quan Customer dùng banner mở hòa vào nền và một thẻ đơn đang giao,
+đọc trên tối đa 20 đơn vừa tải; không thêm danh sách đơn trùng hoặc số liệu mẫu.
+Đường giao nhận động nằm trong banner; thông tin dịch vụ được gom vào chân trang.
+Admin dùng `DashboardNavigation` với sidebar 240px có thể thu/mở và drawer mobile.
+Tên trang chỉ xuất hiện trong nội dung; mục điều hướng active theo route.
+Form, bảng, trạng thái, skeleton, hộp thoại và intro đăng nhập cùng bảng màu;
+không thay đổi API contract, cơ chế xác thực hoặc quyền thao tác.
 
 Phần bổ sung tuần 4 frontend có [chi tiết/lịch sử cơ bản và báo thất bại Admin](shipment-lifecycle.md).
 Backend Detail/Fail vẫn là điều kiện cần để nghiệm thu luồng thật.

@@ -47,7 +47,7 @@ export function ShipmentMapDialog({ open, kind, point, query, district, needsRev
     return () => controller.abort()
   }, [open, districtName, districtQuery, locate])
   const area = viewport?.query === districtQuery ? viewport.area : null
-  return createPortal(<dialog ref={dialog} className="shipment-address-dialog shipment-map-dialog customer-api-page" aria-labelledby="shipment-map-title"
+  return createPortal(<div className="pf-dark"><dialog ref={dialog} className="shipment-address-dialog shipment-map-dialog customer-api-page" aria-labelledby="shipment-map-title"
     onCancel={event => { event.preventDefault(); event.stopPropagation(); onClose() }} onKeyDown={event => {
       event.stopPropagation()
       if (event.key === 'Escape') { event.preventDefault(); onClose() }
@@ -65,5 +65,5 @@ export function ShipmentMapDialog({ open, kind, point, query, district, needsRev
           needsReview={needsReview} onSelect={onSelect} onResolvingChange={onResolvingChange} />
       </Suspense>
     </div>
-  </dialog>, document.body)
+  </dialog></div>, document.body)
 }

@@ -15,7 +15,7 @@ function DriverDirectory() {
   const load = useCallback((cursor: string | undefined, signal: AbortSignal) => getDrivers({ cursor }, signal), [])
   const state = useAdminPage(load, 'drivers')
   return <div className="admin-page admin-api-page">
-    <div className="page-header"><div><span className="admin-page-kicker">ĐỘI NGŨ GIAO NHẬN</span>
+    <div className="page-header"><div>
       <h1 className="page-title">Tài xế</h1>
       <p className="page-subtitle">Danh sách từ API. Số đơn active không phải trạng thái online; tài xế có thể nhận nhiều đơn.</p>
     </div><button className="btn btn-outline" type="button" disabled={state.loading} onClick={state.refresh}>Làm mới</button></div>

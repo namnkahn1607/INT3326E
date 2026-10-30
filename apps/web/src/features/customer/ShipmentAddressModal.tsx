@@ -119,7 +119,7 @@ export function ShipmentAddressModal({ kind, value, onSave, onClose }: {
     onSave({ ...draft, street: draft.street.trim(), area: administrativeAddress(draft.divisions), details: draft.details.trim() })
   }
   const divisions = draft.divisions ?? { province: null, district: null, ward: null }
-  return createPortal(<dialog ref={dialog} className="shipment-address-dialog customer-api-page" aria-labelledby="address-modal-title"
+  return createPortal(<div className="pf-dark"><dialog ref={dialog} className="shipment-address-dialog customer-api-page" aria-labelledby="address-modal-title"
     onCancel={event => { event.preventDefault(); close() }} onKeyDown={containFocus}>
     <form onSubmit={save} noValidate>
       <header className="shipment-address-dialog-header"><div><p className="customer-section-kicker">{kind === 'pickup' ? 'Bên gửi' : 'Bên nhận'}</p>
@@ -156,5 +156,5 @@ export function ShipmentAddressModal({ kind, value, onSave, onClose }: {
         <div><button type="button" className="btn btn-outline" onClick={close}>Hủy</button>
           <button type="submit" className="btn btn-primary" disabled={resolving}>{resolving ? 'Đang lấy địa chỉ…' : 'Xong'}</button></div></footer>
     </form>
-  </dialog>, document.body)
+  </dialog></div>, document.body)
 }

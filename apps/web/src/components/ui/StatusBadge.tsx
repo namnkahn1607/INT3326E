@@ -15,10 +15,11 @@ export function StatusBadge({ status }: StatusBadgeProps) {
   return (
     <span
       className="status-badge"
+      data-status={status}
       style={{
-        color: config.color,
-        backgroundColor: config.bg,
-        border: `1px solid ${config.color}22`,
+        color: `var(--status-color, ${config.color})`,
+        backgroundColor: `var(--status-bg, ${config.bg})`,
+        border: `1px solid var(--status-line, ${config.color}22)`,
       }}
     >
       <i aria-hidden="true" />

@@ -102,12 +102,11 @@ export function LoginPage() {
     finally { submitting.current = false }
   }
 
-  return <main className="auth-page auth-login">
+  return <main className="auth-page auth-login pf-dark">
     <div className="auth-login-shell">
       <section className="auth-story" aria-label="ParcelFlow — Giao nhận bưu kiện">
         <div className="auth-brand" translate="no">Parcel<span>Flow</span><i>.</i></div>
         <div className="auth-story-copy">
-          <p className="auth-eyebrow">KẾT NỐI MỖI CHUYẾN GIAO</p>
           <h2>Gửi trọn niềm tin.<br /><span>Giao từng khoảnh khắc.</span></h2>
           <p>Từ điểm lấy đến tận tay người nhận,<br className="auth-desktop-break" /> cùng ParcelFlow trên từng hành trình.</p>
         </div>
@@ -116,7 +115,6 @@ export function LoginPage() {
       </section>
       <section className="auth-card auth-login-card" aria-labelledby="auth-title">
         <div className="auth-stagger" style={order(0)}>
-          <p className="auth-eyebrow">BẮT ĐẦU HÀNH TRÌNH CỦA BẠN</p>
           <h1 id="auth-title">Chào mừng trở lại</h1>
           <p className="auth-description">Đăng nhập để tiếp tục cùng ParcelFlow.</p>
         </div>

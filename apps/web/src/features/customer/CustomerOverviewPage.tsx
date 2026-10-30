@@ -7,12 +7,33 @@ import { CustomerHomeIcon } from './CustomerHomeIcon'
 import deliveryArtwork from '../../assets/delivery-parcels.webp'
 import './customer-home.css'
 import { StatusBadge } from '../../components/ui/StatusBadge'
+import { CustomerBackdrop } from './CustomerBackdrop'
+
+interface OverviewOrders {
+  shipments: ShipmentResponse[]
+  loading: boolean
+  error: boolean
+}
 
 export function CustomerOverviewPage() {
   const { user } = useAuth()
-  const name = user?.displayName.split(/[\s@]+/)[0] || 'there'
+  const name = user?.displayName.split(/[\s@]+/)[0] || 'bạn'
+  return <CustomerOverviewContent key={user?.id ?? 'signed-out'} name={name} />
+}
+
+function CustomerOverviewContent({ name }: { name: string }) {
   const [trackingNumber, setTrackingNumber] = useState('')
   const navigate = useNavigate()
+  const [orders, setOrders] = useState<OverviewOrders>({ shipments: [], loading: true, error: false })
+  useEffect(() => {
+    const controller = new AbortController()
+    getShipments({ limit: 20 }, controller.signal).then(page => {
+      if (!controller.signal.aborted) setOrders({ shipments: page.data, loading: false, error: false })
+    }).catch(() => {
+      if (!controller.signal.aborted) setOrders({ shipments: [], loading: false, error: true })
+    })
+    return () => controller.abort()
+  }, [])
 
   function track(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -21,33 +42,28 @@ export function CustomerOverviewPage() {
   }
 
   return <div className="pf-home pf-home-container">
-    <section className="pf-welcome" aria-labelledby="pf-welcome-title">
-      <p className="pf-eyebrow">DELIVER ANYWHERE</p>
-      <h1 id="pf-welcome-title">Hello, {name}! <span className="pf-wave" aria-hidden="true">👋</span></h1>
-      <p className="pf-welcome-copy">Send, track and receive with ease.</p>
-    </section>
+    <div className="pf-home-heading">
+      <section className="pf-welcome" aria-labelledby="pf-welcome-title">
+        <h1 id="pf-welcome-title">Xin chào, {name}</h1>
+      </section>
 
-    <form className="pf-track-form" onSubmit={track} aria-label="Tra cứu đơn hàng">
-      <div className="pf-track-input">
-        <CustomerHomeIcon name="search" />
-        <label htmlFor="pf-tracking-number" className="sr-only">Mã vận đơn</label>
-        <input id="pf-tracking-number" name="trackingNumber" autoComplete="off"
-          spellCheck={false} value={trackingNumber} onChange={event => setTrackingNumber(event.target.value)}
-          placeholder="Nhập mã vận đơn để tìm đơn hàng…" />
-      </div>
-      <button type="submit" className="pf-primary-button">Tìm đơn hàng<CustomerHomeIcon name="arrow" /></button>
-    </form>
+      <form className="pf-track-form" onSubmit={track} aria-label="Tra cứu đơn hàng">
+        <div className="pf-track-input">
+          <CustomerHomeIcon name="search" />
+          <label htmlFor="pf-tracking-number" className="sr-only">Mã vận đơn</label>
+          <input id="pf-tracking-number" name="trackingNumber" autoComplete="off"
+            spellCheck={false} value={trackingNumber} onChange={event => setTrackingNumber(event.target.value)}
+            placeholder="Nhập mã vận đơn…" />
+        </div>
+        <button type="submit" className="pf-primary-button">Tìm đơn</button>
+      </form>
+    </div>
 
     <div className="pf-home-feature-grid">
       <CustomerPromoBanner />
-      <ActiveShipment key={user?.id ?? 'signed-out'} />
+      <ActiveShipment orders={orders} />
     </div>
 
-    <section className="pf-home-assurance" aria-label="Delivery essentials">
-      <div><CustomerHomeIcon name="shield" /><span><strong>Handled with care</strong><small>Every parcel matters.</small></span></div>
-      <div><CustomerHomeIcon name="box" /><span><strong>Everything in one place</strong><small>Your orders, simply organised.</small></span></div>
-      <div><CustomerHomeIcon name="truck" /><span><strong>Stay in the loop</strong><small>Clear updates for your delivery.</small></span></div>
-    </section>
   </div>
 }
 
@@ -70,6 +86,7 @@ function CustomerPromoBanner() {
   }
   return <section className={'pf-promo' + (animate ? ' pf-promo--animated' : '')}
     aria-roledescription="carousel" aria-label="Giới thiệu ParcelFlow">
+    <CustomerBackdrop variant="promo" />
     <div className="pf-promo-slides">
       {promoSlides.map((slide, index) => <div key={slide.to} className={'pf-promo-copy' + (index === active ? ' is-active' : '')}
         aria-hidden={index !== active} inert={index !== active} role="group" aria-roledescription="slide"
@@ -99,56 +116,46 @@ function CustomerPromoBanner() {
       </button>
     </div>
     <p className="sr-only" role="status">Nội dung {active + 1} / {promoSlides.length}: {promoSlides[active].title.join(' ')}</p>
-    <span className="pf-promo-caption"><CustomerHomeIcon name="shield" />A little care. A long way.</span>
   </section>
 }
 
-function ActiveShipment() {
-  const [shipment, setShipment] = useState<ShipmentResponse | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(false)
-  useEffect(() => {
-    const controller = new AbortController()
-    getShipments({ limit: 20 }, controller.signal).then(page => {
-      if (!controller.signal.aborted) setShipment(page.data.find(item => ['CREATED', 'ASSIGNED', 'PICKED_UP'].includes(item.status)) ?? null)
-    }).catch(() => { if (!controller.signal.aborted) setError(true) })
-      .finally(() => { if (!controller.signal.aborted) setLoading(false) })
-    return () => controller.abort()
-  }, [])
+function ActiveShipment({ orders }: { orders: OverviewOrders }) {
+  const { loading, error } = orders
+  const shipment = orders.shipments.find(item => ['CREATED', 'ASSIGNED', 'PICKED_UP'].includes(item.status)) ?? null
   const steps = [
-    { status: 'CREATED', label: 'Order created' },
-    { status: 'ASSIGNED', label: 'Driver assigned' },
-    { status: 'PICKED_UP', label: 'In transit' },
-    { status: 'DELIVERED', label: 'Delivered' },
+    { status: 'CREATED', label: 'Đã tạo đơn' },
+    { status: 'ASSIGNED', label: 'Đã phân công' },
+    { status: 'PICKED_UP', label: 'Đang vận chuyển' },
+    { status: 'DELIVERED', label: 'Đã giao hàng' },
   ]
   const currentStep = shipment ? steps.findIndex(step => step.status === shipment.status) : -1
 
   return <section className="pf-active-shipment" aria-labelledby="pf-active-title">
-    <div className="pf-active-heading"><h2 id="pf-active-title">Active shipment</h2>
-      <Link to="/customer/shipments" aria-label="View all your orders"><CustomerHomeIcon name="arrow" /></Link></div>
+    <div className="pf-active-heading"><h2 id="pf-active-title">Đơn đang giao</h2>
+      <Link to="/customer/shipments" aria-label="Xem tất cả đơn hàng"><CustomerHomeIcon name="arrow" /></Link></div>
     {loading ? <div className="pf-shipment-state" role="status"><span className="pf-empty-package"><CustomerHomeIcon name="box" /></span>
-      <h3>Getting your latest update…</h3><p>Just a moment.</p>
+      <h3>Đang tải đơn hàng…</h3><p>Đang lấy trạng thái mới nhất.</p>
       <div className="pf-shipment-skeleton" aria-hidden="true"><span /><span /><span /></div></div>
     : shipment ? <>
       <div className="pf-shipment-package"><span className="pf-package-symbol"><CustomerHomeIcon name="box" /></span>
         <div><p className="pf-shipment-id" translate="no"># {shipment.trackingNumber}</p>
-          <p className="pf-package-name">{shipment.packageDescription || 'Your parcel'}</p></div></div>
+          <p className="pf-package-name">{shipment.packageDescription || 'Bưu kiện của bạn'}</p></div></div>
       <div className="pf-active-status"><StatusBadge status={shipment.status} /></div>
-      <ol className="pf-shipment-progress" aria-label="Shipment progress">
+      <ol className="pf-shipment-progress" aria-label="Tiến trình giao hàng">
         {steps.map((step, index) => <li key={step.status} className={index <= currentStep ? 'is-complete' : ''}
           aria-current={index === currentStep ? 'step' : undefined}>
           <span className="pf-progress-dot">{index <= currentStep && <CustomerHomeIcon name="check" />}</span>
-          <span>{step.label}{index === currentStep && <small>Current status</small>}</span>
+          <span>{step.label}{index === currentStep && <small>Hiện tại</small>}</span>
         </li>)}
       </ol>
-      <Link className="pf-shipment-detail" to={'/customer/shipments/' + shipment.id}>View shipment details<CustomerHomeIcon name="arrow" /></Link>
-      <p className="pf-scope-note">Latest active shipment in the 20 most recent orders. No live GPS shown.</p>
+      <Link className="pf-shipment-detail" to={'/customer/shipments/' + shipment.id}>Chi tiết đơn hàng<CustomerHomeIcon name="arrow" /></Link>
+      <p className="pf-scope-note">Đơn đang giao trong 20 đơn vừa tải. Chưa hiển thị GPS trực tiếp.</p>
     </> : <div className="pf-shipment-state" role={error ? 'alert' : 'status'}>
       <span className="pf-empty-package"><CustomerHomeIcon name="box" /></span>
-      <h3>{error ? 'Updates are unavailable' : 'Ready for your next delivery?'}</h3>
-      <p>{error ? 'Your orders could not be loaded. Open Orders to check or try again.' : 'No active shipment in your latest orders. Send something that matters.'}</p>
+      <h3>{error ? 'Chưa tải được đơn hàng' : 'Chưa có đơn đang giao'}</h3>
+      <p>{error ? 'Mở danh sách đơn để kiểm tra hoặc thử tải lại.' : 'Không có đơn đang giao trong các đơn vừa tải.'}</p>
       <Link className="pf-shipment-detail" to={error ? '/customer/shipments' : '/customer/create'}>
-        {error ? 'View orders' : 'Send a parcel'}<CustomerHomeIcon name="arrow" /></Link>
+        {error ? 'Xem đơn hàng' : 'Gửi bưu kiện'}<CustomerHomeIcon name="arrow" /></Link>
     </div>}
   </section>
 }

@@ -24,7 +24,6 @@ export function AdminAccountsPage() {
     <div className="admin-page">
       <div className="page-header">
         <div>
-          <span className="admin-page-kicker">NGƯỜI DÙNG</span>
           <h1 className="page-title">Tài khoản và phân quyền</h1>
           <p className="page-subtitle">
             Quản lý vai trò và trạng thái người dùng ParcelFlow.
