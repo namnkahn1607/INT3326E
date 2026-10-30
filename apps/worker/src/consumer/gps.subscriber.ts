@@ -45,7 +45,9 @@ export class GpsSubscriber implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  async handleIncomingMessage(message: Message | { id: string; data: Buffer; ack: () => void }): Promise<void> {
+  async handleIncomingMessage(
+    message: Message | { id: string; data: Buffer; ack: () => void; nack?: () => void },
+  ): Promise<void> {
     const rawData = message.data.toString('utf-8');
     const result = this.processor.processMessage(rawData);
 
@@ -63,11 +65,22 @@ export class GpsSubscriber implements OnModuleInit, OnModuleDestroy {
           `[EVT01 GPS Event] ID: ${message.id} | eventId: ${event.eventId} | driverId: ${event.driverId} | coords: (${event.lat}, ${event.lng}) | time: ${event.clientTimestampIso}${tag}`,
         );
 
-        // Lưu dữ liệu vào repository GPS
-        await this.repository.recordGpsEvent(event, isHistoryOnly);
+        try {
+          // Lưu dữ liệu vào repository GPS (Transaction atomic)
+          await this.repository.recordGpsEvent(event, isHistoryOnly);
 
-        // Xác nhận tin nhắn đã xử lý thành công
-        message.ack();
+          // Quy tắc D08: Chỉ ACK sau khi commit database thành công
+          message.ack();
+        } catch (error: any) {
+          this.logger.error(
+            `[GPS Persistence Failed] ID: ${message.id} - ${error.message}. Transaction rolled back; message not acknowledged.`,
+            error.stack,
+          );
+          if (typeof message.nack === 'function') {
+            message.nack();
+          }
+          throw error;
+        }
         break;
       }
 
