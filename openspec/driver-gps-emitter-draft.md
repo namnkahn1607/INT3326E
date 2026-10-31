@@ -441,3 +441,34 @@ database hoặc hạ tầng. Các file và lệnh kiểm chứng nằm trong
 `docs/driver-dashboard-gps.md`. Chưa có trình duyệt kết nối để kiểm tra trực quan.
 W605 còn mở vì handler GPS chưa có trong checkout và chưa kiểm chứng môi trường
 thật. G205/G206 của giai đoạn trước giữ nguyên, không dùng test mới để đóng chúng.
+
+### 11.7. Rà soát thời hạn gửi và hủy yêu cầu
+
+Rà soát ngày 01/11/2026 trên baseline `9ee7c10`: W6-05 quy định timeout 7 giây
+và hủy khi rời trang. API client đang lấy token trước khi thiết lập timeout và
+listener hủy; token chậm có thể giữ dashboard ở trạng thái chờ vô hạn. Phạm vi
+sửa là áp dụng cùng một thời hạn cho lấy token, gửi HTTP và đọc phản hồi, đồng
+thời ngăn gửi HTTP muộn sau khi hết hạn hoặc hủy. Giữ nguyên contract và các
+giới hạn W6-01–06; không triển khai endpoint hoặc thay đổi hạ tầng.
+
+Review yêu cầu: thời hạn được tính từ lúc gọi API; hủy trong lúc chờ token phải
+kết thúc ngay, không gửi HTTP khi token đến muộn. Test dùng fake timers và token
+deferred để phân biệt lỗi này với timeout HTTP đã được kiểm tra trước đó.
+
+- [x] W606: Áp dụng timeout/hủy xuyên suốt API client; kiểm chứng token chậm,
+  hủy trước HTTP, token đến muộn và hồi quy frontend (W6-03/05). Ba test mới
+  thất bại trước sửa và đạt sau sửa; 52 test tập trung, toàn bộ 354 test frontend,
+  lint/build đạt ngày 01/11/2026.
+- [ ] W607: Kiểm tra trực quan dashboard và Start/Stop bằng fixture local;
+  phân biệt kết quả mock với nghiệm thu cloud W605 (W6-01–06).
+
+Phân tích chỉ đọc: W606 khắc phục khoảng trống W6-05 trong phạm vi hiện hành;
+W607 bổ sung kiểm chứng giao diện còn thiếu. W605 tiếp tục phụ thuộc endpoint
+ingest, phiên Driver và quyền quan sát Pub/Sub của môi trường thật.
+
+Kết quả implement: W606 đạt ở mức local/mock. W607 chưa thực hiện vì công cụ
+trình duyệt dừng khi không xác định được URL đủ tin cậy; không dùng test jsdom
+thay cho kiểm tra trực quan. Kiểm tra HTTP chỉ đọc thấy Hosting còn bundle
+Driver skeleton cũ, API Auth trả 401 khi thiếu token và CORS GPS trả 204.
+Không có request GPS thật, đăng nhập, thay đổi cloud hoặc triển khai trong
+lượt này. Chi tiết và lệnh chạy lại tại `docs/driver-dashboard-gps.md`.
