@@ -1,7 +1,8 @@
 # Bàn giao Driver dashboard và gửi GPS thử
 
-Phạm vi: TV4 tuần 6 lịch nhóm (26/10–01/11/2026), tương ứng VII.4/tuần 3
-lộ trình sản phẩm. Branch `feature/driver-dashboard-gps`, base develop `8038c83`.
+Phạm vi: Driver login/dashboard và gửi GPS thử, mốc 26/10–01/11/2026,
+tương ứng VII.4/tuần 3 lộ trình sản phẩm. Branch `feature/driver-dashboard-gps`,
+base develop `8038c83`.
 Yêu cầu và tasks: mục 11 của [đặc tả Driver](../openspec/driver-gps-emitter-draft.md).
 
 ## Hành vi
@@ -84,3 +85,46 @@ quyền merge đã được cập nhật ngày 26/10 như ghi ở trên.
 
 W605 còn mở đến khi có bằng chứng này. Không đánh dấu toàn bộ tuần 6 hoàn tất
 chỉ dựa vào kết quả local.
+
+## Kiểm chứng thời hạn gửi ngày 01/11/2026
+
+Rà soát tiếp từ baseline `9ee7c10`. API client áp dụng cùng một thời hạn cho
+lấy Firebase token, gửi HTTP và đọc phản hồi; adapter GPS tiếp tục đặt 7 giây.
+Hủy khi rời trang có hiệu lực ngay cả trong lúc chờ token. Token đến sau khi
+hết hạn hoặc hủy không được tạo request HTTP muộn. Không thay đổi payload,
+nhịp phát mẫu, cơ chế xác thực hoặc thêm retry/queue.
+
+Ba test hồi quy tái hiện lỗi trước khi sửa và đều đạt sau sửa: token không trả
+về trong thời hạn, hủy trong lúc lấy token, và tổng thời gian lấy token + HTTP.
+
+| Kiểm tra | Kết quả | Mức bằng chứng |
+| --- | --- | --- |
+| API client + adapter GPS + dashboard + emitter | 52/52 test, 4 file | Local/mock, gồm 3 test hồi quy mới |
+| Toàn bộ frontend | 354/354 test, 27 file | Local/mock |
+| `npm run lint:web` | Exit 0 | ESLint |
+| `npm run build:web` | Exit 0 | TypeScript + Vite; chưa deploy |
+
+Chạy lại bộ kiểm tra tập trung từ gốc repo:
+
+```powershell
+npm run test --workspace=@parcelflow/web -- src/api/client.spec.ts src/api/endpoints/locations.spec.ts src/features/driver/DriverPlaceholderPage.spec.tsx src/features/driver/GpsEmitter.spec.tsx
+```
+
+Kiểm tra HTTP chỉ đọc cùng ngày ghi nhận:
+
+- `GET https://int3326e.web.app/driver`: 200. Bundle Hosting vẫn có Driver
+  skeleton dùng `demo-driver-1` và route Driver không qua login; chưa phải
+  dashboard dùng Firebase của baseline hiện tại. HTTP 200 không xác nhận
+  phiên bản frontend đã được cập nhật.
+- `GET https://backend-service-wcvss3dnxa-as.a.run.app/v1/auth/me` không kèm
+  token: 401 `UNAUTHENTICATED`. Chưa kiểm tra tài khoản Driver thật.
+- `OPTIONS /v1/locations` trên API trên: 204, cho phép origin
+  `https://int3326e.web.app` và method POST. Preflight không chứng minh handler
+  ingest đã tồn tại hoặc Pub/Sub đã nhận event.
+
+Chưa có cấu hình Firebase local; không tạo hoặc thay đổi tài khoản/claim.
+Công cụ điều khiển trình duyệt dừng vì không xác định được URL hiện tại đủ
+tin cậy, nên W607 chưa có bằng chứng trực quan. W605 vẫn mở: cần cấu hình và
+triển khai frontend hiện hành, endpoint ingest hoạt động, phiên Driver hợp lệ
+và đối chiếu eventId trên kênh Pub/Sub thử riêng. Không gửi GPS hoặc deploy
+trong lượt kiểm tra HTTP này.
