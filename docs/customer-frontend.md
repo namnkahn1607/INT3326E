@@ -48,3 +48,10 @@ phần này không thay thế tab History hoặc triển khai tracking.
 các mô tả màu cam và scaffold trong báo cáo là lịch sử, không thay thiết kế tím
 hiện hành. Chạy lint/build/test frontend theo [hướng dẫn chung](frontend-guide.md).
 Luồng thật phụ thuộc API đã deploy, Firebase và liên kết business user đúng.
+
+Ngày 02/11/2026 đã merge backend List/Detail/Assign từ develop `4b6c56a` và
+kiểm tra form tạo đơn → mở đơn vừa tạo → danh sách → chi tiết bằng HTTP Nest và
+SQL local cô lập. Admin đọc được cùng đơn, gán/gán lại; Customer tải lại thấy
+lịch sử cập nhật. Không thêm đơn giả vào UI/cache để che lỗi đọc. Firebase và
+chọn địa chỉ trong bộ test là fixture, không phải nghiệm thu Cloud.
+Chạy lại: `npm run test:integration --workspace=@parcelflow/web`.

@@ -22,10 +22,11 @@ hoặc Pub/Sub trực tiếp, không giả lập phiên thành công trong ứng
 
 ## Trạng thái tích hợp
 
-Đối chiếu code tại `6d75d53`: login và form tạo đơn đã dùng luồng thật; Customer
-Overview/List/Detail và Admin Shipments/Assignment/Drivers đã có API client.
-Backend hiện có Create và Admin directory; danh sách/chi tiết/Assign shipment
-vẫn cần được hoàn thiện. Giao diện gọi API không chứng minh endpoint đã deploy.
+Đối chiếu sau merge develop `4b6c56a` tại `11c4b97` ngày 02/11/2026: login,
+Create, Customer Overview/List/Detail và Admin Shipments/Assignment/Drivers đã
+có API client. Backend đã có Create, List/Detail, Assign và Admin directory.
+UI Customer/Admin đã được kiểm tra cùng Nest và SQL local cô lập; kết quả
+local không chứng minh endpoint đã deploy hoặc Cloud SQL đã đúng cấu hình.
 Admin Overview đọc cùng API danh sách, chỉ đếm trên tối đa 20 đơn vừa tải;
 không coi là số liệu toàn hệ thống. Customer History/Notifications và Admin
 Accounts còn dữ liệu mẫu; phải phân biệt rõ với dữ liệu tài khoản.
@@ -46,7 +47,7 @@ Form, bảng, trạng thái, skeleton, hộp thoại và intro đăng nhập cù
 không thay đổi API contract, cơ chế xác thực hoặc quyền thao tác.
 
 Phần bổ sung tuần 4 frontend có [chi tiết/lịch sử cơ bản và báo thất bại Admin](shipment-lifecycle.md).
-Backend Detail/Fail vẫn là điều kiện cần để nghiệm thu luồng thật.
+Backend Detail đã có; Fail vẫn cần được hoàn thiện để nghiệm thu luồng đó.
 Phần tuần 5 nối [tracking và bản đồ tài xế](live-tracking.md) qua API09/11;
 LiveMap không còn danh sách mẫu, chỉ hiển thị trang tài xế API đã tải.
 
@@ -60,3 +61,9 @@ Từ gốc repo: `npm run lint:web`, `npm run build:web`,
 `npm run test --workspace=@parcelflow/web`. Cách chạy và Hosting xem
 [README frontend](../apps/web/README.md) và [bàn giao cấu hình](tv6-deploy-handoff.md).
 Nghiệm thu tuần 1 được lưu tại [báo cáo frontend](frontend-week1-handoff.md).
+
+Tuần lịch 6: `npm run test:integration --workspace=@parcelflow/web` build API,
+kiểm tra kiểu bộ test rồi chạy UI → HTTP Nest → PGlite trong RAM. Bộ test không
+đọc `.env`, không cần tài khoản Firebase/SQL thật; Auth và chọn địa chỉ là fixture,
+panel GPS ngoài phạm vi. Không có chế độ đăng nhập thử trong ứng dụng production.
+Kết quả và giới hạn xem [bàn giao phân công](admin-assignment-handoff.md).

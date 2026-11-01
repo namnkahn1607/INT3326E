@@ -39,7 +39,14 @@ không chép lại schema hoặc suy ra online/offline từ số đơn active.
 
 ## Tích hợp và nghiệm thu
 
-Frontend đã được kiểm tra local/mock; xem [bàn giao Admin](admin-assignment-handoff.md).
-Backend danh sách/chi tiết/Assign còn thiếu tại snapshot kiểm tra 30/10/2026;
-mock không thay bằng chứng phân công thật hoặc Driver thấy đúng đơn.
-Giữ nguyên backend, Driver, GPS và database trong nhiệm vụ frontend này.
+Backend danh sách/chi tiết/Assign được bổ sung ở develop `7b5754f`, đã merge
+cùng `4b6c56a` vào nhánh frontend ngày 02/11/2026. UI/client hiện có tương thích
+với handler mới, giữ thiết kế và contract; xem [bàn giao Admin](admin-assignment-handoff.md).
+Đã kiểm tra UI với Nest thật và SQL PGlite cô lập: tạo/xem lại, gán/gán lại,
+phân trang và phục hồi lỗi. Firebase và chọn địa chỉ là fixture; GPS ngoài scope.
+Chạy từ gốc repo: `npm run test:integration --workspace=@parcelflow/web`.
+Không dùng kết quả này thay nghiệm thu Firebase/Cloud SQL thật hoặc khóa
+PostgreSQL đa connection. Sau deploy phát hiện hai enum SQL không so sánh trực
+tiếp được; người dùng đã duyệt sửa tối thiểu projection/filter backend và test.
+Xem kết quả hồi quy text/enum tại bàn giao. Không đổi API/nghiệp vụ, Driver,
+GPS hoặc database nhóm; cần deploy bản sửa query để xác nhận lại trên Cloud.

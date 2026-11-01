@@ -5,6 +5,9 @@
 Date: 2026-10-24. Base inspected: a2c245f trên feature/frontend (working changes,
 chưa commit). Không thay AGENTS.md hoặc source backend/Worker/Driver/Customer.
 
+Trạng thái mới nhất: xem mục **Tích hợp tuần lịch 6 — 02/11/2026** ở cuối file.
+Các nhận định backend còn thiếu bên dưới chỉ áp dụng snapshot lịch sử được ghi ngày.
+
 ## Results
 
 | Check | Observed result |
@@ -74,3 +77,84 @@ Lần test đầu trong sandbox bị `spawn EPERM` trước khi chạy; chạy l
 tạo tiến trình con thì đạt. Lần khởi động Vite qua script lồng không truyền đúng
 tham số; chạy trực tiếp script workspace thì browser harness đạt. Không sửa
 script, dependency hoặc Auth chỉ để vượt kiểm tra.
+
+## Tích hợp tuần lịch 6 — 02/11/2026
+
+Đã merge develop `4b6c56a` vào frontend tại `11c4b97`, gồm backend List/Detail/Assign
+ở `7b5754f` và sửa timeout API client. Xung đột chỉ trong tài liệu; giữ link `docs`
+và nội dung mới, không tạo lại `openspec/`. `.env.example`, AGENTS.md và constitution
+được giữ nguyên; không thêm dependency, sửa nghiệp vụ backend hoặc giao diện.
+
+| Kiểm tra | Kết quả / mức bằng chứng |
+| --- | --- |
+| `npm run test:integration --workspace=@parcelflow/web` | 8/8 đạt; build API, typecheck bộ integration, React UI → apiClient → HTTP Nest thật → SQL PGlite cô lập trong RAM |
+| Toàn bộ frontend | 438/438 đạt, 34 file; regression local/mock |
+| API Assign/Read và Admin directory/query | 95 đạt, 36 bỏ qua; 3 file; PGlite/HTTP và mock. 35 ca PostgreSQL không có URL test local, 1 ca chờ khóa không áp dụng PGlite |
+| `npm run typecheck --workspace=@parcelflow/api` | Exit 0; gồm kiểu của test API |
+| Build frontend và API | Exit 0; bundle frontend chính 491.79 kB |
+
+Bộ integration ở `apps/web/integration/`, tách khỏi test nhanh và bundle production.
+Nest/PGlite chạy trong worker Node riêng; schema mới nằm trong RAM, không kết nối
+database nhóm, không đọc `.env`. Firebase provider và hộp chọn địa chỉ là fixture;
+panel tracking ngoài phạm vi tuần lịch 6, không dùng bộ này nghiệm thu GPS.
+
+Các luồng đã kiểm tra:
+
+- Customer nhập form, tạo đúng một đơn, dùng link xem lại chi tiết/danh sách;
+  Admin mở cùng mã từ danh sách → chi tiết → phân công.
+- Admin gán/gán lại, cùng tài xế không gửi thêm POST; lịch sử và thông báo lưu
+  đúng. Customer đọc lại thấy cập nhật; backend từ chối Driver cũ/Customer khác.
+- Hai lần bấm xác nhận chỉ một POST. Lỗi SQL trả 503 và rollback; mất response
+  sau commit chỉ GET để đối chiếu, không tạo thêm sự kiện hoặc gửi lại Assign.
+- GET đối chiếu lỗi giữ khóa ghi; nút đọc lại chỉ gửi GET. Trạng thái đã pickup
+  trong fixture trả 409 thật, UI cập nhật và khóa phân công. Không có API Pickup
+  mới; chỉ test fixture tạo trạng thái cạnh tranh để kiểm tra recovery.
+- Cả Customer/Admin dùng cursor server, tìm mã chính xác và về trang đầu khi
+  đổi bộ lọc. Không dùng dữ liệu mẫu hoặc sửa parser để chấp nhận response sai.
+
+Chưa đăng nhập Firebase thật, kiểm tra lại browser trực quan hoặc triển khai
+Cloud trong lượt này. Không đo p95, kiểm tra khóa PostgreSQL nhiều kết nối hay
+pipeline GPS. T017/SC006 và nghiệm thu Cloud tuần lịch 6 còn mở: nhóm cần deploy
+backend mới, cấu hình Firebase/CORS/SQL và dùng tài khoản/mapping được cấp để thử
+Customer tạo/xem, Admin gán/gán lại, Driver thấy đúng đơn trên cùng revision.
+Không chạy file tạo schema rỗng lên database đang có dữ liệu.
+
+Từ gốc repo:
+
+```powershell
+npm run test:integration --workspace=@parcelflow/web
+npm run test --workspace=@parcelflow/web
+npm run lint:web
+npm run build:web
+npm run typecheck --workspace=@parcelflow/api
+npm run test --workspace=@parcelflow/api -- src/modules/assignments/assignments.postgres.spec.ts src/modules/admin/admin-directory.spec.ts src/modules/admin/dto/admin-list-query.spec.ts
+```
+
+## Sửa lỗi so sánh enum sau deploy — 02/11/2026
+
+Cloud đã có endpoint nhưng đọc đơn trả 503. Kiểm tra SQL bằng user backend có
+SELECT hai bảng cho thấy lỗi `operator does not exist: shipment_action = shipment_status`.
+Người dùng cho phép sửa tối thiểu query backend và test, giữ API/nghiệp vụ/database.
+
+Projection chung so sánh action/toStatus/status qua nhãn `::text`; bộ lọc danh
+sách cũng so sánh status với tham số text theo cùng kiểu. Không đổi enum, bảng,
+quyền hoặc dữ liệu. Hai vị trí này được List/Detail/Assign dùng lại.
+
+Bộ test trước chỉ tạo cột text nên không bắt được khác biệt schema Cloud.
+Đã thêm biến thể PGlite dùng hai enum riêng, xác nhận kiểu qua information_schema,
+chạy nguyên bộ đọc/phân công/phân quyền/lịch sử/phân trang/giao trễ trên cả hai schema.
+Ba ca tập trung thất bại trước sửa; sửa projection giúp Assign/Detail đạt nhưng
+hai ca List/filter vẫn thất bại; sau sửa filter toàn matrix đạt.
+
+- Matrix đọc/phân công: 68 đạt, 37 bỏ qua (35 PostgreSQL chưa có URL test riêng,
+  2 ca chờ khóa không áp dụng PGlite).
+- Toàn API: 364 đạt, 80 bỏ qua; 23 file đạt, 2 file bỏ qua. Các ca có điều kiện
+  PostgreSQL/Firebase Emulator không được coi là đã kiểm chứng.
+- UI → Nest → SQL cô lập: 8/8 đạt; build API và typecheck bộ integration đạt.
+- Typecheck API, lint ba file sửa và diff check đạt.
+
+Chạy lại: `npm run test --workspace=@parcelflow/api -- src/modules/assignments/assignments.postgres.spec.ts`.
+Bản sửa chưa deploy trong lượt này. Cần triển khai backend chứa hai thay đổi
+query rồi kiểm tra GET List/Detail và Assign với tài khoản thật trên cùng
+revision. Không chạy migration hoặc đổi enum để áp dụng bản sửa. Hiệu năng
+Cloud chưa được đo lại; gate nghiệm thu thật T017/T026 vẫn mở.
