@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError, apiClient } from './client'
 import { setTokenReader } from '../features/auth/session'
 
-afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); setTokenReader(async () => null) })
+afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); setTokenReader(async () => null) })
 
 describe('API boundary', () => {
   it('does not refresh a token or send an already cancelled request', async () => {
@@ -58,5 +58,50 @@ describe('API boundary', () => {
     const request = apiClient('/probe', { signal: controller.signal })
     await Promise.resolve(); controller.abort()
     await expect(request).rejects.toMatchObject({ name: 'AbortError' })
+  })
+
+  it('times out while waiting for a token and never sends after that token arrives', async () => {
+    vi.useFakeTimers()
+    let resolveToken!: (token: string) => void
+    setTokenReader(() => new Promise(resolve => { resolveToken = resolve }))
+    const fetcher = vi.fn().mockResolvedValue(new Response('{}'))
+    vi.stubGlobal('fetch', fetcher)
+    const outcome = apiClient('/locations', { timeoutMs: 7000 }).catch(error => error)
+    await vi.advanceTimersByTimeAsync(7000)
+    expect(await Promise.race([outcome, Promise.resolve('pending')])).toMatchObject({ code: 'REQUEST_TIMEOUT' })
+    resolveToken('late-token')
+    await vi.advanceTimersByTimeAsync(0)
+    expect(fetcher).not.toHaveBeenCalled()
+  })
+
+  it('cancels immediately while waiting for a token and never sends it later', async () => {
+    vi.useFakeTimers()
+    let resolveToken!: (token: string) => void
+    setTokenReader(() => new Promise(resolve => { resolveToken = resolve }))
+    const fetcher = vi.fn().mockResolvedValue(new Response('{}'))
+    vi.stubGlobal('fetch', fetcher)
+    const controller = new AbortController()
+    const outcome = apiClient('/locations', { signal: controller.signal }).catch(error => error)
+    controller.abort()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(await Promise.race([outcome, Promise.resolve('pending')])).toMatchObject({ name: 'AbortError' })
+    resolveToken('late-token')
+    await vi.advanceTimersByTimeAsync(0)
+    expect(fetcher).not.toHaveBeenCalled()
+  })
+
+  it('uses one deadline for token acquisition and the HTTP request', async () => {
+    vi.useFakeTimers()
+    setTokenReader(() => new Promise(resolve => setTimeout(() => resolve('driver-token'), 6000)))
+    const fetcher = vi.fn((_url, options) => new Promise((_resolve, reject) => {
+      options.signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')))
+    }))
+    vi.stubGlobal('fetch', fetcher)
+    const outcome = apiClient('/locations', { timeoutMs: 7000 }).catch(error => error)
+    await vi.advanceTimersByTimeAsync(6000)
+    expect(fetcher).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(await Promise.race([outcome, Promise.resolve('pending')])).toMatchObject({ code: 'REQUEST_TIMEOUT' })
+    expect(fetcher.mock.calls[0][1].signal.aborted).toBe(true)
   })
 })

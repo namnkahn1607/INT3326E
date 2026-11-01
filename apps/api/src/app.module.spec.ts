@@ -50,9 +50,10 @@ describe('Week 1 API integration', () => {
   });
 
   it('keeps unimplemented business routes unavailable', async () => {
-    for (const path of ['/v1/shipments', '/v1/admin', '/v1/locations']) {
+    for (const path of ['/v1/admin', '/v1/locations']) {
       expect((await fetch(`${baseUrl}${path}`)).status).toBe(404);
     }
+    expect((await fetch(`${baseUrl}/v1/shipments`)).status).toBe(401);
   });
 
   it('protects real profile routes and allows only configured CORS preflight origins', async () => {

@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "ParcelFlow Core Logistics API (MVP)",
-    "description": "POST /shipments implements PF SPEC 01 v1.3 API01/SC02 on the test branch; List/Detail/state actions/GPS remain drafts. Admin directory implements GET /drivers (API11/SC06) and GET /admin/customers (read-only scope requested on 23/10/2026), requiring ADMIN plus business linkage. Deployment and DATA01/02/04 migration acceptance remain separate; see docs/tv6-admin-directory.md and docs/qa-test-plan.md. Week 2 implements GET /auth/me and GET /admin/me under /v1; GET /healthz remains public outside /v1. Authentication uses verified Firebase ID Tokens and current Firebase custom claims for CUSTOMER, DRIVER and ADMIN. No public role-assignment endpoint is provided.\n\nRoles: CUSTOMER, DRIVER, ADMIN; Admin performs dispatch operations.\nBaseline shipment flow: CREATED -> ASSIGNED -> PICKED_UP -> DELIVERED / DELIVERY_FAILED.\nDraft conventions: business routes use /v1; GPS POST /locations returns 202 after Pub/Sub publish; REST uses dropoffAddress/dropoffLocation and data/pagination. See docs/api-contract.md for field mappings and pending integration decisions. Cancellation is preserved separately under x-proposals and requires team approval. GPS uses clientTimestamp for ordering and seq for diagnostics; see docs/gps-event-contract.md for the selected request/event contract and pending independent pipeline review.\n\nAuth review follow-up: HTTP errors use ProblemDetails. Business user linkage validates users.firebaseUid and current role before business handlers; missing/inconsistent linkage returns 409 USER_NOT_PROVISIONED, dependency failure returns 503. Create shipment, the listed Auth/Admin reads and VIETMAP geocoding are implemented locally; shared schema/cloud acceptance is separate; Admin reads do not deploy schema or implement shipment logic.",
-    "version": "0.5.0-create-shipment-test"
+    "description": "Đã triển khai và kiểm thử trên máy API01/02/03/04 theo đặc tả ParcelFlow v1.3: tạo đơn, danh sách/chi tiết theo quyền và phân công tài xế dành cho ADMIN. API nghiệp vụ yêu cầu Firebase hợp lệ và liên kết người dùng nghiệp vụ. Phân công khóa dòng đơn rồi ghi đơn/lịch sử/thông báo trong cùng giao dịch. Gán lại đúng tài xế không ghi thêm dữ liệu. Chưa thay schema hay triển khai Cloud SQL. Pickup/Deliver/Fail, tracking và GPS ingest vẫn là bản nháp. Xem docs/tv1-assignment-week6.md. Giữ Auth, Admin directory và geocoding hiện có.",
+    "version": "0.6.0-shipment-assignment"
   },
   "servers": [
     {
@@ -396,15 +396,15 @@
         "tags": [
           "Shipments"
         ],
-        "summary": "List shipments with keyset pagination",
-        "description": "Retrieves a paginated list of shipments ordered by `createdAt DESC, id DESC`. Scope is filtered by caller role:\n- `CUSTOMER`: Only shipments created by caller\n- `DRIVER`: Only shipments assigned to caller\n- `ADMIN`: All system shipments",
+        "summary": "Danh sách đơn theo quyền và phân trang",
+        "description": "API02. CUSTOMER chỉ xem đơn mình tạo; DRIVER xem đơn hiện được gán, gồm đơn đã kết thúc; ADMIN xem tất cả. Bộ lọc không mở rộng quyền. Sắp createdAt DESC,id DESC; limit mặc định 20, tối đa 100. Cursor gắn với người dùng/bộ lọc và giữ độ chính xác micro giây. Tham số lạ, lặp hoặc cursor sai trả 400. Thiếu liên kết người dùng trả 409, lỗi SQL/cấu hình trả 503. Không trả tổng số đơn. isLate của đơn đang xử lý dùng giờ máy chủ; đơn đã kết thúc dùng thời điểm sự kiện kết thúc.",
         "operationId": "listShipments",
         "parameters": [
           {
             "name": "cursor",
             "in": "query",
             "required": false,
-            "description": "Opaque cursor encoding the `(createdAt, id)` tuple of the last record for keyset pagination.",
+            "description": "Vị trí phân trang theo createdAt/id của dòng cuối, dùng với cùng người dùng và bộ lọc.",
             "schema": {
               "type": "string"
             }
@@ -413,7 +413,7 @@
             "name": "limit",
             "in": "query",
             "required": false,
-            "description": "Number of items to retrieve (default: 20, max: 100).",
+            "description": "Số dòng mỗi trang, mặc định 20, tối đa 100.",
             "schema": {
               "type": "integer",
               "minimum": 1,
@@ -425,19 +425,40 @@
             "name": "status",
             "in": "query",
             "required": false,
-            "description": "Filter shipments by lifecycle status.",
+            "description": "Lọc theo trạng thái đơn.",
             "schema": {
               "$ref": "#/components/schemas/ShipmentStatus"
+            }
+          },
+          {
+            "name": "trackingNumber",
+            "in": "query",
+            "required": false,
+            "description": "Lọc chính xác mã vận đơn trong phạm vi được phép xem.",
+            "schema": {
+              "type": "string",
+              "pattern": "^PF[0-9]{8}[0-9A-HJKMNP-TV-Z]{6}$"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "Paginated shipment records",
+            "description": "Danh sách đơn và thông tin phân trang",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PaginatedShipmentsResponse"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "Dữ liệu nghiệp vụ không được lưu cache.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
                 }
               }
             }
@@ -456,6 +477,9 @@
           },
           "503": {
             "$ref": "#/components/responses/503ServiceUnavailable"
+          },
+          "400": {
+            "$ref": "#/components/responses/400BadRequest"
           }
         },
         "security": [
@@ -463,7 +487,8 @@
             "BearerAuth": []
           }
         ],
-        "x-implementation-status": "draft"
+        "x-implementation-status": "implemented-local",
+        "x-acceptance": "Đã kiểm thử HTTP/SQL trên máy; chưa chạy migration hoặc deploy Cloud. Xem docs/tv1-assignment-week6.md."
       }
     },
     "/shipments/{id}": {
@@ -471,8 +496,8 @@
         "tags": [
           "Shipments"
         ],
-        "summary": "Get shipment details by ID",
-        "description": "Fetches complete shipment metadata including pickup/dropoff coordinates, current status, notes, failure actor/reason.",
+        "summary": "Chi tiết đơn và lịch sử thay đổi",
+        "description": "API03. Trả SC02 và statusHistory theo SC03 từ cùng một phiên bản dữ liệu SQL. Chỉ Customer chủ đơn, Driver hiện hành hoặc Admin được xem. Không có đơn trả 404; ngoài quyền trả 403. Từ chối tham số truy vấn thừa. Không trả lịch sử GPS hoặc cột nội bộ.",
         "operationId": "getShipmentById",
         "parameters": [
           {
@@ -481,11 +506,22 @@
         ],
         "responses": {
           "200": {
-            "description": "Shipment details",
+            "description": "Chi tiết đơn và lịch sử theo thời gian tăng dần",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ShipmentResponse"
+                  "$ref": "#/components/schemas/ShipmentDetailResponse"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "Dữ liệu nghiệp vụ không được lưu cache.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
                 }
               }
             }
@@ -507,6 +543,9 @@
           },
           "503": {
             "$ref": "#/components/responses/503ServiceUnavailable"
+          },
+          "400": {
+            "$ref": "#/components/responses/400BadRequest"
           }
         },
         "security": [
@@ -514,7 +553,8 @@
             "BearerAuth": []
           }
         ],
-        "x-implementation-status": "draft"
+        "x-implementation-status": "implemented-local",
+        "x-acceptance": "Đã kiểm thử HTTP/SQL trên máy; chưa chạy migration hoặc deploy Cloud. Xem docs/tv1-assignment-week6.md."
       }
     },
     "/shipments/{id}/assign": {
@@ -522,8 +562,8 @@
         "tags": [
           "Shipments"
         ],
-        "summary": "Assign or reassign shipment to a driver",
-        "description": "Transitions state from `CREATED` to `ASSIGNED`, or updates `driverId` on an already `ASSIGNED` shipment (reassignment).\n\n**Authorized Roles:** `ADMIN`.\n\n**Natural Idempotency:**\n- If assigned to the same driver when already `ASSIGNED`: no-op, returns `200 OK`.\n- If reassigned to a different driver when `ASSIGNED`: updates `driverId`, returns `200 OK`.\n- If shipment is in `PICKED_UP`, `DELIVERED`, `DELIVERY_FAILED`: rejected with `409 Conflict`.\n\nValidates that the target user exists and holds the `DRIVER` role.",
+        "summary": "Gán hoặc đổi tài xế cho đơn",
+        "description": "API04 chỉ dành cho ADMIN. Khóa shipment bằng SELECT FOR UPDATE, kiểm tra và khóa role tài xế. CREATED chuyển ASSIGNED; ASSIGNED khác Driver ghi REASSIGNED. Đơn, lịch sử và thông báo cùng commit. Gán lại đúng tài xế giữ nguyên updatedAt/lịch sử/thông báo. Đã lấy hàng hoặc kết thúc trả 409; không có đơn/tài xế trả 404; target sai role trả 400. Chỉ nhận driverId trong body, không nhận query. Một Driver có thể nhận nhiều đơn. Mất phản hồi phải GET Detail để đối chiếu và xin xác nhận mới, không tự retry POST.",
         "operationId": "assignShipment",
         "parameters": [
           {
@@ -542,11 +582,22 @@
         },
         "responses": {
           "200": {
-            "description": "Shipment assigned or reassigned successfully",
+            "description": "Đơn sau phân công; giữ nguyên nếu vẫn là tài xế hiện tại",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ShipmentResponse"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "Dữ liệu nghiệp vụ không được lưu cache.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
                 }
               }
             }
@@ -564,7 +615,7 @@
             "$ref": "#/components/responses/404NotFound"
           },
           "409": {
-            "description": "Invalid state transition (shipment already picked up, delivered, failed); business identity linkage failure returns USER_NOT_PROVISIONED",
+            "description": "Trạng thái không cho phép phân công; thiếu/lệch liên kết người dùng trả USER_NOT_PROVISIONED.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -585,7 +636,8 @@
             "BearerAuth": []
           }
         ],
-        "x-implementation-status": "draft"
+        "x-implementation-status": "implemented-local",
+        "x-acceptance": "Đã kiểm thử HTTP/SQL trên máy; chưa chạy migration hoặc deploy Cloud. Xem docs/tv1-assignment-week6.md."
       }
     },
     "/shipments/{id}/pickup": {
@@ -1420,7 +1472,8 @@
             "description": "Prefixed ULID of the target driver. Must exist and hold the DRIVER role.",
             "example": "usr_01J7Z8K9M3Q4T5V6W7X8Y9Z012"
           }
-        }
+        },
+        "additionalProperties": false
       },
       "DeliverShipmentRequest": {
         "type": "object",
@@ -1616,7 +1669,8 @@
             "type": "object",
             "required": [
               "limit",
-              "hasMore"
+              "hasMore",
+              "nextCursor"
             ],
             "properties": {
               "limit": {
@@ -1633,9 +1687,11 @@
                 "description": "Opaque cursor representing (createdAt, id) of the last record. Null if no more records.",
                 "example": "eyJjcmVhdGVkQXQiOiIyMDI2LTEwLTA1VDA4OjMwOjAwWiIsImlkIjoic2hfMDEifQ=="
               }
-            }
+            },
+            "additionalProperties": false
           }
-        }
+        },
+        "additionalProperties": false
       },
       "SubmitLocationRequest": {
         "type": "object",
@@ -1692,7 +1748,14 @@
         "type": "object",
         "additionalProperties": false,
         "description": "Internal Pub/Sub JSON event enriched by the API. This is not the REST request body. Publish retries preserve every field.",
-        "required": ["eventId", "driverId", "lat", "lng", "clientTimestamp", "receivedAt"],
+        "required": [
+          "eventId",
+          "driverId",
+          "lat",
+          "lng",
+          "clientTimestamp",
+          "receivedAt"
+        ],
         "example": {
           "eventId": "gps-example-001",
           "driverId": "demo-driver-1",
@@ -1715,10 +1778,27 @@
             "pattern": "^\\S(?:.*\\S)?$",
             "description": "Internal driver identifier derived by API from authenticated identity. No surrounding whitespace."
           },
-          "lat": { "type": "number", "format": "double", "minimum": -90.0, "maximum": 90.0 },
-          "lng": { "type": "number", "format": "double", "minimum": -180.0, "maximum": 180.0 },
-          "sessionId": { "type": "string", "format": "uuid" },
-          "seq": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+          "lat": {
+            "type": "number",
+            "format": "double",
+            "minimum": -90.0,
+            "maximum": 90.0
+          },
+          "lng": {
+            "type": "number",
+            "format": "double",
+            "minimum": -180.0,
+            "maximum": 180.0
+          },
+          "sessionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "seq": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
           "clientTimestamp": {
             "type": "string",
             "format": "date-time",
@@ -2106,6 +2186,239 @@
             ]
           }
         }
+      },
+      "StatusEventResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "shipmentId",
+          "action",
+          "fromStatus",
+          "toStatus",
+          "actorUserId",
+          "actorRole",
+          "previousDriverId",
+          "newDriverId",
+          "reason",
+          "occurredAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "shipmentId": {
+            "type": "string",
+            "pattern": "^sh_[0-7][0-9A-HJKMNP-TV-Z]{25}$"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "CREATED",
+              "ASSIGNED",
+              "REASSIGNED",
+              "PICKED_UP",
+              "DELIVERED",
+              "DELIVERY_FAILED"
+            ]
+          },
+          "fromStatus": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "CREATED",
+              "ASSIGNED",
+              "PICKED_UP",
+              "DELIVERED",
+              "DELIVERY_FAILED",
+              null
+            ]
+          },
+          "toStatus": {
+            "$ref": "#/components/schemas/ShipmentStatus"
+          },
+          "actorUserId": {
+            "type": "string",
+            "pattern": "^usr_[0-7][0-9A-HJKMNP-TV-Z]{25}$"
+          },
+          "actorRole": {
+            "type": "string",
+            "enum": [
+              "CUSTOMER",
+              "DRIVER",
+              "ADMIN"
+            ]
+          },
+          "previousDriverId": {
+            "type": "string",
+            "pattern": "^usr_[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+            "nullable": true
+          },
+          "newDriverId": {
+            "type": "string",
+            "pattern": "^usr_[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+            "nullable": true
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ShipmentDetailResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "trackingNumber",
+          "customerId",
+          "driverId",
+          "status",
+          "pickupAddress",
+          "pickupLocation",
+          "dropoffAddress",
+          "dropoffLocation",
+          "recipientName",
+          "recipientPhone",
+          "notes",
+          "failureReason",
+          "failedByRole",
+          "failedByUserId",
+          "proofOfDeliveryNotes",
+          "createdAt",
+          "updatedAt",
+          "packageDescription",
+          "packageWeightKg",
+          "expectedDeliveryAt",
+          "isLate",
+          "statusHistory"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^sh_[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+            "example": "sh_01J7Z8K9M3Q4T5V6W7X8Y9Z012"
+          },
+          "trackingNumber": {
+            "type": "string",
+            "pattern": "^PF[0-9]{8}[0-9A-HJKMNP-TV-Z]{6}$",
+            "description": "UTC date + six Crockford Base32 characters, unique with bounded collision retry.",
+            "example": "PF202610247K9M3Q"
+          },
+          "customerId": {
+            "type": "string",
+            "pattern": "^usr_[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+            "example": "usr_01J7Z8K9M3Q4T5V6W7X8Y9A001"
+          },
+          "driverId": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^usr_[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+            "example": "usr_01J7Z8K9M3Q4T5V6W7X8Y9D002"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ShipmentStatus"
+          },
+          "pickupAddress": {
+            "type": "string",
+            "example": "144 Xuan Thuy, Cau Giay, Hanoi"
+          },
+          "pickupLocation": {
+            "$ref": "#/components/schemas/Coordinates"
+          },
+          "dropoffAddress": {
+            "type": "string",
+            "example": "1 Dai Co Viet, Hai Ba Trung, Hanoi"
+          },
+          "dropoffLocation": {
+            "$ref": "#/components/schemas/Coordinates"
+          },
+          "recipientName": {
+            "type": "string",
+            "example": "Nguyen Van A"
+          },
+          "recipientPhone": {
+            "type": "string",
+            "example": "+84987654321"
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true,
+            "example": "Fragile items. Handle with care."
+          },
+          "failureReason": {
+            "type": "string",
+            "nullable": true,
+            "example": null
+          },
+          "failedByRole": {
+            "type": "string",
+            "enum": [
+              "DRIVER",
+              "ADMIN"
+            ],
+            "nullable": true,
+            "description": "Audit record of who declared delivery failure.",
+            "example": null
+          },
+          "failedByUserId": {
+            "type": "string",
+            "pattern": "^usr_[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+            "nullable": true,
+            "description": "User ID of the actor who declared delivery failure.",
+            "example": null
+          },
+          "proofOfDeliveryNotes": {
+            "type": "string",
+            "nullable": true,
+            "example": null
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-24T08:30:00.123Z",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-24T08:30:00.123Z",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+          },
+          "packageDescription": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500
+          },
+          "packageWeightKg": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "expectedDeliveryAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "isLate": {
+            "type": "boolean",
+            "nullable": true,
+            "description": "Deadline null→null; otherwise new Create=false. Replay preserves original value."
+          },
+          "statusHistory": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StatusEventResponse"
+            }
+          }
+        },
+        "additionalProperties": false,
+        "description": "PF v1.3 SC02, every key required; null is a value, not permission to omit a property. Create replay returns original snapshot."
       }
     }
   },

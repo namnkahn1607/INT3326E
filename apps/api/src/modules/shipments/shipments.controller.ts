@@ -1,4 +1,4 @@
-import { Body, Controller, Headers, Inject, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Header, Headers, Inject, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../auth/enums/user-role.enum';
 import type { AuthenticatedRequest } from '../auth/interfaces/authenticated-request.interface';
@@ -10,6 +10,20 @@ import { ShipmentsService } from './shipments.service';
 @UseGuards(BusinessUserGuard)
 export class ShipmentsController {
   constructor(@Inject(ShipmentsService) private readonly shipments: ShipmentsService) {}
+
+  @Get()
+  @Roles(UserRole.CUSTOMER, UserRole.DRIVER, UserRole.ADMIN)
+  @Header('Cache-Control', 'no-store')
+  list(@Req() request: AuthenticatedRequest, @Query() query: Record<string, unknown>) {
+    return this.shipments.list(request.businessUser!, query);
+  }
+
+  @Get(':id')
+  @Roles(UserRole.CUSTOMER, UserRole.DRIVER, UserRole.ADMIN)
+  @Header('Cache-Control', 'no-store')
+  detail(@Req() request: AuthenticatedRequest, @Param('id') id: string, @Query() query: Record<string, unknown>) {
+    return this.shipments.detail(request.businessUser!, id, query);
+  }
 
   @Post()
   @Roles(UserRole.CUSTOMER)
