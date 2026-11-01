@@ -3,7 +3,8 @@
 Phạm vi: Driver login/dashboard và gửi GPS thử, mốc 26/10–01/11/2026,
 tương ứng VII.4/tuần 3 lộ trình sản phẩm. Branch `feature/driver-dashboard-gps`,
 base develop `8038c83`.
-Yêu cầu và tasks: mục 11 của [đặc tả Driver](../openspec/driver-gps-emitter-draft.md).
+Nguồn yêu cầu: [PF SPEC 01 nội dung v1.3](spec-baseline.md), VII.4/UI02;
+contract GPS dùng chung tại [GPS event contract](gps-event-contract.md).
 
 Trạng thái ngày 02/11/2026: phần Driver đạt kiểm chứng local trên baseline
 `4b6c56a`, gồm kiểm tra trình duyệt W607. Nghiệm thu cloud W605 còn mở và
@@ -100,6 +101,8 @@ nhịp phát mẫu, cơ chế xác thực hoặc thêm retry/queue.
 
 Ba test hồi quy tái hiện lỗi trước khi sửa và đều đạt sau sửa: token không trả
 về trong thời hạn, hủy trong lúc lấy token, và tổng thời gian lấy token + HTTP.
+Task W606 đạt ở mức local/mock; W607 kiểm tra trực quan còn mở, cùng gate
+W605 nghiệm thu Firebase/API/Pub/Sub thật bên dưới.
 
 | Kiểm tra | Kết quả | Mức bằng chứng |
 | --- | --- | --- |
@@ -161,7 +164,7 @@ Chạy lại với Node >=22.12, dependencies repo đã cài, package `playwrigh
 sẵn trong môi trường kiểm thử và Microsoft Edge đã cài:
 
 ```powershell
-node --experimental-strip-types openspec/verify-driver-dashboard.mjs
+node --experimental-strip-types apps/web/scripts/verify-driver-dashboard.mjs
 ```
 
 Nếu Playwright ở ngoài repo, đặt `DRIVER_REVIEW_PLAYWRIGHT` thành đường dẫn

@@ -26,7 +26,7 @@ export function StartupExperience({ children }: { children: ReactNode }) {
     return () => { active = false }
   }, [phase, loading, user, reduced])
   const intro = phase === 'intro' && !user && !reduced
-  return <div className="app-experience" data-stage={intro ? 'intro' : phase === 'checking' ? 'checking' : 'ready'}>
+  return <div className={'app-experience' + (location.pathname.startsWith('/driver') ? '' : ' pf-dark')} data-stage={intro ? 'intro' : phase === 'checking' ? 'checking' : 'ready'}>
     {phase === 'checking' ? <AuthLoading /> : <div className={location.state?.authArrival ? 'auth-arrival' : undefined} inert={intro}>
       {children}
     </div>}

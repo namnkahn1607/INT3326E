@@ -1,8 +1,49 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { assignShipment, createShipment, getShipmentById, getShipments } from './shipments'
+import { assignShipment, createShipment, failShipment, getShipmentById, getShipments } from './shipments'
 import { shipmentFixture } from '../../features/customer/shipment-fixture'
 
 afterEach(() => vi.unstubAllGlobals())
+
+describe('Admin Fail contract', () => {
+  const failed = { ...shipmentFixture, status: 'DELIVERY_FAILED', driverId: 'usr_01ARZ3NDEKTSV4RRFFQ69G5FAX',
+    failureReason: 'Không liên hệ được', failedByRole: 'DRIVER', failedByUserId: 'usr_01ARZ3NDEKTSV4RRFFQ69G5FAX' }
+  it('posts only trimmed reason and preserves the original actor/reason on no-op', async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify(failed)))
+    vi.stubGlobal('fetch', fetcher)
+    await expect(failShipment(shipmentFixture.id, '  Người nhận từ chối  ')).resolves.toEqual(failed)
+    expect(new URL(fetcher.mock.calls[0][0]).pathname).toBe(`/v1/shipments/${shipmentFixture.id}/fail`)
+    const options = fetcher.mock.calls[0][1]
+    expect(options.method).toBe('POST')
+    expect(JSON.parse(options.body)).toEqual({ reason: 'Người nhận từ chối' })
+    expect(new Headers(options.headers).has('Idempotency-Key')).toBe(false)
+  })
+  it.each(['', '    ', 'ngắn', 'a'.repeat(501)])('rejects invalid reason before fetch', async reason => {
+    const fetcher = vi.fn(); vi.stubGlobal('fetch', fetcher)
+    await expect(failShipment(shipmentFixture.id, reason)).rejects.toMatchObject({ status: 400, code: 'VALIDATION_ERROR' })
+    expect(fetcher).not.toHaveBeenCalled()
+  })
+  it('counts Unicode code points and rejects mismatched identity or state', async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify(failed)))
+    vi.stubGlobal('fetch', fetcher)
+    await expect(failShipment(shipmentFixture.id, '🚚'.repeat(500))).resolves.toEqual(failed)
+    for (const value of [{ ...failed, id: 'sh_01ARZ3NDEKTSV4RRFFQ69G5FAX' }, shipmentFixture]) {
+      fetcher.mockResolvedValueOnce(new Response(JSON.stringify(value)))
+      await expect(failShipment(shipmentFixture.id, 'Lý do hợp lệ')).rejects.toMatchObject({ code: 'INVALID_RESPONSE' })
+    }
+  })
+  it('does not write invalid IDs or retry conflicts', async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ code: 'INVALID_STATE_TRANSITION' }), { status: 409 }))
+    vi.stubGlobal('fetch', fetcher)
+    await expect(failShipment('../admin', 'Lý do hợp lệ')).rejects.toMatchObject({ status: 400 })
+    expect(fetcher).not.toHaveBeenCalled()
+    await expect(failShipment(shipmentFixture.id, 'Lý do hợp lệ')).rejects.toMatchObject({ status: 409 })
+    expect(fetcher).toHaveBeenCalledTimes(1)
+  })
+  it('does not accept a successful Fail body with the wrong HTTP status', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(failed), { status: 201 })))
+    await expect(failShipment(shipmentFixture.id, 'Lý do hợp lệ')).rejects.toMatchObject({ code: 'INVALID_RESPONSE' })
+  })
+})
 
 describe('Admin Assign contract', () => {
   const driverId = 'usr_01ARZ3NDEKTSV4RRFFQ69G5FAX'

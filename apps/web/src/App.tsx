@@ -25,6 +25,7 @@ import { AdminAssignmentPage } from './features/admin/AdminAssignmentPage'
 import { AdminDriversPage } from './features/admin/AdminDriversPage'
 import { AdminOverviewPage } from './features/admin/AdminOverviewPage'
 import { AdminShipmentsPage } from './features/admin/AdminShipmentsPage'
+const AdminShipmentDetailPage = lazy(() => import('./features/admin/AdminShipmentDetailPage').then(module => ({ default: module.AdminShipmentDetailPage })))
 const AdminLiveMapPage = lazy(() => import('./features/admin/AdminLiveMapPage').then(module => ({ default: module.AdminLiveMapPage })))
 
 // Feature Driver
@@ -51,6 +52,7 @@ export default function App() {
       <Route path="/admin" element={<ProtectedRoute role="ADMIN"><AdminLayout /></ProtectedRoute>}>
         <Route index element={<AdminOverviewPage />} />
         <Route path="shipments" element={<AdminShipmentsPage />} />
+        <Route path="shipments/:id" element={<Suspense fallback={<p role="status">Đang mở chi tiết đơn…</p>}><AdminShipmentDetailPage /></Suspense>} />
         <Route path="assignment" element={<AdminAssignmentPage />} />
         <Route path="live-map" element={<Suspense fallback={<p role="status">Đang mở bản đồ…</p>}><AdminLiveMapPage /></Suspense>} />
         <Route path="drivers" element={<AdminDriversPage />} />

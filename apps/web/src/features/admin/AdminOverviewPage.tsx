@@ -1,140 +1,60 @@
+﻿import { useCallback } from 'react'
 import { Link } from 'react-router'
-import { StatusBadge } from '../../components/ui/StatusBadge'
+import { getShipments } from '../../api/endpoints/shipments'
 import { Icon } from '../../components/ui/Icon'
+import { StatusBadge } from '../../components/ui/StatusBadge'
+import { SHIPMENT_STATUS_MAP } from '../../types/shipment'
+import { formatDateTime } from '../../utils'
+import { useAuth } from '../auth/useAuth'
+import { AdminPageFeedback } from './AdminPageFeedback'
+import { useAdminPage } from './useAdminPage'
+import './admin-api.css'
 
 export function AdminOverviewPage() {
-  return (
-    <div className="admin-page">
-      <div className="page-header">
-        <div>
-          <span className="admin-page-kicker">TỔNG QUAN</span>
-          <h1 className="page-title">Tổng quan vận hành</h1>
-          <p className="page-subtitle">
-            Theo dõi nhanh hoạt động giao nhận trong ngày hôm nay.
-          </p>
-        </div>
-        <div className="admin-header-actions">
-          <Link to="/admin/assignment" className="btn btn-primary">
-            Phân công 3 đơn chờ
-          </Link>
-        </div>
-      </div>
+  const { user } = useAuth()
+  return <OperationsOverview key={user?.id ?? 'signed-out'} />
+}
 
-      <div className="admin-stat-grid">
-        <article className="admin-stat-card">
-          <span className="admin-stat-icon purple"><Icon name="box" /></span>
-          <div><span>Tổng đơn hôm nay</span><strong>128</strong><small className="positive">↑ 12% so với hôm qua</small></div>
-        </article>
-        <article className="admin-stat-card">
-          <span className="admin-stat-icon amber"><Icon name="clock" /></span>
-          <div><span>Chờ phân công</span><strong>3</strong><small>Cần xử lý sớm</small></div>
-        </article>
-        <article className="admin-stat-card">
-          <span className="admin-stat-icon blue"><Icon name="truck" /></span>
-          <div><span>Đang giao</span><strong>42</strong><small>32,8% tổng đơn</small></div>
-        </article>
-        <article className="admin-stat-card">
-          <span className="admin-stat-icon red"><Icon name="box" /></span>
-          <div><span>Cần chú ý</span><strong>2</strong><small>Đơn giao không thành công</small></div>
-        </article>
-      </div>
-
-      <div className="admin-overview-grid">
-        <div className="admin-panel admin-orders-panel">
-          <div className="section-header-row">
-            <div>
-              <h2 className="section-title">Đơn hàng cần xử lý</h2>
-              <p className="admin-panel-subtitle">Các đơn mới hoặc đang gặp vấn đề</p>
-            </div>
-            <Link to="/admin/shipments" className="text-link">
-              Xem tất cả →
-            </Link>
-          </div>
-
-          <div className="data-table-wrapper" role="region" aria-label="Đơn cần xử lý minh họa, cuộn ngang để xem đầy đủ" tabIndex={0}>
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Mã đơn</th>
-                  <th>Người gửi / Người nhận</th>
-                  <th>Trạng thái</th>
-                  <th>Tài xế</th>
-                  <th>Hành động</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><strong>#PF-89025</strong></td>
-                  <td>ĐH Bách Khoa → ĐH Quốc Gia</td>
-                  <td><StatusBadge status="CREATED" /></td>
-                  <td><span className="admin-unassigned">Chưa phân công</span></td>
-                  <td>
-                    <Link to="/admin/assignment" className="action-btn action-primary">
-                      Gán tài xế
-                    </Link>
-                  </td>
-                </tr>
-                <tr>
-                  <td><strong>#PF-89024</strong></td>
-                  <td>Cầu Giấy → Hà Đông</td>
-                  <td><StatusBadge status="PICKED_UP" /></td>
-                  <td>Nguyễn Văn Hùng</td>
-                  <td>
-                    <Link to="/admin/shipments" className="action-btn">
-                      Chi tiết
-                    </Link>
-                  </td>
-                </tr>
-                <tr>
-                  <td><strong>#PF-89020</strong></td>
-                  <td>Hoàn Kiếm → Long Biên</td>
-                  <td><StatusBadge status="DELIVERY_FAILED" /></td>
-                  <td>Phạm Văn Nam</td>
-                  <td>
-                    <Link to="/admin/shipments" className="action-btn">
-                      Xem đơn lỗi
-                    </Link>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <aside className="admin-panel admin-progress-panel">
-          <div className="section-header-row">
-            <div>
-              <h2 className="section-title">Tiến độ hôm nay</h2>
-              <p className="admin-panel-subtitle">Tính đến 14:30</p>
-            </div>
-          </div>
-          <div className="delivery-rate">
-            <strong>92%</strong>
-            <span>Tỷ lệ giao thành công</span>
-          </div>
-          <div className="progress-track"><span style={{ width: '92%' }} /></div>
-          <div className="progress-summary">
-            <div><strong>83</strong><span>Đã hoàn tất</span></div>
-            <div><strong>42</strong><span>Đang giao</span></div>
-            <div><strong>3</strong><span>Chờ xử lý</span></div>
-          </div>
-          <Link to="/admin/shipments" className="admin-panel-link">Xem báo cáo đơn hàng →</Link>
-        </aside>
-      </div>
-
-      <div className="admin-panel admin-activity-panel">
-        <div className="section-header-row">
-          <div>
-            <h2 className="section-title">Hoạt động gần đây</h2>
-            <p className="admin-panel-subtitle">Cập nhật mới nhất trong hệ thống</p>
-          </div>
-        </div>
-        <div className="admin-activity-list">
-          <div><span className="activity-dot green" /><p><strong>#PF-89018</strong> đã giao thành công</p><time>5 phút trước</time></div>
-          <div><span className="activity-dot purple" /><p><strong>Trần Văn Nam</strong> đã nhận đơn #PF-89023</p><time>12 phút trước</time></div>
-          <div><span className="activity-dot amber" /><p><strong>#PF-89025</strong> đang chờ phân công tài xế</p><time>18 phút trước</time></div>
-        </div>
-      </div>
+function OperationsOverview() {
+  const load = useCallback((_: string | undefined, signal: AbortSignal) => getShipments({ limit: 20 }, signal), [])
+  const state = useAdminPage(load, 'overview')
+  const orders = state.page?.data
+  const metrics = orders ? [
+    { label: 'Đơn đã tải', value: orders.length, icon: 'box' },
+    { label: 'Chờ phân công', value: orders.filter(item => item.status === 'CREATED').length, icon: 'clock' },
+    { label: 'Đang vận chuyển', value: orders.filter(item => ['ASSIGNED', 'PICKED_UP'].includes(item.status)).length, icon: 'truck' },
+    { label: 'Đã giao', value: orders.filter(item => item.status === 'DELIVERED').length, icon: 'check' },
+  ] as const : []
+  return <div className="admin-page admin-api-page operations-overview">
+    <div className="page-header"><div>
+      <h1 className="page-title">Tổng quan vận hành</h1>
+      <p className="page-subtitle">Tình hình giao nhận trong tối đa 20 đơn vừa tải. Không phải tổng toàn hệ thống.</p></div>
+      <div className="admin-header-actions"><button type="button" className="btn btn-outline" disabled={state.loading} onClick={state.refresh}>Làm mới</button>
+        <Link to="/admin/assignment" className="btn btn-primary">Phân công tài xế<Icon name="arrow" /></Link></div>
     </div>
-  )
+    <AdminPageFeedback loading={state.loading} error={state.error} empty={orders?.length === 0} label="tổng quan đơn hàng" onRetry={state.refresh} />
+    {orders && <>
+      <section className="dashboard-metrics" aria-label="Số liệu trên trang đã tải">
+        {metrics.map(metric => <article className="dashboard-metric" key={metric.label}>
+          <div><span>{metric.label}</span><Icon name={metric.icon} /></div><strong>{metric.value}</strong><small>Trong {orders.length} đơn đã tải</small>
+        </article>)}
+      </section>
+      <div className="operations-grid"><section className="dashboard-panel operations-recent" aria-labelledby="recent-orders-title">
+        <div className="dashboard-panel-heading"><div><h2 id="recent-orders-title">Đơn hàng vừa tải</h2><p>Trạng thái được trả về từ hệ thống</p></div><Link to="/admin/shipments">Tất cả đơn<Icon name="arrow" /></Link></div>
+        {orders.length > 0 && <div className="data-table-wrapper" role="region" aria-label="Đơn hàng vừa tải, cuộn ngang để xem đầy đủ" tabIndex={0}>
+          <table className="data-table"><thead><tr><th>Mã đơn</th><th>Người nhận</th><th>Trạng thái</th><th>Tạo lúc</th></tr></thead>
+            <tbody>{orders.slice(0, 7).map(item => <tr key={item.id}><td><Link className="dashboard-order-link" to={'/admin/shipments/' + encodeURIComponent(item.id)}>{item.trackingNumber}</Link></td>
+              <td>{item.recipientName}</td><td><StatusBadge status={item.status} /></td><td><time dateTime={item.createdAt}>{formatDateTime(item.createdAt)}</time></td></tr>)}</tbody></table>
+        </div>}
+      </section>
+      <section className="dashboard-panel operations-distribution" aria-labelledby="status-distribution-title">
+        <div className="dashboard-panel-heading"><div><h2 id="status-distribution-title">Trạng thái đơn hàng</h2><p>Phân bố trong {orders.length} đơn đã tải</p></div><Icon name="grid" /></div>
+        <ul>{Object.entries(SHIPMENT_STATUS_MAP).map(([status, meta]) => {
+          const count = orders.filter(item => item.status === status).length
+          return <li key={status}><div><span>{meta.label}</span><strong>{count}</strong></div>
+            <meter min={0} max={Math.max(orders.length, 1)} value={count} aria-label={meta.label}>{count}</meter></li>
+        })}</ul>
+      </section></div>
+    </>}
+  </div>
 }

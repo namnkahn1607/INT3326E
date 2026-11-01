@@ -22,8 +22,8 @@ const payload = { pickupAddress: '144 Xuan Thuy', pickupLocation: { lat: 21, lng
   dropoffAddress: '1 Dai Co Viet', dropoffLocation: { lat: 0, lng: 0 },
   recipientName: 'Nguoi nhan', recipientPhone: '+84900000000' };
 
-// Cả hai chế độ chạy handler và SQL thật. Chỉ PostgreSQL nhiều connection kiểm chứng được việc chờ khóa.
-for (const mode of ['pglite', 'postgres'] as const) {
+// Các chế độ đều chạy handler và SQL thật. Chỉ PostgreSQL nhiều connection kiểm chứng được việc chờ khóa.
+for (const mode of ['pglite', 'pglite-enums', 'postgres'] as const) {
   describe.skipIf(mode === 'postgres' && !nativeUrl)(`Tuần 6: đọc đơn và phân công (${mode}, Firebase giả lập)`, () => {
     let app: INestApplication;
     let base: string;
@@ -49,7 +49,7 @@ for (const mode of ['pglite', 'postgres'] as const) {
 
     beforeAll(async () => {
       let adapter: object;
-      if (mode === 'pglite') {
+      if (mode !== 'postgres') {
         engine = new PGlite();
         let tail = Promise.resolve();
         adapter = { query, end: async () => {}, connect: async () => {
@@ -75,8 +75,29 @@ for (const mode of ['pglite', 'postgres'] as const) {
             release: (error?: Error) => client.release(error) };
         } };
       }
-      const sql = await readFile(resolve(process.cwd(), '../../packages/database/sql/001-create-shipment.sql'), 'utf8');
+      let sql = await readFile(resolve(process.cwd(), '../../packages/database/sql/001-create-shipment.sql'), 'utf8');
+      if (mode === 'pglite-enums') {
+        // Cloud stores action and status as distinct enums; the text-only fixture cannot expose cross-type comparisons.
+        sql = `CREATE TYPE shipment_status AS ENUM ('CREATED','ASSIGNED','PICKED_UP','DELIVERED','DELIVERY_FAILED');
+          CREATE TYPE shipment_action AS ENUM ('CREATED','ASSIGNED','REASSIGNED','PICKED_UP','DELIVERED','DELIVERY_FAILED');\n` + sql
+          .replace('status text NOT NULL', 'status shipment_status NOT NULL')
+          .replace('action text NOT NULL', 'action shipment_action NOT NULL')
+          .replace('"fromStatus" text CHECK', '"fromStatus" shipment_status CHECK')
+          .replace('"toStatus" text NOT NULL', '"toStatus" shipment_status NOT NULL');
+      }
       if (engine) await engine.exec(sql); else await pool!.query(sql);
+      if (mode === 'pglite-enums') {
+        const types = await query(`SELECT table_name, column_name, udt_name FROM information_schema.columns
+          WHERE table_schema=current_schema() AND ((table_name='shipments' AND column_name='status')
+            OR (table_name='shipment_status_events' AND column_name IN ('action','fromStatus','toStatus')))
+          ORDER BY table_name, column_name`);
+        expect(types.rows).toEqual([
+          { table_name: 'shipment_status_events', column_name: 'action', udt_name: 'shipment_action' },
+          { table_name: 'shipment_status_events', column_name: 'fromStatus', udt_name: 'shipment_status' },
+          { table_name: 'shipment_status_events', column_name: 'toStatus', udt_name: 'shipment_status' },
+          { table_name: 'shipments', column_name: 'status', udt_name: 'shipment_status' },
+        ]);
+      }
       for (const [uid, [n, role]] of Object.entries(users)) {
         await query('INSERT INTO users (id,"firebaseUid",email,name,role) VALUES ($1,$2,$3,$4,$5)',
           [id(n), uid, `${uid}@example.com`, uid, role]);

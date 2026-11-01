@@ -87,7 +87,7 @@ client retains its key. All SC02 keys are explicit, including nullable fields.
 
 This is **test-branch implementation, not a deployed Cloud SQL acceptance**.
 Baseline SQL requires an empty schema; see [DB safety](../packages/database/README.md)
-and [Spec Kit/verification](../specs/002-create-shipment/quickstart.md).
+and [Create shipment handoff](create-shipment-handoff.md).
 At the 24/10 checkpoint, List/Detail, Assign and GPS were not implemented.
 List/Detail/Assign are now available locally as described above; GPS remains unimplemented. Historical draft statements below are retained, not current
 Create requirements. No migration, seed, IAM, deploy or auth changes run automatically.
