@@ -459,8 +459,10 @@ deferred để phân biệt lỗi này với timeout HTTP đã được kiểm t
   hủy trước HTTP, token đến muộn và hồi quy frontend (W6-03/05). Ba test mới
   thất bại trước sửa và đạt sau sửa; 52 test tập trung, toàn bộ 354 test frontend,
   lint/build đạt ngày 01/11/2026.
-- [ ] W607: Kiểm tra trực quan dashboard và Start/Stop bằng fixture local;
-  phân biệt kết quả mock với nghiệm thu cloud W605 (W6-01–06).
+- [x] W607: Kiểm tra trực quan dashboard và Start/Stop bằng fixture local;
+  phân biệt kết quả mock với nghiệm thu cloud W605 (W6-01–06). Ngày 02/11/2026:
+  19/19 kịch bản browser đạt, đã xem ảnh 320/1440 px và trạng thái gửi/Stop;
+  báo cáo `docs/evidence/driver-dashboard/browser-review.json`.
 
 Phân tích chỉ đọc: W606 khắc phục khoảng trống W6-05 trong phạm vi hiện hành;
 W607 bổ sung kiểm chứng giao diện còn thiếu. W605 tiếp tục phụ thuộc endpoint
@@ -472,3 +474,37 @@ thay cho kiểm tra trực quan. Kiểm tra HTTP chỉ đọc thấy Hosting cò
 Driver skeleton cũ, API Auth trả 401 khi thiếu token và CORS GPS trả 204.
 Không có request GPS thật, đăng nhập, thay đổi cloud hoặc triển khai trong
 lượt này. Chi tiết và lệnh chạy lại tại `docs/driver-dashboard-gps.md`.
+
+### 11.8. Kế hoạch kiểm chứng giao diện trên baseline tích hợp
+
+Tiếp tục W607 ngày 02/11/2026 từ `origin/develop` tại `4b6c56a`. Công cụ
+trình duyệt mất kết nối; người dùng đã cho phép chọn cách kiểm tra local phù
+hợp sau khi được giải thích phương án Playwright. Dùng profile thử riêng,
+AuthContext giả và API mock; chặn request ra ngoài loopback, không dùng phiên
+đăng nhập thật. Fixture chỉ tồn tại trong thư mục Git bỏ qua khi chạy harness.
+
+Review W6-01–06: cần kiểm tra màn hẹp/rộng, tên tài khoản dài, keyboard, trạng
+thái ban đầu, nhịp 8 giây, Stop/restart, response lỗi/timeout, chuyển tài khoản,
+đăng xuất và rời route. Lưu kết quả JSON và ảnh, chỉ đóng W607 sau khi đã xem
+ảnh và các ca đạt. Không dùng kết quả mock để đóng W605 hoặc G206.
+
+Phân tích chỉ đọc: API đọc đơn/phân công đã có trong baseline mới, không đổi
+phạm vi skeleton Driver của W6-02. Handler GPS vẫn chưa có trên develop;
+nhánh GPS `99a462a` chưa thống nhất event với contract chung và thiếu guard
+ánh xạ user nghiệp vụ tại controller. Các điểm tích hợp này phải được giải
+quyết trước nghiệm thu thật; không tự sửa hoặc merge backend trong W607.
+
+Kết quả ngày 02/11/2026: người dùng xác nhận chỉ hoàn thiện Driver và bàn giao
+backend. W607 đạt bằng Edge/Playwright trên profile riêng; Auth/API mock, không
+có runtime error hoặc HTTP request ra ngoài origin thử. Đã xác nhận hủy request
+ở mức browser, route/role, keyboard, nhịp gửi, Stop/restart và lỗi. Toàn bộ
+354 test frontend, lint và build trên baseline mới đạt. Harness chạy lại tại
+`openspec/verify-driver-dashboard.mjs`; ảnh và JSON ở
+`docs/evidence/driver-dashboard/`.
+
+Review service GPS nhánh `99a462a` bằng SDK mock tái hiện event không đạt
+validator dùng chung; đã ghi bàn giao cụ thể trong `docs/driver-dashboard-gps.md`.
+W605 giữ mở ngoài phạm vi Driver local; không tự sửa backend hay đánh dấu
+nghiệm thu cloud. Converge chỉ đọc sau kiểm chứng: không phát hiện phần Driver
+thiếu task hoặc thiếu implementation trong W6-01–05; không thêm tính năng ngoài
+phạm vi skeleton và gửi thử GPS.

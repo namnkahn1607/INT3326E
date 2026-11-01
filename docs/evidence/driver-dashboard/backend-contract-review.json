@@ -1,0 +1,21 @@
+{
+  "status": "BLOCKED",
+  "level": "remote-source-service-with-pubsub-sdk-mock",
+  "generatedAt": "2026-11-01T18:30:45.810Z",
+  "reviewedRevision": "99a462ab8de2e30d4f8a329060068f7de05b69d0",
+  "frontendRevision": "4b6c56a304afddfcf3c9d4e807f6588100e2a067",
+  "sharedRequestAccepted": true,
+  "serviceResponseStatus": "ACCEPTED",
+  "sharedEventAccepted": false,
+  "sharedEventError": "GPS payload contains unknown fields",
+  "clientTimestampType": "number",
+  "unexpectedEventFields": [
+    "latitude",
+    "longitude",
+    "clientTimestampIso",
+    "receivedAtMs"
+  ],
+  "controllerHasBusinessUserGuard": false,
+  "cloudGpsPublished": false,
+  "backendFilesModified": false
+}

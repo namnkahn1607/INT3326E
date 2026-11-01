@@ -1,0 +1,38 @@
+{
+  "status": "PASS",
+  "generatedAt": "2026-11-01T18:29:41.296Z",
+  "sourceRevision": "4b6c56a304afddfcf3c9d4e807f6588100e2a067",
+  "browser": "Microsoft Edge 156.0.4314.58",
+  "level": "local-browser-with-auth-and-api-mocks",
+  "checks": [
+    "layout 320px and long account name",
+    "layout 390px and long account name",
+    "layout 1440px and long account name",
+    "keyboard skip link reaches main content",
+    "eight-second cadence, acceptance, Stop and restart sequence",
+    "rejection 401 is visible and not counted",
+    "rejection 403 is visible and not counted",
+    "rejection 404 is visible and not counted",
+    "rejection 409 is visible and not counted",
+    "rejection 503 is visible and not counted",
+    "rejection invalid is visible and not counted",
+    "rejection network is visible and not counted",
+    "seven-second timeout without automatic retry",
+    "pending request cleanup: Rời trang thử",
+    "pending request cleanup: Đăng xuất",
+    "pending request cleanup: Đổi tài khoản thử",
+    "route access ?role=CUSTOMER",
+    "route access ?role=ADMIN",
+    "route access ?signedout=1"
+  ],
+  "runtimeErrors": [],
+  "externalRequests": [],
+  "cloudGpsPublished": false,
+  "sourceFiles": [
+    "DriverPlaceholderPage.tsx",
+    "GpsEmitter.tsx",
+    "DriverLayout.tsx",
+    "api/client.ts",
+    "api/endpoints/locations.ts"
+  ]
+}
