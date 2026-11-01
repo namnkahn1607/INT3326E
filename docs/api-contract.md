@@ -1,4 +1,17 @@
-# API contract — Week 1 draft
+# API contract
+
+## TV1 week 6 — List, Detail and Assignment
+
+`GET /v1/shipments`, `GET /v1/shipments/:id` and ADMIN-only
+`POST /v1/shipments/:id/assign` are implemented locally against the existing
+quoted-camelCase SQL baseline. List/Detail scope Customer ownership and current
+Driver assignment; Detail and history share one snapshot. Assignment locks the
+shipment and commits driver/status, event and notification atomically. Repeating
+the current driver is a no-op; clients reconcile uncertain responses with Detail.
+
+Contract, test instructions and Cloud acceptance gates:
+[tv1-assignment-week6.md](tv1-assignment-week6.md). No production schema, IAM or
+deployment changes are included. The dated sections below retain earlier snapshots.
 
 ## VIETMAP geocoding integration — 2026-10-25
 
@@ -74,8 +87,8 @@ client retains its key. All SC02 keys are explicit, including nullable fields.
 This is **test-branch implementation, not a deployed Cloud SQL acceptance**.
 Baseline SQL requires an empty schema; see [DB safety](../packages/database/README.md)
 and [Spec Kit/verification](../specs/002-create-shipment/quickstart.md).
-GET List/Detail, Assign and GPS remain unimplemented; preserving the frontend does
-not activate those routes. Historical draft statements below are retained, not current
+At the 24/10 checkpoint, List/Detail, Assign and GPS were not implemented.
+List/Detail/Assign are now available locally as described above; GPS remains unimplemented. Historical draft statements below are retained, not current
 Create requirements. No migration, seed, IAM, deploy or auth changes run automatically.
 
 Current Admin read endpoints: `GET /v1/drivers` (API11/SC06) and
