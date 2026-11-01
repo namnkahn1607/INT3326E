@@ -49,7 +49,7 @@ import '../../src/components/ui/ui.css'
 import '../../src/features/auth/auth.css'
 import '../../src/dark-dashboard.css'
 setTokenReader(async () => 'local-review-token')
-function Review() {
+export function Review() {
   const params = new URLSearchParams(location.search)
   const [user, setUser] = useState(params.has('signedout') ? null : {
     id: 'driver-review-uid', email: 'driver@example.test',

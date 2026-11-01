@@ -1,7 +1,7 @@
 {
   "status": "PASS",
-  "generatedAt": "2026-11-01T18:29:41.296Z",
-  "sourceRevision": "4b6c56a304afddfcf3c9d4e807f6588100e2a067",
+  "generatedAt": "2026-11-01T18:42:31.860Z",
+  "sourceRevision": "366b5ad3878e4bff895aedee82234d241d6982c0",
   "browser": "Microsoft Edge 156.0.4314.58",
   "level": "local-browser-with-auth-and-api-mocks",
   "checks": [

@@ -6,8 +6,8 @@ base develop `8038c83`.
 Nguồn yêu cầu: [PF SPEC 01 nội dung v1.3](spec-baseline.md), VII.4/UI02;
 contract GPS dùng chung tại [GPS event contract](gps-event-contract.md).
 
-Trạng thái ngày 02/11/2026: phần Driver đạt kiểm chứng local trên baseline
-`4b6c56a`, gồm kiểm tra trình duyệt W607. Nghiệm thu cloud W605 còn mở và
+Trạng thái ngày 02/11/2026: phần Driver đạt kiểm chứng local sau tích hợp
+`develop` tại `75e9664`, gồm kiểm tra trình duyệt W607. Nghiệm thu cloud W605 còn mở và
 được bàn giao cho phần API/triển khai ở mục cuối.
 
 ## Hành vi
@@ -138,7 +138,9 @@ trong lượt kiểm tra HTTP này.
 
 ## Kiểm chứng giao diện ngày 02/11/2026
 
-Nhánh Driver đã fast-forward lên `origin/develop` tại `4b6c56a`; dùng nguyên
+Kiểm chứng ban đầu tại `4b6c56a`, sau đó tích hợp `develop` tại `75e9664`
+và kiểm tra lại với stylesheet chung hiện hành. Giữ cấu trúc tài liệu đã được
+nhóm hợp nhất vào `docs`; harness nằm trong `apps/web/scripts`. Dùng nguyên
 dashboard, layout, route guard, API client và adapter GPS hiện có. Không phát
 hiện thiếu sót frontend cần sửa thêm trong phạm vi đã chốt.
 
@@ -150,7 +152,8 @@ hiện thiếu sót frontend cần sửa thêm trong phạm vi đã chốt.
 | Start/Stop/restart | Không gửi lúc mở trang; mẫu đầu sau 8 giây; restart tiếp tục sequence | Body/Bearer token giả được đối chiếu trên request mock |
 | Lỗi và cleanup | 401/403/404/409/503, response sai, mất mạng, timeout; không tăng số chấp nhận khi lỗi | Browser local; không lộ nội dung lỗi thô |
 | Hủy request | Browser ghi nhận `net::ERR_ABORTED` khi timeout/rời route/đăng xuất/đổi tài khoản | Không phát thêm mẫu của phiên cũ |
-| Toàn bộ frontend | 354/354 test, 27 file | Local/mock |
+| Toàn bộ frontend sau tích hợp | 438/438 test, 34 file | Local/mock |
+| Suite tích hợp Shipment hiện có | 8/8 test | Nest HTTP + PGlite local; Firebase mock, không phải GPS cloud |
 | Lint/build | `npm run lint:web`, `npm run build:web`: exit 0 | TypeScript + Vite; chưa deploy |
 
 [Báo cáo trình duyệt](evidence/driver-dashboard/browser-review.json) ghi source
@@ -165,6 +168,7 @@ sẵn trong môi trường kiểm thử và Microsoft Edge đã cài:
 
 ```powershell
 node --experimental-strip-types apps/web/scripts/verify-driver-dashboard.mjs
+npm run test:integration --workspace=@parcelflow/web
 ```
 
 Nếu Playwright ở ngoài repo, đặt `DRIVER_REVIEW_PLAYWRIGHT` thành đường dẫn
@@ -174,6 +178,8 @@ browser/server và xóa đúng file fixture khi kết thúc. Kết quả mặc �
 `.vitest/driver-dashboard-review`; `DRIVER_REVIEW_OUTPUT` đổi thư mục kết quả.
 Các lệnh test/lint/build ở trên giữ nguyên. Node có cảnh báo module type của
 shared GPS type; harness vẫn exit 0, không sửa cấu hình package để che cảnh báo.
+Dependency được khôi phục đúng lockfile; không thay package manifest/lockfile.
+Fixture export component hợp lệ để lint vẫn đạt khi chạy song song browser.
 
 ## Bàn giao tích hợp API GPS
 
