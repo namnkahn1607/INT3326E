@@ -22,9 +22,9 @@ const payload = { pickupAddress: '144 Xuan Thuy', pickupLocation: { lat: 21, lng
   dropoffAddress: '1 Dai Co Viet', dropoffLocation: { lat: 0, lng: 0 },
   recipientName: 'Nguoi nhan', recipientPhone: '+84900000000' };
 
-// Both modes run the production HTTP handlers and SQL. Only native PG can prove competing row locks.
+// Cả hai chế độ chạy handler và SQL thật. Chỉ PostgreSQL nhiều connection kiểm chứng được việc chờ khóa.
 for (const mode of ['pglite', 'postgres'] as const) {
-  describe.skipIf(mode === 'postgres' && !nativeUrl)(`Week 6 Shipment/Assignment (${mode}, Firebase mock)`, () => {
+  describe.skipIf(mode === 'postgres' && !nativeUrl)(`Tuần 6: đọc đơn và phân công (${mode}, Firebase giả lập)`, () => {
     let app: INestApplication;
     let base: string;
     let engine: PGlite | undefined;
@@ -63,7 +63,7 @@ for (const mode of ['pglite', 'postgres'] as const) {
         const target = new URL(nativeUrl!);
         if (!['localhost', '127.0.0.1', '[::1]'].includes(target.hostname) ||
             target.pathname !== '/parcelflow_shipments_test' || [...target.searchParams.keys()].some(k => k !== 'sslmode')) {
-          throw new Error('Use a disposable loopback database named parcelflow_shipments_test without connection overrides');
+          throw new Error('Chỉ dùng database test riêng trên máy tên parcelflow_shipments_test, không ghi đè tham số kết nối');
         }
         pool = new Pool({ connectionString: nativeUrl, max: 8, connectionTimeoutMillis: 5000, statement_timeout: 5000 });
         await pool.query(`CREATE SCHEMA "${schema}"`); await pool.end();
@@ -116,7 +116,7 @@ for (const mode of ['pglite', 'postgres'] as const) {
       SELECT (SELECT count(*)::int FROM shipment_status_events WHERE action<>'CREATED') AS events,
         (SELECT count(*)::int FROM notifications WHERE kind<>'CREATED') AS notifications`)).rows[0];
 
-    it('protects List/Detail/Assign with global Auth, Admin role and business mapping', async () => {
+    it('bảo vệ API đọc đơn và phân công bằng xác thực, role và liên kết người dùng nghiệp vụ', async () => {
       const s = await create();
       for (const path of ['/shipments', `/shipments/${s.id}`, `/shipments/${s.id}/assign`]) {
         const response = await fetch(base + path, path.endsWith('/assign') ? { method: 'POST',
@@ -132,7 +132,7 @@ for (const mode of ['pglite', 'postgres'] as const) {
       expect(await effects()).toEqual({ events: 0, notifications: 0 });
     });
 
-    it('TC02.1: assigns one Driver and atomically writes trusted history/notification with exact SC02', async () => {
+    it('TC02.1: gán tài xế và ghi lịch sử, thông báo cùng giao dịch; response đúng SC02', async () => {
       const s = await create(); const response = await assign(s.id);
       expect(response.status).toBe(200); expect(response.headers.get('cache-control')).toBe('no-store');
       const body = await response.json();
@@ -149,14 +149,14 @@ for (const mode of ['pglite', 'postgres'] as const) {
       expect(String(n.body)).not.toContain(payload.recipientPhone);
     });
 
-    it('TC02.2: same current driver is a no-op, preserving mutation time and all side effects', async () => {
+    it('TC02.2: gán lại đúng tài xế không đổi thời gian và không thêm lịch sử, thông báo', async () => {
       const s = await create(); const first = await (await assign(s.id)).json();
       const second = await assign(s.id, id(3), 'admin2'); expect(second.status).toBe(200);
       expect(await second.json()).toEqual(first);
       expect(await effects()).toEqual({ events: 1, notifications: 1 });
     });
 
-    it('TC02.3: reassign records both Drivers and immediately removes the old Driver scope', async () => {
+    it('TC02.3: gán lại ghi đúng tài xế trước/sau và thu quyền xem của tài xế cũ', async () => {
       const s = await create(); await assign(s.id);
       const changed = await assign(s.id, id(4), 'admin2'); expect(changed.status).toBe(200);
       expect(await changed.json()).toMatchObject({ driverId: id(4), status: 'ASSIGNED' });
@@ -169,7 +169,7 @@ for (const mode of ['pglite', 'postgres'] as const) {
       expect(await effects()).toEqual({ events: 2, notifications: 2 });
     });
 
-    it('TC02.4: missing shipment/Driver returns404, wrong target role400, and picked-up/terminal state409', async () => {
+    it('TC02.4: thiếu đơn/tài xế trả 404, sai role trả 400, đã lấy hàng/kết thúc trả 409', async () => {
       const s = await create(); expect((await assign(shipmentId(999))).status).toBe(404);
       expect((await assign(s.id, id(999))).status).toBe(404);
       expect((await assign(s.id, id(1))).status).toBe(400);
@@ -186,7 +186,7 @@ for (const mode of ['pglite', 'postgres'] as const) {
     });
 
     it.each(['INSERT INTO shipment_status_events', 'INSERT INTO notifications', 'UPDATE shipments'])(
-      'rolls back assignment when %s fails, sanitizes errors and permits a fresh retry', async stage => {
+      'hoàn tác phân công khi %s lỗi, không lộ SQL và cho phép thử lại khi lỗi đã hết', async stage => {
         const s = await create(); failWrite = stage;
         const failed = await assign(s.id); expect(failed.status).toBe(503);
         expect(JSON.stringify(await failed.json())).not.toMatch(/credentials|INSERT|UPDATE|SELECT/);
@@ -196,7 +196,7 @@ for (const mode of ['pglite', 'postgres'] as const) {
         failWrite = null; expect((await assign(s.id)).status).toBe(200);
       });
 
-    it('TC02.6: lost commit response can be reconciled through Detail without duplicating the assignment', async () => {
+    it('TC02.6: mất phản hồi sau commit vẫn đọc lại được chi tiết và không ghi trùng phân công', async () => {
       const s = await create(); loseCommit = true; expect((await assign(s.id)).status).toBe(503);
       const detail = await (await get(`/shipments/${s.id}`)).json();
       expect(detail).toMatchObject({ status: 'ASSIGNED', driverId: id(3) });
@@ -205,13 +205,13 @@ for (const mode of ['pglite', 'postgres'] as const) {
       expect(await effects()).toEqual({ events: 1, notifications: 1 });
     });
 
-    it('allows one Driver to hold multiple shipments', async () => {
+    it('cho phép một tài xế nhận nhiều đơn', async () => {
       const a = await create(); const b = await create();
       expect((await assign(a.id)).status).toBe(200); expect((await assign(b.id)).status).toBe(200);
       expect((await (await get('/shipments', 'driver1')).json()).data).toHaveLength(2);
     });
 
-    it('scopes List/Detail by actor, applies exact tracking/status filters and returns empty pages', async () => {
+    it('lọc đơn theo người dùng, mã vận đơn và trạng thái; trả trang rỗng khi không có kết quả', async () => {
       const a = await create(); const b = await create('other'); await assign(a.id);
       const list = await get('/shipments', 'customer'); expect(list.headers.get('cache-control')).toBe('no-store');
       expect((await list.json()).data.map((s: { id: string }) => s.id)).toEqual([a.id]);
@@ -223,8 +223,8 @@ for (const mode of ['pglite', 'postgres'] as const) {
         .toEqual({ limit: 20, hasMore: false, nextCursor: null });
     });
 
-    it('paginates ties and microsecond timestamps without omissions; rejects cursors reused across actor/filter', async () => {
-      // The baseline uses milliseconds; preserve precision if the shared database supports microseconds.
+    it('phân trang đúng khi trùng thời gian hoặc lệch micro giây; chặn cursor khác người dùng/bộ lọc', async () => {
+      // Schema mẫu dùng mili giây; vẫn phải phân trang đúng nếu database chung lưu đến micro giây.
       await query('ALTER TABLE shipments ALTER COLUMN "createdAt" TYPE timestamptz(6)');
       const created = await Promise.all([create(), create(), create()]);
       for (const [i, s] of created.entries()) await query('UPDATE shipments SET "createdAt"=$2 WHERE id=$1',
@@ -243,7 +243,7 @@ for (const mode of ['pglite', 'postgres'] as const) {
       expect((await get('/shipments?status=ASSIGNED&cursor=' + first.pagination.nextCursor)).status).toBe(400);
     });
 
-    it('terminal shipments stay in the current Driver scope; lateness uses closing history, not read time', async () => {
+    it('tài xế vẫn xem được đơn đã kết thúc; giao trễ tính theo sự kiện kết thúc', async () => {
       const s = await create('customer', { expectedDeliveryAt: new Date(Date.now() + 60_000).toISOString() });
       await assign(s.id);
       await query(`UPDATE shipments SET status='DELIVERED',"expectedDeliveryAt"='2026-01-01T01:00:00Z',
@@ -259,7 +259,7 @@ for (const mode of ['pglite', 'postgres'] as const) {
       expect((await (await get(`/shipments/${s.id}`)).json()).isLate).toBe(true);
     });
 
-    it('active lateness is null without a deadline and changes after the deadline', async () => {
+    it('đơn đang xử lý chưa có hạn giao trả null, quá hạn trả giao trễ', async () => {
       const s = await create(); expect(s.isLate).toBeNull();
       await query(`UPDATE shipments SET "expectedDeliveryAt"=clock_timestamp()-interval '1 second' WHERE id=$1`, [s.id]);
       expect((await (await get(`/shipments/${s.id}`)).json()).isLate).toBe(true);
@@ -268,16 +268,16 @@ for (const mode of ['pglite', 'postgres'] as const) {
     });
 
     it.each([{}, [], null, { driverId: id(3), role: 'ADMIN' }, { driverId: 'bad' }, { driverId: id(3), customerId: id(2) }])(
-      'rejects invalid assignment body %j without writes', async body => {
+      'từ chối nội dung phân công sai %j và không ghi dữ liệu', async body => {
         const s = await create(); expect((await assign(s.id, id(3), 'admin', body)).status).toBe(400);
         expect(await effects()).toEqual({ events: 0, notifications: 0 });
       });
 
     it.each(['?limit=0', '?limit=101', '?limit=1.5', '?limit=1&limit=2', '?status=BAD', '?status=CREATED&status=ASSIGNED',
       '?trackingNumber=bad', '?cursor=garbage', '?cursor=e30', '?role=ADMIN', '?customerId=x'])(
-      'rejects invalid list query %s', async query => expect((await get('/shipments' + query)).status).toBe(400));
+      'từ chối tham số danh sách không hợp lệ %s', async query => expect((await get('/shipments' + query)).status).toBe(400));
 
-    it('rejects bad path IDs, unknown Detail/Assign query fields and prevents unintended action routes', async () => {
+    it('chặn mã đơn sai, tham số thừa và các action ngoài phạm vi', async () => {
       const s = await create();
       expect((await get('/shipments/not-an-id')).status).toBe(400);
       expect((await assign('not-an-id')).status).toBe(400);
@@ -286,7 +286,7 @@ for (const mode of ['pglite', 'postgres'] as const) {
       expect((await fetch(`${base}/shipments/${s.id}/pickup`, { method: 'POST', headers: headers('driver1') })).status).toBe(404);
     });
 
-    it('existing frontend parsers accept actual List/Detail/Assign responses', async () => {
+    it('frontend hiện có đọc được response thật của API danh sách, chi tiết và phân công', async () => {
       const { getShipments, getShipmentById, assignShipment } = await import(resolve(process.cwd(), '../web/src/api/endpoints/shipments.ts'));
       const { setTokenReader } = await import(resolve(process.cwd(), '../web/src/features/auth/session.ts'));
       const s = await create(); vi.stubEnv('VITE_API_URL', base); setTokenReader(async () => 'admin');
@@ -297,21 +297,21 @@ for (const mode of ['pglite', 'postgres'] as const) {
       } finally { setTokenReader(null); vi.unstubAllEnvs(); }
     });
 
-    it('simultaneous same-driver assignments create only one event/notification', async () => {
+    it('nhiều request cùng gán một tài xế chỉ tạo một sự kiện và một thông báo', async () => {
       const s = await create();
       const responses = await Promise.all(Array.from({ length: 5 }, () => assign(s.id)));
       expect(responses.map(r => r.status)).toEqual([200, 200, 200, 200, 200]);
       expect(await effects()).toEqual({ events: 1, notifications: 1 });
     });
 
-    it.skipIf(mode !== 'postgres')('observes a second connection blocked by the shipment lock, then serializes a reassign', async () => {
+    it.skipIf(mode !== 'postgres')('quan sát connection thứ hai chờ khóa đơn rồi gán lại theo đúng thứ tự', async () => {
       const s = await create();
       let reached!: () => void; let release!: () => void;
       const arrived = new Promise<void>(r => { reached = r; });
       blockWrite = { reached, gate: new Promise<void>(r => { release = r; }) };
       const first = assign(s.id); let second: Promise<Response> | undefined;
       try {
-        await Promise.race([arrived, first.then(() => { throw new Error('First assignment missed the barrier'); })]);
+        await Promise.race([arrived, first.then(() => { throw new Error('Lần gán đầu chưa tới điểm giữ giao dịch để kiểm tra khóa'); })]);
         second = assign(s.id, id(4), 'admin2');
         const until = Date.now() + 2500; let waiting = 0;
         do {

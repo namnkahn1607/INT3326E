@@ -1,17 +1,18 @@
 # API contract
 
-## TV1 week 6 — List, Detail and Assignment
+## TV1 tuần 6 — Đọc đơn và phân công tài xế
 
-`GET /v1/shipments`, `GET /v1/shipments/:id` and ADMIN-only
-`POST /v1/shipments/:id/assign` are implemented locally against the existing
-quoted-camelCase SQL baseline. List/Detail scope Customer ownership and current
-Driver assignment; Detail and history share one snapshot. Assignment locks the
-shipment and commits driver/status, event and notification atomically. Repeating
-the current driver is a no-op; clients reconcile uncertain responses with Detail.
+Đã triển khai và kiểm thử trên máy ba API: `GET /v1/shipments`,
+`GET /v1/shipments/:id` và `POST /v1/shipments/:id/assign` chỉ dành cho ADMIN.
+Dùng schema SQL hiện có, giữ tên cột camelCase có dấu nháy kép.
+Customer chỉ xem đơn mình tạo, Driver chỉ xem đơn hiện được gán; chi tiết và
+lịch sử lấy từ cùng một phiên bản dữ liệu. Phân công khóa dòng đơn rồi ghi
+trạng thái, lịch sử và thông báo trong cùng giao dịch. Gán lại đúng tài xế hiện
+tại không ghi thêm dữ liệu. Khi mất phản hồi, client đọc lại chi tiết để đối chiếu.
 
-Contract, test instructions and Cloud acceptance gates:
-[tv1-assignment-week6.md](tv1-assignment-week6.md). No production schema, IAM or
-deployment changes are included. The dated sections below retain earlier snapshots.
+Xem [hướng dẫn TV1 tuần 6](tv1-assignment-week6.md) để chạy test và tích hợp.
+Chưa thay schema production, IAM hoặc triển khai lên Cloud. Các mục có ngày
+bên dưới giữ kết quả tại thời điểm bàn giao trước đó.
 
 ## VIETMAP geocoding integration — 2026-10-25
 

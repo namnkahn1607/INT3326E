@@ -37,7 +37,7 @@ export class ShipmentsReadRepository {
   async detail(actor: BusinessUser, id: string): Promise<ShipmentDetailDto> {
     if (!this.pool) throw new ServiceUnavailableException();
     try {
-      // A single statement keeps the current driver, authorization and history in one snapshot.
+      // Một câu SQL đọc cùng phiên bản dữ liệu cho tài xế, quyền xem và lịch sử, tránh lệch khi gán lại.
       const { rows } = await this.pool.query<ShipmentRow & { allowed: boolean; statusHistory: ShipmentDetailDto['statusHistory'] }>(`
         SELECT ${SHIPMENT_PROJECTION},
           ($2::text = 'ADMIN' OR ($2 = 'CUSTOMER' AND s."senderId" = $3)
@@ -52,8 +52,8 @@ export class ShipmentsReadRepository {
             FROM shipment_status_events e WHERE e."shipmentId" = s.id), '[]'::jsonb) AS "statusHistory"
         FROM shipments s WHERE s.id = $1`, [id, ...shipmentScope(actor)]);
       const row = rows[0];
-      if (!row) throw new ApiProblem(404, 'RESOURCE_NOT_FOUND', 'Shipment not found');
-      if (!row.allowed) throw new ApiProblem(403, 'FORBIDDEN_RESOURCE', 'Access denied');
+      if (!row) throw new ApiProblem(404, 'RESOURCE_NOT_FOUND', 'Không tìm thấy đơn hàng');
+      if (!row.allowed) throw new ApiProblem(403, 'FORBIDDEN_RESOURCE', 'Không có quyền truy cập');
       return { ...shipmentResponse(row), statusHistory: row.statusHistory };
     } catch (error) {
       if (error instanceof HttpException) throw error;

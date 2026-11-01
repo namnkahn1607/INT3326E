@@ -1,61 +1,65 @@
-# TV1 tuần 6 — Shipment reads và Assignment
+# TV1 tuần 6 — Đọc đơn và phân công tài xế
 
-Đạt (TV6) thực hiện thay TV1 theo phân công hiện tại. Baseline:
-`develop@3110275d4a54ff7cebf0a875fbf1a94a41359193`.
-Nguồn yêu cầu: [PF SPEC 01, nội dung v1.3](https://docs.google.com/document/d/1S9gY8a08d8-9Rd4bhTOeT_IAJUrYtFnZtDKjKKEpuq8/edit),
-FR02/FR06/FR10, API02/03/04, SC01/02/03, SD04 và TC02.1–4/6.
-Theo lịch nhóm, tuần 6 là 26/10–01/11/2026. List/Detail là phụ thuộc để nối
-giao diện phân công hiện có; không làm lại frontend hoặc Auth.
+Đạt (TV6) thực hiện thay TV1, từ develop tại commit `3110275`.
+Nguồn: [đặc tả ParcelFlow v1.3](https://docs.google.com/document/d/1S9gY8a08d8-9Rd4bhTOeT_IAJUrYtFnZtDKjKKEpuq8/edit),
+FR02/FR06/FR10, API02/03/04, SC01/02/03 và TC02.1–4/6.
+Tuần 6 theo lịch nhóm: 26/10–01/11/2026.
 
-## API
+## Các API đã làm
 
-| Method/path | Quyền và kết quả |
+| API | Quyền và kết quả |
 | --- | --- |
-| `GET /v1/shipments` | CUSTOMER chỉ đơn mình tạo; DRIVER chỉ đơn hiện đang gán, gồm terminal; ADMIN toàn bộ. Trả SC01 với `data: SC02[]`. |
-| `GET /v1/shipments/:id` | Cùng quyền tài nguyên; SC02 kèm `statusHistory: SC03[]` theo `occurredAt ASC, id ASC`. Không tồn tại 404, ngoài quyền 403. |
-| `POST /v1/shipments/:id/assign` | Chỉ ADMIN có business user. Body duy nhất `{ "driverId": "usr_..." }`, trả 200 SC02. |
+| `GET /v1/shipments` | Customer xem đơn mình tạo; Driver xem đơn hiện được gán, kể cả đơn đã kết thúc; Admin xem tất cả. |
+| `GET /v1/shipments/:id` | Chi tiết đơn và lịch sử theo thời gian tăng dần. Không có đơn trả 404; ngoài quyền trả 403. |
+| `POST /v1/shipments/:id/assign` | Chỉ Admin. Body duy nhất `{ "driverId": "usr_..." }`. Trả 200 và thông tin đơn sau phân công. |
 
-Giữ FirebaseAuthGuard, RolesGuard, BusinessUserGuard và pool `USER_DATABASE`
-hiện có. Không tin actor/role trong body. Các response mới có
-`Cache-Control: no-store`; lỗi đi qua ProblemDetails hiện có.
+Dùng lại xác thực Firebase, kiểm tra role, liên kết người dùng nghiệp vụ và
+nhóm kết nối database `USER_DATABASE`. Không lấy danh tính người thao tác từ
+body. Response có `Cache-Control: no-store`; lỗi dùng ProblemDetails hiện có.
 
-List nhận `limit` mặc định 20, tối đa 100; `status`, `trackingNumber` exact và
-`cursor` opaque. Sort `createdAt DESC,id DESC`. Cursor gắn với actor/filter,
-giữ microsecond của khóa SQL; scope vẫn được áp lại trong query, cursor không
-trao quyền. Field lạ, lặp hoặc cursor không khớp trả 400. Không có total hay
-snapshot xuyên các trang. Detail và history đọc bằng một SQL statement để
-tránh trộn state/driver/history khi reassign cạnh tranh. `isLate` của đơn active
-so với server time; đơn terminal so với sự kiện kết thúc, bằng deadline là false.
+Danh sách nhận `limit` mặc định 20, tối đa 100; `status`, `trackingNumber`
+đầy đủ và `cursor`. Sắp `createdAt DESC,id DESC`. Cursor giữ vị trí phân trang,
+gắn với người dùng và bộ lọc; SQL vẫn kiểm tra quyền ở mỗi request. Giữ độ
+chính xác micro giây để không bỏ sót dòng. Tham số lạ, lặp hoặc cursor sai
+trả 400. Không trả tổng số đơn hay cam kết dữ liệu cố định qua nhiều trang.
 
-## Transaction phân công
+Chi tiết và lịch sử đọc bằng một câu SQL để không ghép trạng thái cũ với tài
+xế mới khi có request gán lại chạy đồng thời. Đơn đang xử lý tính `isLate`
+theo giờ máy chủ; đơn đã kết thúc dùng thời điểm sự kiện kết thúc. Chưa có
+hạn giao trả null, kết thúc đúng hạn trả false.
 
-1. Khóa shipment bằng `SELECT ... FOR UPDATE OF s`, sau đó kiểm tra state.
-2. Khóa user được chọn bằng `FOR SHARE` và kiểm tra role DRIVER. Shipment/Driver
-   không tồn tại trả 404; target sai role trả 400; PICKED_UP/terminal trả 409.
-3. CREATED chuyển ASSIGNED. ASSIGNED cùng Driver là no-op, giữ nguyên
-   `updatedAt`, history và notification. ASSIGNED khác Driver ghi REASSIGNED.
-4. Với thay đổi thật, cùng một SQL client ghi shipment, status event và
-   notification cho Customer rồi commit. Lỗi ghi rollback tất cả; lỗi dependency
-   được che chi tiết SQL và trả 503. Không tự retry transaction.
+## Vì sao phân công không bị ghi trùng?
 
-Hai request cạnh tranh được serialize theo khóa shipment; request sau đọc
-state/driver sau commit trước. Hai yêu cầu gán Driver khác nhau có thể cùng
-thành công theo thứ tự, vì reassign được phép trước pickup. Mỗi đơn chỉ có một
-Driver hiện hành; một Driver được có nhiều đơn. Nếu mất response, frontend phải
-GET Detail và yêu cầu xác nhận mới; không tự phát lại ý định gán cũ.
+1. Khóa dòng đơn bằng `SELECT ... FOR UPDATE OF s`, rồi kiểm tra trạng thái.
+   Chỉ CREATED và ASSIGNED mới được phân công.
+2. Kiểm tra tài khoản được chọn tồn tại, có quyền DRIVER. Khóa bằng `FOR SHARE`
+   để role không đổi trong lúc giao dịch đang chạy.
+3. Nếu vẫn là tài xế hiện tại thì giữ nguyên `updatedAt`, không thêm lịch sử
+   hoặc thông báo. Nếu gán mới/đổi tài xế thì ghi ASSIGNED/REASSIGNED.
+4. Cùng một kết nối SQL cập nhật đơn, ghi lịch sử và thông báo cho Customer.
+   Chỉ trả thành công sau khi cả ba bước đã commit. Một bước lỗi thì hoàn tác
+   toàn bộ; lỗi database trả 503 và không lộ SQL.
 
-Comment trong source giải thích khóa, thời điểm lấy clock, snapshot, no-op và
-commit. Controller chỉ nhận HTTP; service kiểm tra request/quyền; repository
-giữ query/transaction. Response mapper dùng chung cho reads và Assign.
+Request thứ hai chờ khóa rồi đọc dữ liệu đã commit của request trước. Hai
+request chọn Driver khác nhau có thể thành công lần lượt vì đặc tả cho phép
+gán lại trước khi lấy hàng. Mỗi đơn chỉ có một Driver hiện hành; một Driver
+vẫn có thể nhận nhiều đơn.
 
-## Database
+Không có đơn/tài xế trả 404; tài khoản sai role trả 400; đã lấy hàng hoặc kết
+thúc trả 409. Mất phản hồi thì frontend đọc lại chi tiết và yêu cầu người dùng
+xác nhận lại ý định gán, không tự gửi lại POST.
 
-Dùng các bảng/cột đã có ở `packages/database/sql/001-create-shipment.sql`:
-`users`, `shipments`, `shipment_status_events`, `notifications`.
-Giữ mapping quoted camelCase, `trackingCode/senderId/delivery*` sang
-`trackingNumber/customerId/dropoff*`. Không thêm dependency, schema hoặc lệnh
-migration mới. File SQL baseline chỉ dành cho schema rỗng/test; không apply nó
-trực tiếp lên Cloud SQL đã có dữ liệu. Pool và credential do cấu hình hiện có quản lý.
+## Code và dữ liệu
+
+Controller nhận HTTP; service kiểm tra yêu cầu/quyền; repository xử lý SQL và
+giao dịch. Dùng chung phần ánh xạ response. Comment giải thích khóa dòng,
+thời điểm lấy giờ máy chủ, đọc cùng phiên bản dữ liệu và xử lý mất phản hồi.
+
+Dùng các bảng `users`, `shipments`, `shipment_status_events`, `notifications`
+và tên cột hiện có. Ánh xạ `trackingCode/senderId/delivery*` sang
+`trackingNumber/customerId/dropoff*`. Không thêm thư viện hay migration.
+File `packages/database/sql/001-create-shipment.sql` chỉ dành cho schema
+rỗng/test, không chạy trực tiếp trên Cloud SQL đang có dữ liệu.
 
 ## Kiểm thử
 
@@ -68,46 +72,44 @@ npm run build --workspace=@parcelflow/api
 npm run test --workspace=@parcelflow/api
 ```
 
-Để kiểm tra PostgreSQL native, operator cấu hình `SHIPMENT_TEST_DATABASE_URL`
-tại máy trỏ tới database test loopback **`parcelflow_shipments_test`**, rồi chạy:
+Muốn kiểm chứng khóa giữa nhiều kết nối, cấu hình `SHIPMENT_TEST_DATABASE_URL`
+trỏ tới database test riêng trên máy tên `parcelflow_shipments_test`, rồi chạy:
 
 ```bash
 npm run test --workspace=@parcelflow/api -- src/modules/assignments/assignments.postgres.spec.ts
 ```
 
-Harness tự tạo/dọn schema ngẫu nhiên, không dùng `DATABASE_URL` của ứng dụng.
-Firebase được mock trong cả hai mode. PGlite chạy SQL thật nhưng serialize
-transaction; chỉ PostgreSQL native kiểm chứng khóa giữa nhiều connection.
+Bộ test tự tạo/dọn schema riêng, không dùng `DATABASE_URL` của ứng dụng.
+Firebase được giả lập. PGlite chạy SQL thật nhưng xử lý giao dịch lần lượt;
+PostgreSQL nhiều connection mới kiểm chứng được việc chờ khóa.
 
-Bộ test bao phủ quyền 401/403/409, scope sau reassign, state/target invalid,
-same-driver no-op, nhiều đơn/Driver, rollback từng bước ghi, mất response sau
-COMMIT, filter/pagination/microsecond, terminal lateness và frontend API client
-đọc response thật từ Nest HTTP. Test native giữ transaction đầu tại barrier,
-quan sát connection thứ hai chờ `Lock` trong `pg_stat_activity`, rồi xác nhận
-history ASSIGNED/REASSIGNED đúng driver trước/sau và không ghi trùng notification.
+Bộ test kiểm tra quyền, tài xế cũ mất quyền sau gán lại, đầu vào/trạng thái
+sai, nhiều đơn cho một Driver, hoàn tác từng bước ghi, mất phản hồi sau commit,
+phân trang và giao trễ. Có kiểm tra frontend hiện tại đọc response thật từ
+Nest HTTP. Test PostgreSQL giữ giao dịch đầu tại một điểm chờ, quan sát
+connection thứ hai chờ khóa trong `pg_stat_activity`, rồi kiểm tra thứ tự gán,
+lịch sử và thông báo.
 
-Kết quả kiểm tra ngày 01/11/2026:
+Kết quả bản triển khai ngày 01/11/2026:
 
-- Bộ mới: **69 pass, 1 skip** với PGlite và PostgreSQL native 18.6. Skip là ca
-  quan sát lock cố ý không chạy trên PGlite.
-- Toàn bộ API: **357 pass, 16 skip**. 16 skip gồm 7 Firebase Emulator, 7 Admin
-  native SQL do chưa cấu hình URL riêng và 2 ca lock không áp dụng cho PGlite.
-- API typecheck/build đạt. Kết quả này không chứng minh Firebase/Cloud SQL thật.
-- Root typecheck và **354 test frontend** đạt. Lint phần thay đổi không có
-  warning/error; lint toàn repo còn cảnh báo có sẵn ở scaffold và code ngoài phạm vi.
-- OpenAPI JSON, các `$ref` nội bộ và `git diff --check` đạt.
+- Bộ mới: 69 đạt, 1 bỏ qua với PGlite và PostgreSQL 18.6. Ca bỏ qua là kiểm
+  tra chờ khóa không áp dụng cho PGlite.
+- Toàn bộ API: 357 đạt, 16 bỏ qua. Gồm 7 ca cần Firebase Emulator, 7 ca Admin
+  cần URL PostgreSQL riêng và 2 ca khóa không áp dụng cho PGlite.
+- 354 test frontend đạt. Kiểm tra kiểu dữ liệu ở gốc repo và API, build API đạt.
+- Lint phần sửa không có lỗi/cảnh báo; toàn repo còn cảnh báo cũ ngoài phạm vi.
+- OpenAPI JSON, tham chiếu nội bộ và `git diff --check` đạt.
 
-PostgreSQL chạy tạm trên loopback trong thư mục công việc, database riêng.
-Không thay dependencies repo để cài server, không kết nối database nhóm.
+PostgreSQL kiểm thử chạy riêng trên máy và đã dừng sau khi kiểm tra.
+Chưa kết nối database nhóm trong lượt này.
 
-## Bàn giao tích hợp
+## Bàn giao
 
-TV3 có thể dùng nguyên `getShipments`, `getShipmentById`, `assignShipment` đang
-có. Frontend đã có recovery GET-only khi kết quả Assign không rõ; không thêm
-retry POST. TV4 dùng List/Detail theo business Driver hiện hành.
+TV3 dùng nguyên `getShipments`, `getShipmentById`, `assignShipment` hiện có.
+Giữ cách đọc lại chi tiết khi kết quả phân công chưa rõ, không tự retry POST.
+TV4 dùng danh sách/chi tiết theo tài khoản Driver hiện hành.
 
-Còn mở: deploy bản mới, xác nhận schema/runtime và mapping Firebase ba role,
-nghiệm thu Admin chọn đơn/gán/reassign và Driver đọc đúng đơn trên Cloud.
-Đo NFR riêng trên môi trường đó. TC02.5 race với Pickup vẫn là bước sau khi API
-Pickup tồn tại; không bổ sung handler Pickup chỉ để đóng test này. GPS ingest,
-Worker, UI mới và provisioning production không thuộc thay đổi này.
+Còn cần triển khai và nghiệm thu trên Cloud: schema/mapping Firebase đúng,
+Admin gán/gán lại, Driver xem đúng đơn. Hiệu năng phải đo riêng trên Cloud.
+Ca TC02.5 cạnh tranh với Pickup làm sau khi có API Pickup. GPS ingest, Worker,
+UI mới và cấp user production nằm ngoài phần này.

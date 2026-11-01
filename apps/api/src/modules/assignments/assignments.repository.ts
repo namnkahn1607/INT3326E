@@ -19,26 +19,26 @@ export class AssignmentsRepository {
     try {
       client = await this.pool.connect();
       await client.query('BEGIN');
-      // Every assignment locks the shipment first. Waiting requests then see the committed driver/state.
+      // Khóa đơn trước khi kiểm tra. Request đang chờ sẽ đọc trạng thái và tài xế sau lần commit trước.
       const locked = await client.query<ShipmentRow>(`
         SELECT ${SHIPMENT_PROJECTION} FROM shipments s WHERE s.id = $1 FOR UPDATE OF s`, [id]);
       const current = locked.rows[0];
-      if (!current) throw new ApiProblem(404, 'RESOURCE_NOT_FOUND', 'Shipment not found');
+      if (!current) throw new ApiProblem(404, 'RESOURCE_NOT_FOUND', 'Không tìm thấy đơn hàng');
       if (current.status !== 'CREATED' && current.status !== 'ASSIGNED') {
-        throw new ApiProblem(409, 'INVALID_STATE_TRANSITION', 'Shipment can no longer be assigned');
+        throw new ApiProblem(409, 'INVALID_STATE_TRANSITION', 'Đơn đã lấy hàng hoặc kết thúc, không thể phân công lại');
       }
-      // Lock the target role too, so it cannot change between validation and commit.
+      // Khóa cả tài khoản được chọn để role không đổi giữa lúc kiểm tra và commit.
       const driver = await client.query<{ role: string }>('SELECT role FROM users WHERE id = $1 FOR SHARE', [driverId]);
-      if (!driver.rows[0]) throw new ApiProblem(404, 'RESOURCE_NOT_FOUND', 'Driver not found');
-      if (driver.rows[0].role !== UserRole.DRIVER) invalidField('driverId', 'Selected user must be a DRIVER');
+      if (!driver.rows[0]) throw new ApiProblem(404, 'RESOURCE_NOT_FOUND', 'Không tìm thấy tài xế');
+      if (driver.rows[0].role !== UserRole.DRIVER) invalidField('driverId', 'Tài khoản được chọn phải có quyền DRIVER');
       if (current.driverId === driverId) {
         const response = shipmentResponse(current);
-        // No-op preserves the original mutation time, event and notification.
+        // Gán lại đúng tài xế hiện tại: giữ nguyên thời gian, lịch sử và thông báo.
         await client.query('COMMIT');
         return response;
       }
 
-      // Read server time after obtaining the lock, rather than at transaction start.
+      // Lấy giờ máy chủ sau khi có khóa để không tính cả thời gian request phải chờ.
       const clock = await client.query<{ now: Date }>('SELECT clock_timestamp() AS now');
       const occurredAt = new Date(clock.rows[0].now).toISOString();
       const action = current.status === 'CREATED' ? 'ASSIGNED' : 'REASSIGNED';
@@ -56,12 +56,12 @@ export class AssignmentsRepository {
         `Đơn ${current.trackingCode} đã được ${action === 'ASSIGNED' ? 'phân công' : 'đổi'} tài xế.`, occurredAt]);
       const updated = await client.query<ShipmentRow>(`SELECT ${SHIPMENT_PROJECTION} FROM shipments s WHERE s.id=$1`, [id]);
       const response = shipmentResponse(updated.rows[0]);
-      // Respond only after all three writes commit. An uncertain commit must not trigger an automatic retry.
+      // Chỉ trả thành công khi cả ba bước ghi đã commit. Nếu mất phản hồi, không tự gán lại.
       await client.query('COMMIT');
       return response;
     } catch (error) {
       try { await client?.query('ROLLBACK'); }
-      catch { releaseError = new Error('Transaction connection is unusable'); }
+      catch { releaseError = new Error('Kết nối không còn dùng được sau khi hoàn tác giao dịch'); }
       if (error instanceof HttpException) throw error;
       throw new ServiceUnavailableException();
     } finally { client?.release(releaseError); }

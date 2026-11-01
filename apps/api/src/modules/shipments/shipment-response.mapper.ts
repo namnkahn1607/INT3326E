@@ -14,7 +14,7 @@ export interface ShipmentRow extends QueryResultRow {
   cursorCreatedAt: string; observedAt: Date; terminalAt: Date | null;
 }
 
-// Resolve terminal lateness from the closing event, never from a later read's clock.
+// Đơn đã kết thúc: tính giao trễ theo sự kiện kết thúc, tránh đổi kết quả khi đọc lại sau đó.
 export const SHIPMENT_PROJECTION = `s.*,
   to_char(s."createdAt" AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS "cursorCreatedAt",
   statement_timestamp() AS "observedAt",
@@ -33,7 +33,7 @@ export function shipmentResponse(row: ShipmentRow): ShipmentResponseDto {
     throw new ServiceUnavailableException();
   }
   const comparisonTime = terminal ? row.terminalAt! : row.observedAt;
-  // Explicit mapping keeps storage names and private columns out of API responses.
+  // Ánh xạ rõ từng trường để response đúng contract và không lộ cột nội bộ của database.
   return {
     id: row.id, trackingNumber: row.trackingCode, customerId: row.senderId, driverId: row.driverId, status: row.status,
     pickupAddress: row.pickupAddress, pickupLocation: { lat: row.pickupLat, lng: row.pickupLng },

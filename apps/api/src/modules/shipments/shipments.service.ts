@@ -35,12 +35,12 @@ export class ShipmentsService {
   }
 
   detail(actor: BusinessUser, id: string, query: Record<string, unknown>) {
-    if (Object.keys(query).length) invalidField('query', 'Query fields are not supported');
+    if (Object.keys(query).length) invalidField('query', 'Yêu cầu này không nhận tham số truy vấn');
     return this.reads.detail(actor, parseShipmentId(id));
   }
 
   async create(actor: BusinessUser, payload: CreateShipmentDto, key: string): Promise<ShipmentResponseDto> {
-    if (actor.role !== UserRole.CUSTOMER) throw new ApiProblem(403, 'FORBIDDEN_RESOURCE', 'Access denied');
+    if (actor.role !== UserRole.CUSTOMER) throw new ApiProblem(403, 'FORBIDDEN_RESOURCE', 'Không có quyền truy cập');
     if (!/^usr_[0-7][0-9A-HJKMNP-TV-Z]{25}$/.test(actor.id)) {
       throw new ApiProblem(409, 'USER_NOT_PROVISIONED', 'Business user ID does not match the contract');
     }

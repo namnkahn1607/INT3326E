@@ -17,7 +17,7 @@ export interface ShipmentListQuery {
 }
 
 export function parseShipmentId(id: string): string {
-  if (!SHIPMENT_ID.test(id)) invalidField('shipmentId', 'Must be a sh_ULID');
+  if (!SHIPMENT_ID.test(id)) invalidField('shipmentId', 'Mã đơn phải có dạng sh_ULID');
   return id;
 }
 
@@ -31,20 +31,20 @@ export function encodeShipmentCursor(actor: BusinessUser, query: ShipmentListQue
 
 export function parseShipmentListQuery(raw: Record<string, unknown>, actor: BusinessUser): ShipmentListQuery {
   if (Object.keys(raw).some(key => !['limit', 'cursor', 'status', 'trackingNumber'].includes(key))) {
-    invalidField('query', 'Unknown query field');
+    invalidField('query', 'Tham số truy vấn không được hỗ trợ');
   }
   let limit = 20;
   if (raw.limit !== undefined) {
     if (typeof raw.limit !== 'string' || !/^[1-9]\d{0,2}$/.test(raw.limit) || Number(raw.limit) > 100) {
-      invalidField('limit', 'Must be an integer between 1 and 100');
+      invalidField('limit', 'Phải là số nguyên từ 1 đến 100');
     }
     limit = Number(raw.limit);
   }
   if (raw.status !== undefined && (typeof raw.status !== 'string' || !SHIPMENT_STATUSES.includes(raw.status as ShipmentStatus))) {
-    invalidField('status', 'Unknown shipment status');
+    invalidField('status', 'Trạng thái đơn không hợp lệ');
   }
   if (raw.trackingNumber !== undefined && (typeof raw.trackingNumber !== 'string' || !TRACKING_NUMBER.test(raw.trackingNumber))) {
-    invalidField('trackingNumber', 'Must be an exact tracking number');
+    invalidField('trackingNumber', 'Phải nhập đầy đủ mã vận đơn đúng định dạng');
   }
   const query: ShipmentListQuery = { limit, status: raw.status as ShipmentStatus ?? null,
     trackingNumber: raw.trackingNumber as string ?? null, after: null };
@@ -65,11 +65,11 @@ export function parseShipmentListQuery(raw: Record<string, unknown>, actor: Busi
     query.after = { createdAt: value.createdAt, id: value.id };
     return query;
   } catch {
-    invalidField('cursor', 'Invalid cursor for this query');
+    invalidField('cursor', 'Cursor không hợp lệ hoặc không khớp bộ lọc hiện tại');
   }
 }
 
-// Role scope is always reapplied in SQL; an opaque cursor never grants access.
+// SQL luôn lọc theo quyền hiện tại; cursor chỉ giữ vị trí phân trang, không cấp thêm quyền.
 export function shipmentScope(actor: BusinessUser): [string, string | null] {
   return [actor.role, actor.role === UserRole.ADMIN ? null : actor.id];
 }

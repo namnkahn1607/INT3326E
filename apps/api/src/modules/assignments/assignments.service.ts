@@ -12,8 +12,8 @@ export class AssignmentsService {
   constructor(@Inject(AssignmentsRepository) private readonly assignments: AssignmentsRepository) {}
 
   assign(actor: BusinessUser, id: string, body: unknown, query: Record<string, unknown>) {
-    if (actor.role !== UserRole.ADMIN) throw new ApiProblem(403, 'FORBIDDEN_RESOURCE', 'Access denied');
-    if (Object.keys(query).length) invalidField('query', 'Query fields are not supported');
+    if (actor.role !== UserRole.ADMIN) throw new ApiProblem(403, 'FORBIDDEN_RESOURCE', 'Không có quyền truy cập');
+    if (Object.keys(query).length) invalidField('query', 'Yêu cầu này không nhận tham số truy vấn');
     return this.assignments.assign(actor, parseShipmentId(id), parseAssignDriver(body));
   }
 }

@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "ParcelFlow Core Logistics API (MVP)",
-    "description": "PF SPEC 01 v1.3 API01/02/03/04 implemented locally: transactional Create, role-scoped List/Detail and ADMIN Assign/reassign. All business routes require Firebase identity plus business-user linkage. Responses use SC01/02/03 and ProblemDetails. Assignment locks the shipment, validates the target DRIVER, and commits shipment/history/notification together. Same current driver is a no-op. Cloud acceptance and shared database rollout remain separate. Pickup/Deliver/Fail, tracking and GPS ingest remain draft. See docs/tv1-assignment-week6.md. Existing Auth, Admin directory and geocoding behavior is preserved.",
+    "description": "Đã triển khai và kiểm thử trên máy API01/02/03/04 theo đặc tả ParcelFlow v1.3: tạo đơn, danh sách/chi tiết theo quyền và phân công tài xế dành cho ADMIN. API nghiệp vụ yêu cầu Firebase hợp lệ và liên kết người dùng nghiệp vụ. Phân công khóa dòng đơn rồi ghi đơn/lịch sử/thông báo trong cùng giao dịch. Gán lại đúng tài xế không ghi thêm dữ liệu. Chưa thay schema hay triển khai Cloud SQL. Pickup/Deliver/Fail, tracking và GPS ingest vẫn là bản nháp. Xem docs/tv1-assignment-week6.md. Giữ Auth, Admin directory và geocoding hiện có.",
     "version": "0.6.0-shipment-assignment"
   },
   "servers": [
@@ -396,15 +396,15 @@
         "tags": [
           "Shipments"
         ],
-        "summary": "List shipments with keyset pagination",
-        "description": "API02. CUSTOMER reads own shipments; DRIVER reads currently assigned shipments including terminal ones; ADMIN reads all. Filters never expand role scope. Sort createdAt DESC,id DESC; default limit20, max100. Cursor is bound to actor and filters, preserving SQL microseconds. Unknown/repeated query fields and invalid cursors return400. No total or cross-page snapshot guarantee. Missing business identity409, SQL/config errors503. isLate is calculated at read time for active shipments, at closing event time for terminal shipments.",
+        "summary": "Danh sách đơn theo quyền và phân trang",
+        "description": "API02. CUSTOMER chỉ xem đơn mình tạo; DRIVER xem đơn hiện được gán, gồm đơn đã kết thúc; ADMIN xem tất cả. Bộ lọc không mở rộng quyền. Sắp createdAt DESC,id DESC; limit mặc định 20, tối đa 100. Cursor gắn với người dùng/bộ lọc và giữ độ chính xác micro giây. Tham số lạ, lặp hoặc cursor sai trả 400. Thiếu liên kết người dùng trả 409, lỗi SQL/cấu hình trả 503. Không trả tổng số đơn. isLate của đơn đang xử lý dùng giờ máy chủ; đơn đã kết thúc dùng thời điểm sự kiện kết thúc.",
         "operationId": "listShipments",
         "parameters": [
           {
             "name": "cursor",
             "in": "query",
             "required": false,
-            "description": "Opaque cursor encoding the `(createdAt, id)` tuple of the last record for keyset pagination.",
+            "description": "Vị trí phân trang theo createdAt/id của dòng cuối, dùng với cùng người dùng và bộ lọc.",
             "schema": {
               "type": "string"
             }
@@ -413,7 +413,7 @@
             "name": "limit",
             "in": "query",
             "required": false,
-            "description": "Number of items to retrieve (default: 20, max: 100).",
+            "description": "Số dòng mỗi trang, mặc định 20, tối đa 100.",
             "schema": {
               "type": "integer",
               "minimum": 1,
@@ -425,7 +425,7 @@
             "name": "status",
             "in": "query",
             "required": false,
-            "description": "Filter shipments by lifecycle status.",
+            "description": "Lọc theo trạng thái đơn.",
             "schema": {
               "$ref": "#/components/schemas/ShipmentStatus"
             }
@@ -434,7 +434,7 @@
             "name": "trackingNumber",
             "in": "query",
             "required": false,
-            "description": "Exact tracking-number filter within the current role scope.",
+            "description": "Lọc chính xác mã vận đơn trong phạm vi được phép xem.",
             "schema": {
               "type": "string",
               "pattern": "^PF[0-9]{8}[0-9A-HJKMNP-TV-Z]{6}$"
@@ -443,7 +443,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Paginated shipment records",
+            "description": "Danh sách đơn và thông tin phân trang",
             "content": {
               "application/json": {
                 "schema": {
@@ -453,7 +453,7 @@
             },
             "headers": {
               "Cache-Control": {
-                "description": "Private business data must not be cached.",
+                "description": "Dữ liệu nghiệp vụ không được lưu cache.",
                 "schema": {
                   "type": "string",
                   "enum": [
@@ -488,7 +488,7 @@
           }
         ],
         "x-implementation-status": "implemented-local",
-        "x-acceptance": "Local HTTP/SQL tests; no Cloud SQL migration or deployment. See docs/tv1-assignment-week6.md."
+        "x-acceptance": "Đã kiểm thử HTTP/SQL trên máy; chưa chạy migration hoặc deploy Cloud. Xem docs/tv1-assignment-week6.md."
       }
     },
     "/shipments/{id}": {
@@ -496,8 +496,8 @@
         "tags": [
           "Shipments"
         ],
-        "summary": "Get shipment details by ID",
-        "description": "API03. Returns SC02 and ordered SC03 statusHistory from one SQL snapshot. CUSTOMER owner, current DRIVER or ADMIN only. Missing shipment404; existing shipment outside scope403. Reject unknown query fields. No GPS history or private database fields.",
+        "summary": "Chi tiết đơn và lịch sử thay đổi",
+        "description": "API03. Trả SC02 và statusHistory theo SC03 từ cùng một phiên bản dữ liệu SQL. Chỉ Customer chủ đơn, Driver hiện hành hoặc Admin được xem. Không có đơn trả 404; ngoài quyền trả 403. Từ chối tham số truy vấn thừa. Không trả lịch sử GPS hoặc cột nội bộ.",
         "operationId": "getShipmentById",
         "parameters": [
           {
@@ -506,7 +506,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Shipment details",
+            "description": "Chi tiết đơn và lịch sử theo thời gian tăng dần",
             "content": {
               "application/json": {
                 "schema": {
@@ -516,7 +516,7 @@
             },
             "headers": {
               "Cache-Control": {
-                "description": "Private business data must not be cached.",
+                "description": "Dữ liệu nghiệp vụ không được lưu cache.",
                 "schema": {
                   "type": "string",
                   "enum": [
@@ -554,7 +554,7 @@
           }
         ],
         "x-implementation-status": "implemented-local",
-        "x-acceptance": "Local HTTP/SQL tests; no Cloud SQL migration or deployment. See docs/tv1-assignment-week6.md."
+        "x-acceptance": "Đã kiểm thử HTTP/SQL trên máy; chưa chạy migration hoặc deploy Cloud. Xem docs/tv1-assignment-week6.md."
       }
     },
     "/shipments/{id}/assign": {
@@ -562,8 +562,8 @@
         "tags": [
           "Shipments"
         ],
-        "summary": "Assign or reassign shipment to a driver",
-        "description": "Transitions state from `CREATED` to `ASSIGNED`, or updates `driverId` on an already `ASSIGNED` shipment (reassignment).\n\n**Authorized Roles:** `ADMIN`.\n\n**Natural Idempotency:**\n- If assigned to the same driver when already `ASSIGNED`: no-op, returns `200 OK`.\n- If reassigned to a different driver when `ASSIGNED`: updates `driverId`, returns `200 OK`.\n- If shipment is in `PICKED_UP`, `DELIVERED`, `DELIVERY_FAILED`: rejected with `409 Conflict`.\n\nValidates that the target user exists and holds the `DRIVER` role.\nAPI04 implemented locally. Locks the shipment with SELECT FOR UPDATE; validates and locks the target user role. Changed assignment writes one status event and Customer notification on the same SQL client before commit. Same current DRIVER preserves updatedAt/history/notification. No Idempotency-Key or automatic retry: on uncertain response GET Detail and obtain fresh user confirmation. Target missing404; wrong role400; invalid state409. One DRIVER may hold multiple shipments. Reject all body fields other than driverId and all query fields.",
+        "summary": "Gán hoặc đổi tài xế cho đơn",
+        "description": "API04 chỉ dành cho ADMIN. Khóa shipment bằng SELECT FOR UPDATE, kiểm tra và khóa role tài xế. CREATED chuyển ASSIGNED; ASSIGNED khác Driver ghi REASSIGNED. Đơn, lịch sử và thông báo cùng commit. Gán lại đúng tài xế giữ nguyên updatedAt/lịch sử/thông báo. Đã lấy hàng hoặc kết thúc trả 409; không có đơn/tài xế trả 404; target sai role trả 400. Chỉ nhận driverId trong body, không nhận query. Một Driver có thể nhận nhiều đơn. Mất phản hồi phải GET Detail để đối chiếu và xin xác nhận mới, không tự retry POST.",
         "operationId": "assignShipment",
         "parameters": [
           {
@@ -582,7 +582,7 @@
         },
         "responses": {
           "200": {
-            "description": "Shipment assigned or reassigned successfully",
+            "description": "Đơn sau phân công; giữ nguyên nếu vẫn là tài xế hiện tại",
             "content": {
               "application/json": {
                 "schema": {
@@ -592,7 +592,7 @@
             },
             "headers": {
               "Cache-Control": {
-                "description": "Private business data must not be cached.",
+                "description": "Dữ liệu nghiệp vụ không được lưu cache.",
                 "schema": {
                   "type": "string",
                   "enum": [
@@ -615,7 +615,7 @@
             "$ref": "#/components/responses/404NotFound"
           },
           "409": {
-            "description": "Invalid state transition (shipment already picked up, delivered, failed); business identity linkage failure returns USER_NOT_PROVISIONED",
+            "description": "Trạng thái không cho phép phân công; thiếu/lệch liên kết người dùng trả USER_NOT_PROVISIONED.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -637,7 +637,7 @@
           }
         ],
         "x-implementation-status": "implemented-local",
-        "x-acceptance": "Local HTTP/SQL tests; no Cloud SQL migration or deployment. See docs/tv1-assignment-week6.md."
+        "x-acceptance": "Đã kiểm thử HTTP/SQL trên máy; chưa chạy migration hoặc deploy Cloud. Xem docs/tv1-assignment-week6.md."
       }
     },
     "/shipments/{id}/pickup": {
