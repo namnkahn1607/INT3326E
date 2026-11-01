@@ -18,7 +18,7 @@ export class ShipmentsReadRepository {
         SELECT ${SHIPMENT_PROJECTION} FROM shipments s
         WHERE ($1::text = 'ADMIN' OR ($1 = 'CUSTOMER' AND s."senderId" = $2)
           OR ($1 = 'DRIVER' AND s."driverId" = $2))
-          AND ($3::text IS NULL OR s.status = $3)
+          AND ($3::text IS NULL OR s.status::text = $3::text)
           AND ($4::text IS NULL OR s."trackingCode" = $4)
           AND ($5::timestamptz IS NULL OR (s."createdAt", s.id) < ($5::timestamptz, $6::text))
         ORDER BY s."createdAt" DESC, s.id DESC LIMIT $7`,

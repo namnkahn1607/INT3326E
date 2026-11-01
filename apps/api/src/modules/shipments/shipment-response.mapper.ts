@@ -19,7 +19,7 @@ export const SHIPMENT_PROJECTION = `s.*,
   to_char(s."createdAt" AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS "cursorCreatedAt",
   statement_timestamp() AS "observedAt",
   (SELECT e."occurredAt" FROM shipment_status_events e
-   WHERE e."shipmentId" = s.id AND e.action = s.status AND e."toStatus" = s.status
+   WHERE e."shipmentId" = s.id AND e.action::text = s.status::text AND e."toStatus"::text = s.status::text
      AND e.action IN ('DELIVERED', 'DELIVERY_FAILED')
    ORDER BY e."occurredAt", e.id LIMIT 1) AS "terminalAt"`;
 
