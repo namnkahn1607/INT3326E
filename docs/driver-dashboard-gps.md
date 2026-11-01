@@ -6,6 +6,10 @@ base develop `8038c83`.
 Nguồn yêu cầu: [PF SPEC 01 nội dung v1.3](spec-baseline.md), VII.4/UI02;
 contract GPS dùng chung tại [GPS event contract](gps-event-contract.md).
 
+Trạng thái ngày 02/11/2026: phần Driver đạt kiểm chứng local sau tích hợp
+`develop` tại `75e9664`, gồm kiểm tra trình duyệt W607. Nghiệm thu cloud W605 còn mở và
+được bàn giao cho phần API/triển khai ở mục cuối.
+
 ## Hành vi
 
 - Login/role gate và đăng xuất tái sử dụng phần Auth có sẵn. `/driver` chỉ dành
@@ -131,3 +135,81 @@ tin cậy, nên W607 chưa có bằng chứng trực quan. W605 vẫn mở: cầ
 triển khai frontend hiện hành, endpoint ingest hoạt động, phiên Driver hợp lệ
 và đối chiếu eventId trên kênh Pub/Sub thử riêng. Không gửi GPS hoặc deploy
 trong lượt kiểm tra HTTP này.
+
+## Kiểm chứng giao diện ngày 02/11/2026
+
+Kiểm chứng ban đầu tại `4b6c56a`, sau đó tích hợp `develop` tại `75e9664`
+và kiểm tra lại với stylesheet chung hiện hành. Giữ cấu trúc tài liệu đã được
+nhóm hợp nhất vào `docs`; harness nằm trong `apps/web/scripts`. Dùng nguyên
+dashboard, layout, route guard, API client và adapter GPS hiện có. Không phát
+hiện thiếu sót frontend cần sửa thêm trong phạm vi đã chốt.
+
+| Kiểm tra | Kết quả | Mức bằng chứng |
+| --- | --- | --- |
+| Trình duyệt Microsoft Edge qua Playwright | 19/19 kịch bản đạt | Browser thật, AuthContext/API mock, clock mô phỏng |
+| Layout 320/390/1440 px | Không tràn ngang, gồm tên tài khoản dài | Đã xem ảnh màn hẹp/rộng và trạng thái nhận GPS rồi dừng |
+| Keyboard | Skip link đưa focus tới nội dung chính | Browser local |
+| Start/Stop/restart | Không gửi lúc mở trang; mẫu đầu sau 8 giây; restart tiếp tục sequence | Body/Bearer token giả được đối chiếu trên request mock |
+| Lỗi và cleanup | 401/403/404/409/503, response sai, mất mạng, timeout; không tăng số chấp nhận khi lỗi | Browser local; không lộ nội dung lỗi thô |
+| Hủy request | Browser ghi nhận `net::ERR_ABORTED` khi timeout/rời route/đăng xuất/đổi tài khoản | Không phát thêm mẫu của phiên cũ |
+| Toàn bộ frontend sau tích hợp | 438/438 test, 34 file | Local/mock |
+| Suite tích hợp Shipment hiện có | 8/8 test | Nest HTTP + PGlite local; Firebase mock, không phải GPS cloud |
+| Lint/build | `npm run lint:web`, `npm run build:web`: exit 0 | TypeScript + Vite; chưa deploy |
+
+[Báo cáo trình duyệt](evidence/driver-dashboard/browser-review.json) ghi source
+SHA, phiên bản Edge, 19 kịch bản, không có runtime error và không có HTTP request
+ra ngoài origin thử. Ảnh: [tài khoản dài trên màn 320 px](evidence/driver-dashboard/mobile-long-account.png),
+[hai mẫu được chấp nhận rồi Stop](evidence/driver-dashboard/gps-accepted-stopped.png).
+Fixture dùng tài khoản/dữ liệu giả, không truy cập phiên trình duyệt của người
+dùng và không gửi GPS lên cloud. Đây là bằng chứng W607, không thay W605.
+
+Chạy lại với Node >=22.12, dependencies repo đã cài, package `playwright` có
+sẵn trong môi trường kiểm thử và Microsoft Edge đã cài:
+
+```powershell
+node --experimental-strip-types apps/web/scripts/verify-driver-dashboard.mjs
+npm run test:integration --workspace=@parcelflow/web
+```
+
+Nếu Playwright ở ngoài repo, đặt `DRIVER_REVIEW_PLAYWRIGHT` thành đường dẫn
+package đó trước khi chạy. Harness dùng loopback `127.0.0.1:5179`, không cho
+fallback sang origin khác, tạo fixture tạm trong `apps/web/.vitest`, tự đóng
+browser/server và xóa đúng file fixture khi kết thúc. Kết quả mặc định nằm tại
+`.vitest/driver-dashboard-review`; `DRIVER_REVIEW_OUTPUT` đổi thư mục kết quả.
+Các lệnh test/lint/build ở trên giữ nguyên. Node có cảnh báo module type của
+shared GPS type; harness vẫn exit 0, không sửa cấu hình package để che cảnh báo.
+Dependency được khôi phục đúng lockfile; không thay package manifest/lockfile.
+Fixture export component hợp lệ để lint vẫn đạt khi chạy song song browser.
+
+## Bàn giao tích hợp API GPS
+
+Driver đã đạt kiểm chứng local; các bước dưới đây thuộc phần API GPS và môi
+trường triển khai cần sẵn sàng trước nghiệm thu cloud W605.
+
+Nguồn review: `origin/feature/scaffold-gps-worker` tại `99a462a`. Gọi service
+trực tiếp với request Driver hợp lệ và Pub/Sub SDK mock trả thành công cho
+thấy response `ACCEPTED`, nhưng event publish không qua validator dùng chung.
+[Báo cáo đối chiếu](evidence/driver-dashboard/backend-contract-review.json)
+ghi SHA đầy đủ và mức mock; chưa chạy HTTP guard hoặc broker thật.
+
+Các điểm cần xử lý trước W605:
+
+1. `location.service.ts`: publish `clientTimestamp` dạng UTC ISO mili giây,
+   giữ đúng các trường của `GpsTelemetryEvent`. Event hiện có timestamp dạng
+   số và thêm `latitude`, `longitude`, `clientTimestampIso`, `receivedAtMs`,
+   khiến `assertGpsTelemetryEvent` báo `GPS payload contains unknown fields`.
+   Frontend tiếp tục dùng `lat/lng/clientTimestamp/seq` theo contract đã chốt.
+2. `location.controller.ts`: gắn `BusinessUserGuard` và lấy Driver từ
+   `request.businessUser.id` sau xác thực/role guard. Không dùng Firebase UID
+   hoặc `driverId` trong body làm phương án thay thế cho định danh nghiệp vụ.
+   Cần test qua Nest HTTP để chứng minh role/linkage/validation thực sự chạy;
+   test gọi controller trực tiếp không kiểm chứng các guard đó.
+3. Ghép LocationModule vào baseline develop hiện hành, giữ các module đang có.
+   Kiểm tra request/response/event bằng shared validation và OpenAPI; giữ
+   broker-confirmed 202, lỗi publish không trả thành công. Không thay contract
+   frontend để khớp payload riêng chưa được duyệt.
+4. Chuẩn bị bản web/API test đúng source, cấu hình Firebase/API URL/CORS và
+   tài khoản Driver có linkage. Đăng nhập, Start, đối chiếu `eventId` giữa
+   response và Pub/Sub trên kênh thử riêng; kiểm tra Stop, rời trang và lỗi.
+   Không pull/ACK subscription nghiệp vụ để lấy bằng chứng. Chỉ đóng W605
+   sau lượt thật; response 202 chưa chứng minh Worker đã ghi SQL.
