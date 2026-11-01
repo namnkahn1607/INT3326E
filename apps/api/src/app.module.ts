@@ -6,9 +6,10 @@ import { HealthController } from './health/health.controller';
 import { AdminModule } from './modules/admin/admin.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ShipmentsModule } from './modules/shipments/shipments.module';
+import { LocationModule } from './modules/location/location.module';
 
 @Module({
-  imports: [AuthModule, AdminModule, ShipmentsModule],
+  imports: [AuthModule, AdminModule, ShipmentsModule, LocationModule],
   controllers: [HealthController],
   providers: [{ provide: APP_FILTER, useClass: ApiExceptionFilter }],
 })

@@ -1,34 +1,47 @@
-import { IsString, IsNumber, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsString, IsNumber, IsOptional } from 'class-validator';
 
 /**
- * EVT01 - IngestLocationDto for POST /v1/locations
+ * EVT01 / API08 - IngestLocationDto for POST /v1/locations
+ * Supports both standard lat/lng and latitude/longitude coordinates.
+ * driverId is optional in body as it is derived from the authenticated DRIVER token.
  */
 export class IngestLocationDto {
-  /** [Bắt buộc] String - Mã định danh tài xế (VD: "drv_123456789") */
-  @IsString()
-  @IsNotEmpty()
-  driverId!: string;
-
-  /** [Bắt buộc] Number (Float) - Tọa độ vĩ độ (VD: 21.028511) */
+  /** Latitude coordinate (-90 to 90) */
   @IsNumber()
-  latitude!: number;
+  @IsOptional()
+  latitude?: number;
 
-  /** [Bắt buộc] Number (Float) - Tọa độ kinh độ (VD: 105.804817) */
+  /** Longitude coordinate (-180 to 180) */
   @IsNumber()
-  longitude!: number;
+  @IsOptional()
+  longitude?: number;
 
-  /** [Bắt buộc] Number (Integer/Epoch MS) - Thời gian UTC mili-giây (VD: Date.now()) */
+  /** Coordinate alias (lat) */
   @IsNumber()
-  clientTimestamp!: number;
+  @IsOptional()
+  lat?: number;
 
-  /** [Tùy chọn] String - Mã phiên di chuyển chẩn đoán (VD: "sess_987654321") */
+  /** Coordinate alias (lng) */
+  @IsNumber()
+  @IsOptional()
+  lng?: number;
+
+  /** UTC timestamp (Epoch ms or ISO-8601 string) */
+  @IsOptional()
+  clientTimestamp!: number | string;
+
+  /** Optional session identifier for diagnostics */
   @IsString()
   @IsOptional()
   sessionId?: string;
 
-  /** [Tùy chọn] Number (Integer) - Số thứ tự gói tin trong phiên (VD: 1) */
+  /** Optional sequence number within session */
   @IsNumber()
   @IsOptional()
   seq?: number;
-}
 
+  /** Fallback driverId if unauthenticated test */
+  @IsString()
+  @IsOptional()
+  driverId?: string;
+}
