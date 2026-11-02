@@ -213,3 +213,17 @@ Các điểm cần xử lý trước W605:
    response và Pub/Sub trên kênh thử riêng; kiểm tra Stop, rời trang và lỗi.
    Không pull/ACK subscription nghiệp vụ để lấy bằng chứng. Chỉ đóng W605
    sau lượt thật; response 202 chưa chứng minh Worker đã ghi SQL.
+
+## Cập nhật sau tích hợp nhánh Na — 02/11/2026
+
+Đã nhập nhánh `feature/scaffold-gps-worker` tại `99a462a` vào baseline
+`develop` tại `c580efb`, giữ code và lịch sử commit của Na. Xung đột module gốc
+được xử lý bằng cách giữ Assignment/Geocoding hiện có và thêm LocationModule.
+
+Các điểm 1–3 ở mục bàn giao phía trên đã được xử lý: event không còn trường
+thừa, timestamp canonical, dùng BusinessUserGuard, không fallback UID/body.
+Test HTTP local kiểm chứng quyền/mapping, publish-confirmed 202, lỗi 503 và
+đối chiếu event bằng validator chung rồi đưa qua processor của Na. Báo cáo
+`backend-contract-review.json` giữ nguyên như bằng chứng lịch sử của source cũ.
+W605 vẫn mở đến khi có lượt Driver → API → Pub/Sub Cloud thật.
+Xem [chi tiết tích hợp và kiểm thử](na-gps-merge.md).

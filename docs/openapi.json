@@ -822,7 +822,7 @@
           "Tracking & Location"
         ],
         "summary": "Submit driver location coordinates (High throughput - Async)",
-        "description": "**Asynchronous Write Path (not implemented):**\nDriver submits lat, lng, seq and clientTimestamp every ~8 seconds. The API derives driverId from authenticated identity, creates eventId and receivedAt, and publishes GpsTelemetryEvent as UTF-8 JSON. Return 202 only after publish succeeds; this does not confirm a database write. Reject unknown request fields.\n\n**Timestamp Ordering:**\nclientTimestamp determines location freshness. seq is diagnostic and may restart at 1 after a client restart; it is not a cross-session ordering key. Worker dedupe uses (driverId, clientTimestamp), and current location advances only for a strictly newer clientTimestamp. Retry publish preserves the entire event. See docs/gps-event-contract.md for the selected week 2 contract and pending independent pipeline review.\n\n**Authorized Roles:** `DRIVER`.",
+        "description": "**Đã tích hợp trên máy, chưa nghiệm thu Cloud:** Driver gửi lat/lng/clientTimestamp, tùy chọn seq/sessionId. Firebase và role guard xác thực DRIVER; BusinessUserGuard ánh xạ sang mã tài xế nội bộ. Không nhận driverId, role, eventId, receivedAt hoặc trường thừa từ client. Timestamp được chuẩn hóa UTC mili giây, cắt phần nhỏ hơn mili giây; từ chối mẫu tương lai vượt receivedAt hơn 60 giây.\n\nAPI tạo eventId/receivedAt, publish EVT01 dưới dạng JSON UTF-8 và chỉ trả 202 sau broker confirmation. Publish lỗi trả 503. 202 chưa xác nhận Worker đã ghi SQL. Worker dedupe theo (driverId, clientTimestamp), không dùng seq để sắp thứ tự xuyên phiên. Xem docs/na-gps-merge.md và docs/gps-event-contract.md cho mức bằng chứng và phần Cloud còn mở.\n\n**Authorized Roles:** `DRIVER`.",
         "operationId": "submitLocation",
         "requestBody": {
           "required": true,
@@ -872,7 +872,7 @@
             "BearerAuth": []
           }
         ],
-        "x-implementation-status": "draft"
+        "x-implementation-status": "implemented-local"
       }
     },
     "/shipments/{id}/tracking": {
