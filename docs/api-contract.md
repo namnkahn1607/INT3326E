@@ -103,7 +103,7 @@ Create requirements. No migration, seed, IAM, deploy or auth changes run automat
 Current Admin read endpoints: `GET /v1/drivers` (API11/SC06) and
 `GET /v1/admin/customers` (read-only TV6 scope requested on 23/10/2026).
 Both require ADMIN and a provisioned business user. See
-[Admin directory](tv6-admin-directory.md) for pagination, database dependencies,
+[Admin directory](admin-directory.md) for pagination, database dependencies,
 privacy and integration details; see [QA test plan](qa-test-plan.md) for acceptance.
 Historical week 1/2 draft statements below do not describe these new handlers.
 
@@ -174,7 +174,7 @@ Health tests and the TV6 Auth/Admin tests can be run now without Firebase calls.
 
 ## TV6 Auth tuần 2 — 17/10/2026
 
-Bổ sung API đã triển khai `GET /v1/auth/me` (ba role) và `GET /v1/admin/me` (ADMIN). Mọi handler mặc định được guard bảo vệ; health public. API nghiệp vụ còn lại vẫn là draft. Custom claims Firebase là nguồn role, có kiểm tra revocation/account hiện tại; không có role Dispatcher riêng hoặc public API cấp quyền. Xem `docs/auth-rbac.md` mục 12 cho claims CLI, cấu hình frontend/runtime, kiểm thử và trạng thái cloud chưa nghiệm thu.
+Bổ sung API đã triển khai `GET /v1/auth/me` (ba role) và `GET /v1/admin/me` (ADMIN). Mọi handler mặc định được guard bảo vệ; health public. API nghiệp vụ còn lại vẫn là draft. Custom claims Firebase là nguồn role, có kiểm tra revocation/account hiện tại; không có role Dispatcher riêng hoặc public API cấp quyền. Xem [bàn giao Auth và RBAC](auth-rbac-handoff.md) cho claims CLI, cấu hình frontend/runtime, kiểm thử và trạng thái cloud chưa nghiệm thu.
 
 
 ### Follow-up review Auth tuần 2
