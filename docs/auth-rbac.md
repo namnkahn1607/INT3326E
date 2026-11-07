@@ -311,7 +311,7 @@ Việc này cho phép kiểm thử Auth và RBAC mà chưa cần:
 Quyết định tuần 2 và các nội dung cần phối hợp:
 
 - Đã chốt: role xác thực lấy từ Firebase custom claims, gồm CUSTOMER/DRIVER/ADMIN; không phụ thuộc PostgreSQL để xác thực.
-- API scaffold đã dùng prefix `/v1` cho nghiệp vụ và giữ `/healthz` công khai ngoài prefix; contract nghiệp vụ vẫn là draft.
+- API scaffold đã dùng prefix `/v1` cho nghiệp vụ và giữ `/healthz` công khai ngoài prefix; Create và Assign đã có handler từ 01/11/2026, các contract còn lại vẫn là draft.
 - Bản follow-up review dùng exception filter chung để trả ProblemDetails cho lỗi API, gồm 401/403/409/503. Các ví dụ response Nest ở phần tuần 1 là hồ sơ lịch sử.
 - Đã có SQL lookup và BusinessUserGuard cho liên kết user; migration, seed và nghiệm thu Cloud SQL cần TV1/TV5 phối hợp, xem [mục 6 của bàn giao](tv6/auth-rbac-handoff.md#6-follow-up-review-pr-15--danh-tính-nghiệp-vụ-và-lỗi-dependency).
 

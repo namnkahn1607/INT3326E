@@ -4,8 +4,8 @@ Kết quả kiểm tra theo ngày nằm ở [Bàn giao Admin directory](tv6/admi
 
 ## Phạm vi và nguồn
 
-Triển khai từ `develop` tại `52b4cf25dcbadd64fe8796b8f806c27df857f409`.
-Đã đối chiếu các branch, PR/issue và PF SPEC 01 v1.3 trong
+Triển khai từ `develop` tại `52b4cf25dcbadd64fe8796b8f806c27df857f409` (23/10/2026).
+Nội dung viết theo PF SPEC 01 v1.3, chưa đối chiếu lại với v1.4. Đã đối chiếu các branch, PR/issue và v1.3 trong
 [Google Docs](https://docs.google.com/document/d/1S9gY8a08d8-9Rd4bhTOeT_IAJUrYtFnZtDKjKKEpuq8/edit),
 Phần VI AUTH01, API00/API11, SC01/SC06, DATA01/02/04 và UI03; Phần VII tuần 3.
 

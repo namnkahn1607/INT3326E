@@ -8,6 +8,8 @@
 | Môi trường đã kiểm | Local, mock/HTTP và Firebase Auth Emulator |
 | Chưa kiểm | Firebase production, browser end-to-end trên Hosting, đo latency/NFR trên cloud |
 
+Ghi chú 07/11/2026: các câu "chưa có handler Shipment" ở mục 6 đúng tại 17/10. Hiện Create và Assign đã có handler, kết quả kiểm tra ở [week-07](week-07.md#kết-quả-chạy-07112026).
+
 Hợp đồng và quy tắc nằm ở [Hợp đồng Auth và RBAC](../auth-rbac.md). Tài liệu này chỉ ghi phần tích hợp tuần 2, cách vận hành và kết quả kiểm tra.
 
 ## Phạm vi
