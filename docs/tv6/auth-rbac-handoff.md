@@ -8,7 +8,7 @@
 | Môi trường đã kiểm | Local, mock/HTTP và Firebase Auth Emulator |
 | Chưa kiểm | Firebase production, browser end-to-end trên Hosting, đo latency/NFR trên cloud |
 
-Hợp đồng và quy tắc nằm ở [Hợp đồng Auth và RBAC](auth-rbac.md). Tài liệu này chỉ ghi phần tích hợp tuần 2, cách vận hành và kết quả kiểm tra.
+Hợp đồng và quy tắc nằm ở [Hợp đồng Auth và RBAC](../auth-rbac.md). Tài liệu này chỉ ghi phần tích hợp tuần 2, cách vận hành và kết quả kiểm tra.
 
 ## Phạm vi
 

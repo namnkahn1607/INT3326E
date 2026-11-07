@@ -1,6 +1,6 @@
 # Admin directory
 
-Kết quả kiểm tra theo ngày nằm ở [Bàn giao Admin directory](admin-directory-handoff.md).
+Kết quả kiểm tra theo ngày nằm ở [Bàn giao Admin directory](tv6/admin-directory-handoff.md).
 
 ## Phạm vi và nguồn
 

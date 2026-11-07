@@ -17,8 +17,8 @@ Trạng thái sheet: Chưa cập nhật. Không tự xác nhận đã được d
 | Tuần | Việc theo sheet | Có trong repo |
 | --- | --- | --- |
 | 1 | Tổng hợp vai trò, quyền, tiêu chí nghiệm thu, danh mục tài liệu | Chưa đối chiếu được với file cụ thể |
-| 2 | Soạn Auth/RBAC, liên kết người dùng, thông báo, ma trận QA | [auth-rbac.md](auth-rbac.md) (hợp đồng), commit `bf93103` (05/10); [qa-test-plan.md](qa-test-plan.md) bản nháp |
-| 3 | Tổng hợp constitution, hướng dẫn agent, traceability, phân công tuần 4–13 | [AGENTS.md](../AGENTS.md), [week-task-breakdown.md](week-task-breakdown.md); constitution nằm trong checkout `parcelflow-docs-revision`, chưa commit |
+| 2 | Soạn Auth/RBAC, liên kết người dùng, thông báo, ma trận QA | [auth-rbac.md](../auth-rbac.md) (hợp đồng), commit `bf93103` (05/10); [qa-test-plan.md](../qa-test-plan.md) bản nháp |
+| 3 | Tổng hợp constitution, hướng dẫn agent, traceability, phân công tuần 4–13 | [AGENTS.md](../../AGENTS.md), [week-task-breakdown.md](week-task-breakdown.md); constitution nằm trong checkout `parcelflow-docs-revision`, chưa commit |
 
 ## Tuần 4 (12/10–18/10)
 
@@ -28,7 +28,7 @@ Trạng thái sheet: Chưa cập nhật. Không tự xác nhận đã được d
 - 05/10 đến 09/10: token verifier, guard xác thực, role decorator, guard phân quyền, scaffold Admin (`691ae07`, `649a4f5`, `d82e0b9`, `a409693`, `1883408`).
 - 09/10: bỏ role DISPATCHER, dùng ADMIN cho quyền điều phối, đồng bộ README, ARCHITECTURE, auth-rbac (`73b998c`, `d266269`, `b09462a` và các commit cùng PR #4, #11).
 - 17/10: Firebase login và RBAC ba role (`fe0b6e2`), ràng buộc liên kết user nghiệp vụ và lỗi dependency (`16f0cb1`). Hai commit này do Đạt thực hiện bằng Codex nên Git ghi tác giả là `Codex`. Kết quả ở [auth-rbac-handoff.md](auth-rbac-handoff.md).
-- 18/10: [frontend-config-handoff.md](frontend-config-handoff.md) cho cấu hình frontend (`87bb551`, PR #16).
+- 18/10: [frontend-config-handoff.md](../frontend-config-handoff.md) cho cấu hình frontend (`87bb551`, PR #16).
 
 **Bằng chứng:** các PR trên đã vào `develop`. Test Auth chạy với Firebase Emulator và mock. Chưa có bằng chứng đăng nhập thật trên Cloud trong repo.
 
@@ -38,7 +38,7 @@ Trạng thái sheet: Chưa cập nhật. Không tự xác nhận đã được d
 
 **Theo sheet (TRUE):** tích hợp Firebase Auth đầy đủ (custom claims ba role), auth guard.
 
-**Thực tế:** phần này đã làm ở tuần 4 theo lịch (`fe0b6e2`, `16f0cb1`). Tuần 5 chạm thêm 24/10: Admin directory chỉ đọc và bản nháp QA plan (`1063cf1`, PR #19). Hợp đồng ở [admin-directory.md](admin-directory.md), kết quả ở [admin-directory-handoff.md](admin-directory-handoff.md).
+**Thực tế:** phần này đã làm ở tuần 4 theo lịch (`fe0b6e2`, `16f0cb1`). Tuần 5 chạm thêm 24/10: Admin directory chỉ đọc và bản nháp QA plan (`1063cf1`, PR #19). Hợp đồng ở [admin-directory.md](../admin-directory.md), kết quả ở [admin-directory-handoff.md](admin-directory-handoff.md).
 
 **Bằng chứng:** `GET /v1/drivers`, `GET /v1/admin/customers`, `GET /v1/admin/me`. Bộ test mock, HTTP và SQL cục bộ có trong `admin-directory.spec.ts` và `admin-directory.postgres.spec.ts`. Ca ADM12 (race/snapshot) cần PostgreSQL đa kết nối thật, chưa chạy.
 
