@@ -68,6 +68,32 @@ Ghi chú:
 - Trong lúc kiểm tra GPS, mẫu trùng khóa khác tọa độ giữ bản đầu, mẫu cũ không kéo `current_locations` lùi. Đây là kết quả phụ trên PostgreSQL local, chưa tính là đạt AC04 (dedupe và ordering đầy đủ là checkpoint tuần 8).
 - Script kiểm tra GPS là file tạm, đã xóa sau khi chạy, nên chưa chạy lại được từ repo.
 
+## Tồn đọng giao cho người khác
+
+Soạn 07/11/2026. Đây là các việc TV6 không tự làm được để đóng QA tuần 7. Hạn theo lịch tuần 7 là 08/11. Khi xong, người nhận gửi commit hoặc PR (hoặc revision Cloud) cho TV6 để chạy lại các ca ở cột "Chặn ca nào".
+
+| # | Việc tồn đọng | Người nhận | Chặn ca nào | Điều kiện hoàn thành (để TV6 chạy lại) | Phụ thuộc | Mã việc tuần 7 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | API lấy hàng `POST /v1/shipments/{id}/pickup`. OpenAPI đã khai báo, `develop` chưa có route (Cloud cũng trả 404) | TV1 | TC03.1–TC03.4, TC02.5, phần pickup của TC06.1 | Driver được gán: 200, đơn ASSIGNED → PICKED_UP, ghi event và notification trong cùng transaction. Driver khác: 403. Sai trạng thái: 409. Gọi lặp: không thêm event. Có test SQL theo mẫu `assignments.postgres.spec.ts` | Assign tuần 6 | W7-TV1-01, AC03 |
+| 2 | API giao hàng `POST /v1/shipments/{id}/deliver` (body `proofOfDeliveryNotes` tùy chọn, tối đa 255 ký tự) | TV1 | TC03.x, phần terminal của TC06.1 | Chỉ từ PICKED_UP sang DELIVERED, chỉ Driver được gán. Ghi event và notification một lần, gọi lặp không thêm tác động, lỗi giữa chừng rollback | Mục 1 | W7-TV1-01, AC03 |
+| 3 | Lịch sử có event PICKED_UP và DELIVERED trong `statusHistory` của Detail (đủ actor, thời gian, thứ tự). Nếu nhóm chốt endpoint history riêng thì ghi path vào OpenAPI | TV1 | Phần còn lại của TC06.1 | Detail trả đủ chuỗi CREATED, ASSIGNED, PICKED_UP, DELIVERED đúng thứ tự; Customer chủ đơn đọc được, Customer khác 403 | Mục 1, 2 | W7-TV1-02, AC06 |
+| 4 | Driver app: danh sách đơn được gán, nút nhận và giao nối API thật, GPS lấy từ trình duyệt hoặc simulator có nhãn (hiện phát một tọa độ cố định) | TV4 | Luồng đầu cuối do Driver thao tác, W7-TV6-02f | Driver đăng nhập thấy đúng đơn của mình, bấm nhận và giao đổi được trạng thái, GPS đổi theo nguồn đã chọn, chu kỳ 8 giây | Mục 1, 2 | W7-TV4-01, W7-TV4-02 |
+| 5 | UI tiến độ cho Admin và history thật cho Customer (tab lịch sử Customer còn dữ liệu mẫu theo báo cáo 04/11) | TV3 | Kiểm UI của luồng đầu cuối | Customer chỉ xem history đơn của mình, có loading, rỗng, lỗi; Admin thấy tiến độ nhưng không pickup hay deliver thay Driver | Mục 3 | W7-TV3-01, W7-TV3-02 |
+| 6 | Tài khoản demo ba role trên Firebase project `int3326e`: tạo trong Console, cấp role bằng `npm run auth:set-role` (xem [bàn giao Auth](auth-rbac-handoff.md)), có row tương ứng trong `users` (`firebaseUid` duy nhất, `role` khớp claim). Gửi thông tin đăng nhập cho TV6 qua kênh riêng, không đưa vào Git | TV5 (Firebase project); TV1 hoặc TV5 (seed `users`) | Mọi ca có đăng nhập trên Cloud | Ba tài khoản đăng nhập được, `/v1/auth/me` trả đúng role, `/v1/admin/me` 200 cho Admin và 403 cho hai role còn lại | Không | W7-TV6-01 |
+| 7 | Ghi lại revision đang chạy: SHA nguồn, ngày deploy, migration và schema đã áp dụng (users, shipments, events, notifications, idempotency, GPS) | TV5; TV1 và TV2 xác nhận migration | Kết luận Cloud: hiện chỉ biết route có mặt, chưa biết SHA | Biên bản có SHA khớp một commit trên `develop`, runtime service account, `DATABASE_URL` trỏ đúng database | Không | W7-TV5-01, W7-TV5-02 |
+| 8 | DDL cho `current_locations` và `location_history` (snake_case như Worker ghi và Prisma DATA04/05) áp dụng lên Cloud SQL. Repo hiện không có DDL cho hai bảng này; Admin directory đã đọc theo cột này | TV2 và TV1 (chủ schema); TV5 áp dụng | GPS lưu SQL, Admin đọc vị trí | File SQL trong `packages/database/sql/`, đã chạy trên Cloud SQL, tên cột khớp Worker và `GET /v1/drivers` | Mục 7 | W7-TV2-01 |
+| 9 | Worker chạy với PostgreSQL thật, không rơi về bộ nhớ (kiểm `DATABASE_URL` và log khởi động). Ghi một mẫu và thấy hàng trong SQL, ACK sau commit | TV2; TV5 cấu hình runtime | W7-TV6-02f trên Cloud | Một `eventId` thấy ở `location_history` và `current_locations`; khởi động lại instance vẫn đọc lại được | Mục 7, 8 | W7-TV2-02, W7-TV5-02 |
+| 10 | Chốt cơ chế nhận message: sheet ghi push subscription, code hiện dùng pull (`subscription.on('message')`). Không trỏ push vào URL chỉ có health check | TV2 và TV5 | Cấu hình Cloud của Worker | Quyết định ghi vào tài liệu (nếu đổi runtime thì ghi amendment); cấu hình thực tế khớp quyết định | Không | Sheet tuần 7 của TV5 |
+| 11 | Kiểm một mẫu GPS đi từ API qua Pub/Sub, Worker đến SQL trên máy dev. Cần Docker (`infra/docker-compose.yml` có sẵn emulator) hoặc `gcloud components install beta pubsub-emulator` | TV5 hoặc người có máy chạy được Docker | W7-TV6-02f ở mức local | Một `eventId` đi qua đủ bốn chặng, log Worker và hàng SQL khớp; ghi lại lệnh chạy | Mục 8 | W7-TV6-02f |
+| 12 | Deploy lại frontend Hosting. Bundle `/driver` vẫn là `index-CCoMdCpR.js` như ngày 02/11 | TV5 cùng TV3 và TV4 | Kiểm UI trên Cloud | Hosting phục vụ bản build mới, ghi SHA và cấu hình `VITE_*` theo [cấu hình frontend](../frontend-config-handoff.md) | Mục 4, 5 | W7-TV5-02 |
+
+Thứ tự gợi ý: mục 1, 2, 3 trước (mở khóa TC03 và TC06.1), song song với mục 6, 7, 8 (mở khóa Cloud), rồi mục 4, 5, 9, 12, cuối cùng là mục 11.
+
+Lưu ý:
+- `fail` và các việc của tuần 8 trở đi không nằm ở bảng này.
+- TV6 không tự viết các handler ở mục 1, 2, 3 thay TV1. QA chỉ đánh dấu đạt khi có bằng chứng từ chủ component.
+- Các ca TV6 đã đạt ở local không cần người nhận làm lại.
+
 ## Còn thiếu và rủi ro
 
 - Pickup, deliver, fail chưa có trên `develop` (TV1), nên TC03.x chỉ ghi BLOCKED; TC06.1 chỉ đạt phần create, assign, reassign.
