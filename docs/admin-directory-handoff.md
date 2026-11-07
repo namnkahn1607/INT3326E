@@ -27,3 +27,11 @@ không chạy race đa kết nối thực hoặc nghiệm thu runtime production
 application, Firebase thật, IAM và deployment không bị thay đổi. Bản code được
 bàn giao qua nhánh `feature/tv6-admin-directory`; kết quả này chưa nghiệm thu deploy. TV1/TV2/TV5
 cần xác nhận migration/runtime trước khi chạy smoke các endpoint mới trên cloud.
+
+## Kiểm tra lại ngày 07/11/2026
+
+- Truy vấn driver đọc `current_locations` bằng cột snake_case (`driver_id`, `client_timestamp`, `received_at`) như Worker ghi và Prisma DATA04, đặt alias về `receivedAt`, `clientTimestamp` nên response không đổi. Bản cũ đọc camelCase có quote, lệch với Worker.
+- Chuyển `admin-directory.repository.ts` vào `admin/repositories/`, cùng kiểu với `controllers/`, `services/`, `dto/`.
+- Test SQL: chạy với PostgreSQL thật trên máy (loopback, database `parcelflow_admin_test`, cụm tạm đã xóa sau khi chạy), không dùng PGlite. Toàn bộ API: 406 test đạt, 73 skip (SQL của shipments/assignments và Firebase Emulator chưa bật), typecheck đạt. Tăng từ 399 đạt vì 7 ca SQL của Admin chạy thật.
+- Sửa test `admin-directory.postgres.spec.ts`: `search_path` được đặt lại mỗi khi pool mở kết nối. Trước đó ca "503 khi thiếu cột GPS" fail trên Postgres thật, cả ở `ea0b74d`, vì `search_path` mất sau khi kết nối bị thay.
+- Chưa kiểm: Cloud SQL, race đa kết nối (ADM12), schema thật của `current_locations` trên Cloud. Tên cột snake_case là theo Worker và Prisma, chưa đối chiếu với DB đã deploy.
