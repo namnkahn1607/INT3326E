@@ -1,4 +1,6 @@
-# TV6 — Admin directory
+# Admin directory
+
+Kết quả kiểm tra theo ngày nằm ở [Bàn giao Admin directory](admin-directory-handoff.md).
 
 ## Phạm vi và nguồn
 
@@ -75,16 +77,18 @@ client. Tham số cursor/role/limit được bind vào query, không nội suy v
 | --- | --- | --- |
 | `users` | `id`, `firebaseUid` cho actor; `name`, `role`, `createdAt`; Customer thêm `email`, `phone` | TV1 |
 | `shipments` | `driverId`, `status` | TV1 |
-| `current_locations` | `driverId`, `lat`, `lng`, `clientTimestamp`, `receivedAt` | TV2 phối hợp TV1 |
+| `current_locations` | `driver_id`, `lat`, `lng`, `client_timestamp`, `received_at` | TV2 phối hợp TV1 |
 
-Contract dùng tên field camelCase có quote như UsersRepository hiện tại và
-DATA01/02/04. Index dự kiến: `users(role, createdAt DESC, id DESC)`, index theo
-driver/status cho shipments, PK `current_locations.driverId`; TV1/TV2 chốt
+`users` và `shipments` dùng tên camelCase có quote như UsersRepository và
+`packages/database/sql/001-create-shipment.sql`. `current_locations` dùng snake_case
+như Worker ghi và Prisma DATA04; truy vấn đặt alias về `receivedAt`,
+`clientTimestamp` để response không đổi. Index dự kiến: `users(role, createdAt DESC, id DESC)`, index theo
+driver/status cho shipments, PK `current_locations.driver_id`; TV1/TV2 chốt
 migration và TV5 xác nhận schema/search_path của runtime. Các index này là
 khuyến nghị bàn giao, chưa được tạo bởi thay đổi TV6.
 
-Prisma trong repo vẫn là draft: `current_locations` chưa có hai timestamp của
-DATA04, ID còn UUID thay cho prefixed ULID. Không dùng draft đó làm bằng chứng
+Prisma trong repo vẫn là draft: ID còn UUID thay cho prefixed ULID, và tên cột
+của `users`/`shipments` trong Prisma (snake_case) khác file SQL 001 (camelCase). Không dùng draft đó làm bằng chứng
 migration đã chạy. Danh sách trả 503 nếu ID vẫn là định dạng cũ; API11 cũng
 trả 503 nếu DB chưa đáp ứng query; không fallback
 thành danh sách rỗng/count 0. Danh sách Customer chỉ phụ thuộc bảng users.
@@ -123,21 +127,3 @@ case, checkpoint và cách ghi kết quả ở [QA test plan](qa-test-plan.md).
 
 Đồng bộ dependency `class-validator` vào manifest và hai lockfile để sửa lỗi
 typecheck có sẵn của DTO GPS; không thay đổi GPS contract trong phần Admin.
-
-## Kết quả kiểm tra bản bàn giao 23/10/2026
-
-- API: **179 test pass**, gồm 7 SQL integration qua `pg`/Nest HTTP trên
-  PostgreSQL WASM (PGlite 0.5.11); Firebase được mock. **7 Firebase Auth
-  Emulator test skip**, không được tính đã chạy. Nếu không cấu hình SQL test,
-  bộ mặc định có 172 pass, 7 SQL skip và 7 emulator skip.
-- API cài sạch từ lockfile riêng, typecheck và build pass. Root workspace
-  `npm ci --ignore-scripts`, typecheck và **74 test GPS/runner** pass.
-- Root lint không có error, còn cảnh báo scaffold rỗng/strictNullChecks có sẵn.
-  Frontend production build pass, còn cảnh báo bundle lớn có sẵn.
-- OpenAPI 3.0.3 validation và `git diff --check` pass.
-
-SQL test sử dụng database in-memory riêng, không phải Cloud SQL; không đo NFR,
-không chạy race đa kết nối thực hoặc nghiệm thu runtime production. Database
-application, Firebase thật, IAM và deployment không bị thay đổi. Bản code được
-bàn giao qua nhánh `feature/tv6-admin-directory`; kết quả này chưa nghiệm thu deploy. TV1/TV2/TV5
-cần xác nhận migration/runtime trước khi chạy smoke các endpoint mới trên cloud.

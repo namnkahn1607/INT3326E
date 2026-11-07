@@ -27,7 +27,9 @@ describe.skipIf(!connectionString)('Admin directory PostgreSQL integration (mock
       throw new Error('Use a disposable loopback database named parcelflow_admin_test');
     }
     pool = new Pool({ connectionString, max: 1, connectionTimeoutMillis: 5000, statement_timeout: 5000 });
-    await pool.query(`CREATE SCHEMA "${schema}"; SET search_path TO "${schema}"`);
+    // Pool may open a new connection after an error, so set search_path on every connection.
+    pool.on('connect', (client) => { void client.query(`SET search_path TO "${schema}"`); });
+    await pool.query(`CREATE SCHEMA "${schema}"`);
     // Test fixture only: this does not replace TV1/TV2 migrations or initialize the application DB.
     await pool.query(`
       CREATE TABLE users (
@@ -37,8 +39,8 @@ describe.skipIf(!connectionString)('Admin directory PostgreSQL integration (mock
       );
       CREATE TABLE shipments (id text PRIMARY KEY, "driverId" text REFERENCES users(id), status text NOT NULL);
       CREATE TABLE current_locations (
-        "driverId" text PRIMARY KEY REFERENCES users(id), lat double precision NOT NULL,
-        lng double precision NOT NULL, "clientTimestamp" timestamptz(3) NOT NULL, "receivedAt" timestamptz(3) NOT NULL
+        driver_id text PRIMARY KEY REFERENCES users(id), lat double precision NOT NULL,
+        lng double precision NOT NULL, client_timestamp timestamptz(3) NOT NULL, received_at timestamptz(3) NOT NULL
       );
     `);
     const seed = async (n: number, role: UserRole, createdAt: string) => pool.query(
@@ -145,12 +147,12 @@ describe.skipIf(!connectionString)('Admin directory PostgreSQL integration (mock
   });
 
   it('returns 503 for a missing GPS contract column instead of fabricated counts or locations', async () => {
-    await pool.query('ALTER TABLE current_locations RENAME COLUMN "clientTimestamp" TO old_timestamp');
+    await pool.query('ALTER TABLE current_locations RENAME COLUMN client_timestamp TO old_timestamp');
     try {
       const response = await fetch(`${base}/drivers`, { headers });
       expect(response.status).toBe(503);
       expect(await response.json()).toMatchObject({ code: 'SERVICE_UNAVAILABLE' });
       expect((await read('/admin/customers')).data).toHaveLength(2);
-    } finally { await pool.query('ALTER TABLE current_locations RENAME COLUMN old_timestamp TO "clientTimestamp"'); }
+    } finally { await pool.query('ALTER TABLE current_locations RENAME COLUMN old_timestamp TO client_timestamp'); }
   });
 });

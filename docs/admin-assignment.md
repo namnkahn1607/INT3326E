@@ -34,7 +34,7 @@ tại [vòng đời đơn](shipment-lifecycle.md); không ghép chúng vào thao
 ID dùng sh_/usr_ + ULID theo [API contract](api-contract.md). Bearer do client
 chung cung cấp; không gửi actor, role hoặc Idempotency-Key của Create cho Assign.
 Response phải khớp đơn/tài xế và trạng thái ASSIGNED.
-DriverResponse và điều kiện GPS dùng đúng [Admin directory](tv6-admin-directory.md),
+DriverResponse và điều kiện GPS dùng đúng [Admin directory](admin-directory.md),
 không chép lại schema hoặc suy ra online/offline từ số đơn active.
 
 ## Tích hợp và nghiệm thu

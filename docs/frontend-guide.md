@@ -59,7 +59,7 @@ Tuần 4 phản ánh vòng đời; polling/tracking đầu cuối thuộc tuần
 
 Từ gốc repo: `npm run lint:web`, `npm run build:web`,
 `npm run test --workspace=@parcelflow/web`. Cách chạy và Hosting xem
-[README frontend](../apps/web/README.md) và [bàn giao cấu hình](tv6-deploy-handoff.md).
+[README frontend](../apps/web/README.md) và [bàn giao cấu hình](frontend-config-handoff.md).
 Nghiệm thu tuần 1 được lưu tại [báo cáo frontend](frontend-week1-handoff.md).
 
 Tuần lịch 6: `npm run test:integration --workspace=@parcelflow/web` build API,

@@ -84,7 +84,7 @@ TV6 không tạo handler Assign/GPS thay chủ component chỉ để đánh dấ
 
 ## Cách chạy và ghi kết quả
 
-Các lệnh tự động, điều kiện SQL test nằm ở [Admin directory](tv6-admin-directory.md#kiểm-tra).
+Các lệnh tự động, điều kiện SQL test nằm ở [Admin directory](admin-directory.md#kiểm-tra).
 Unit/HTTP thường chạy cùng `npm test` tại `apps/api`; Firebase Emulator và SQL
 integration opt-in phải ghi rõ đã chạy hay skip. Build/typecheck pass không thay
 nghiệm thu cloud hoặc đo NFR.
