@@ -77,18 +77,17 @@ client. Tham số cursor/role/limit được bind vào query, không nội suy v
 | --- | --- | --- |
 | `users` | `id`, `firebaseUid` cho actor; `name`, `role`, `createdAt`; Customer thêm `email`, `phone` | TV1 |
 | `shipments` | `driverId`, `status` | TV1 |
-| `current_locations` | `driver_id`, `lat`, `lng`, `client_timestamp`, `received_at` | TV2 phối hợp TV1 |
+| `current_locations` | `driverId`, `lat`, `lng`, `clientTimestamp`, `receivedAt` | TV2 phối hợp TV1 |
 
-`users` và `shipments` dùng tên camelCase có quote như UsersRepository và
-`packages/database/sql/001-create-shipment.sql`. `current_locations` dùng snake_case
-như Worker ghi và Prisma DATA04; truy vấn đặt alias về `receivedAt`,
-`clientTimestamp` để response không đổi. Index dự kiến: `users(role, createdAt DESC, id DESC)`, index theo
-driver/status cho shipments, PK `current_locations.driver_id`; TV1/TV2 chốt
+Mọi bảng dùng tên camelCase có quote, theo DATA01, DATA04, DATA05 trong đặc tả v1.4
+(không có quy tắc snake_case), UsersRepository và
+`packages/database/sql/001-create-shipment.sql`. Index dự kiến: `users(role, createdAt DESC, id DESC)`, index theo
+driver/status cho shipments, PK `current_locations."driverId"`; TV1/TV2 chốt
 migration và TV5 xác nhận schema/search_path của runtime. Các index này là
 khuyến nghị bàn giao, chưa được tạo bởi thay đổi TV6.
 
 Prisma trong repo vẫn là draft: ID còn UUID thay cho prefixed ULID, và tên cột
-của `users`/`shipments` trong Prisma (snake_case) khác file SQL 001 (camelCase). Không dùng draft đó làm bằng chứng
+trong Prisma của `users`/`shipments` (snake_case) khác file SQL 001 và đặc tả (camelCase). Không dùng draft đó làm bằng chứng
 migration đã chạy. Danh sách trả 503 nếu ID vẫn là định dạng cũ; API11 cũng
 trả 503 nếu DB chưa đáp ứng query; không fallback
 thành danh sách rỗng/count 0. Danh sách Customer chỉ phụ thuộc bảng users.

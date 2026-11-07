@@ -39,8 +39,8 @@ describe.skipIf(!connectionString)('Admin directory PostgreSQL integration (mock
       );
       CREATE TABLE shipments (id text PRIMARY KEY, "driverId" text REFERENCES users(id), status text NOT NULL);
       CREATE TABLE current_locations (
-        driver_id text PRIMARY KEY REFERENCES users(id), lat double precision NOT NULL,
-        lng double precision NOT NULL, client_timestamp timestamptz(3) NOT NULL, received_at timestamptz(3) NOT NULL
+        "driverId" text PRIMARY KEY REFERENCES users(id), lat double precision NOT NULL,
+        lng double precision NOT NULL, "clientTimestamp" timestamptz(3) NOT NULL, "receivedAt" timestamptz(3) NOT NULL
       );
     `);
     const seed = async (n: number, role: UserRole, createdAt: string) => pool.query(
@@ -147,12 +147,12 @@ describe.skipIf(!connectionString)('Admin directory PostgreSQL integration (mock
   });
 
   it('returns 503 for a missing GPS contract column instead of fabricated counts or locations', async () => {
-    await pool.query('ALTER TABLE current_locations RENAME COLUMN client_timestamp TO old_timestamp');
+    await pool.query('ALTER TABLE current_locations RENAME COLUMN "clientTimestamp" TO old_timestamp');
     try {
       const response = await fetch(`${base}/drivers`, { headers });
       expect(response.status).toBe(503);
       expect(await response.json()).toMatchObject({ code: 'SERVICE_UNAVAILABLE' });
       expect((await read('/admin/customers')).data).toHaveLength(2);
-    } finally { await pool.query('ALTER TABLE current_locations RENAME COLUMN old_timestamp TO client_timestamp'); }
+    } finally { await pool.query('ALTER TABLE current_locations RENAME COLUMN old_timestamp TO "clientTimestamp"'); }
   });
 });

@@ -47,7 +47,7 @@ Code của TV6 chạy sớm hơn lịch sheet khoảng một tuần. Ví dụ Fi
 
 1. Danh sách "8 use case bắt buộc" của checkpoint tuần 9.
 2. Push hay pull cho Worker (dòng tuần 7 của TV5 so với code hiện tại).
-3. Mapping cột GPS giữa Worker (snake_case) và API directory (camelCase có ngoặc kép), chốt theo DB thật.
+3. Cột GPS: đặc tả dùng camelCase, Worker của Na đã đổi theo (nhánh chưa merge), Worker trên `develop` vẫn snake_case. Cần merge nhánh của Na và chốt theo DB thật.
 4. Phân rã trên chưa tính độ lệch người được giao với người làm thực tế.
 
 ## Mẫu ghi kết quả mỗi ca

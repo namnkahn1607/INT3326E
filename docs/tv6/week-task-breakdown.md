@@ -39,7 +39,7 @@ Checkpoint: luồng tạo đơn đến giao hàng hoạt động hoàn chỉnh; 
 | --- | --- | --- | --- | --- |
 | W7-TV1-01 | Pickup/deliver: kiểm tra driver và trạng thái, transaction, lưu history/notification | Assign tuần 6, contract Phần VI | API pickup, deliver, kèm test | FR03, AC03, TC03.1–03.4 |
 | W7-TV1-02 | Endpoint history đúng scope, thứ tự, phân trang | W7-TV1-01 | API history, bàn giao method/path/payload/mã lỗi cho TV3 | FR06, AC06 |
-| W7-TV2-01 | Đồng bộ schema và migration GPS (snake_case của Worker với cột API directory đang đọc) | Schema DATA04/DATA05, TV6 | Mapping chốt theo DB thật | AC04; điểm tích hợp 1 trong báo cáo 04/11 |
+| W7-TV2-01 | Đồng bộ schema và migration GPS (cột camelCase theo DATA04/05 cho cả Worker và API directory) | Schema DATA04/DATA05, TV6 | Mapping chốt theo DB thật | AC04; điểm tích hợp 1 trong báo cáo 04/11 |
 | W7-TV2-02 | Consume, ghi history/current vào SQL, ACK sau commit | W7-TV2-01 | Bằng chứng một mẫu đi từ queue đến SQL | FR04, TC04.8; chưa tính đạt toàn bộ AC04 |
 | W7-TV3-01 | Hiển thị tiến độ cho Admin theo quyền | W7-TV1-01 | UI tiến độ, không thêm quyền ngoài FRD | FR03, FR10 |
 | W7-TV3-02 | Customer xem history từ API thật, có loading/rỗng/lỗi | W7-TV1-02 | Tab lịch sử bỏ dữ liệu mẫu | FR06, AC06 |
@@ -60,7 +60,7 @@ Checkpoint: Customer thấy vị trí tài xế cập nhật gần real-time tr�
 | --- | --- | --- | --- | --- |
 | W8-TV1-01 | Sửa bug luồng shipment phát sinh từ QA tuần 7 | Báo cáo W7-TV6-02 | Danh sách lỗi đã đóng kèm commit | AC01–AC03 |
 | W8-TV1-02 | Hỗ trợ API đọc tracking đúng scope owner | W8-TV2-02 | Endpoint tracking trả đủ key theo `ShipmentTrackingResponse` | FR05, AC05, NF04 |
-| W8-TV2-01 | Idempotency: `ON CONFLICT (driver_id, client_timestamp)`, giữ bản đầu | W7-TV2-02 | History một dòng mỗi khóa mẫu | AC04, NF08, TC04.3, TC04.6 |
+| W8-TV2-01 | Idempotency: `ON CONFLICT ("driverId", "clientTimestamp")`, giữ bản đầu | W7-TV2-02 | History một dòng mỗi khóa mẫu | AC04, NF08, TC04.3, TC04.6 |
 | W8-TV2-02 | Out-of-order: current chỉ tiến theo mẫu hợp lệ mới hơn, xử lý mẫu tương lai | W8-TV2-01 | Current không lùi; test trên PostgreSQL thật | AC04, NF08, TC04.4, TC04.5, REC04 |
 | W8-TV3-01 | Bản đồ Leaflet cho Customer | Contract tracking | Map hiển thị vị trí, không lỗi khi chưa có GPS | FR05, AC05 |
 | W8-TV3-02 | Polling nối `current_location`, dừng khi rời trang, báo cũ/stale | W8-TV3-01 | Polling dọn đúng khi unmount | AC05, TC05.1–05.3 |
@@ -162,7 +162,7 @@ Checkpoint: sản phẩm, tài liệu và số liệu sẵn sàng bàn giao. She
 
 1. Danh sách "8 use case bắt buộc" của checkpoint tuần 9.
 2. Push hay pull cho Worker (dòng tuần 7 của TV5 so với code hiện tại).
-3. Mapping cột GPS giữa Worker (snake_case) và API directory (camelCase có ngoặc kép), chốt theo DB thật.
+3. Cột GPS: đặc tả dùng camelCase, Worker của Na đã đổi theo (nhánh chưa merge), Worker trên `develop` vẫn snake_case. Cần merge nhánh của Na và chốt theo DB thật.
 4. Phân rã trên chưa tính độ lệch người được giao với người làm thực tế.
 
 ## Mẫu bàn giao mỗi việc
