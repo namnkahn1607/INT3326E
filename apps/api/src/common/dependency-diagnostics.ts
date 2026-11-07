@@ -1,7 +1,7 @@
 import type { Logger } from '@nestjs/common';
 
 export type DependencyStage =
-  | 'auth.verify-token' | 'auth.lookup-user' | 'database.idle' | 'users.lookup'
+  | 'auth.verify-token' | 'auth.lookup-user' | 'database.idle' | 'users.lookup' | 'notifications.list'
   | 'shipments.connect' | 'shipments.begin' | 'shipments.idempotency.claim' | 'shipments.clock'
   | 'shipments.idempotency.read' | 'shipments.idempotency.refresh' | 'shipments.build'
   | 'shipments.insert' | 'shipments.event.insert' | 'shipments.notification.insert'
