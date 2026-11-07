@@ -31,25 +31,34 @@ QA luồng end-to-end create → assign → pickup → deliver.
 
 Môi trường: PostgreSQL thật trên máy (loopback, cụm tạm đã xóa sau khi chạy), Firebase giả lập, source `develop` tại `dd9a07f` cộng nhánh `docs/tv6-weekly`. Không phải Cloud. Bộ test chạy toàn bộ API: 470 đạt, 0 lỗi, 10 skip (7 ca Firebase Emulator chưa bật và 3 ca chỉ chạy ở chế độ khác).
 
-| Ca | Nội dung | Môi trường | Kết quả |
-| --- | --- | --- | --- |
-| TC01.1 | Create hợp lệ: 201, một shipment, event, notification, idempotency cùng commit | PostgreSQL local, mock Firebase | PASS |
-| TC01.2 | Gửi lặp cùng key, kể cả hai request cạnh tranh: một đơn, không thêm event/notification | PostgreSQL local, mock Firebase | PASS |
-| TC01.3 | Cùng key, payload đổi: 409 `IDEMPOTENCY_KEY_CONFLICT`, DB không đổi | PostgreSQL local, mock Firebase | PASS |
-| TC01.4 | Key hoặc field sai: 400, không tạo dữ liệu | PostgreSQL local, mock Firebase | PASS |
-| TC01.5 | Lỗi ghi notification hoặc idempotency: rollback cả giao dịch, không trả 201 giả | PostgreSQL local, mock Firebase | PASS |
-| TC01.6 | Replay Create sau khi đã assign: snapshot CREATED, Detail trả trạng thái mới | PostgreSQL local, mock Firebase | PASS |
-| TC02.1 | Admin gán driver: 200 ASSIGNED, Customer/Driver bị 403 | PostgreSQL local, mock Firebase | PASS |
-| TC02.2 | Gán lại cùng driver là no-op | PostgreSQL local, mock Firebase | PASS |
-| TC02.3 | Reassign trước pickup | PostgreSQL local, mock Firebase | PASS |
-| TC02.4 | Sau pickup trả 409, driver không tồn tại 404, sai role 400 | PostgreSQL local, mock Firebase | PASS (đơn PICKED_UP hoặc terminal dựng sẵn trong fixture) |
-| TC02.6 | Mất response: GET Detail thấy trạng thái mới | PostgreSQL local, mock Firebase | PASS |
-| TC04.1–TC04.2 | `POST /v1/locations`: chỉ DRIVER, chỉ trả 202 khi broker xác nhận | Mock broker | PASS |
-| GPS cột | Worker ghi `current_locations`, `GET /v1/drivers` đọc đúng tọa độ, `clientTimestamp`, `receivedAt` | PostgreSQL local, bảng GPS dựng theo Prisma DATA04/05 | PASS |
-| TC03.1–TC03.4 | Pickup và deliver | | BLOCKED: chưa có handler trên `develop` (TV1) |
-| TC06.1 | History theo scope và thứ tự | | BLOCKED: chưa có endpoint riêng (TV1) |
-| TC02.5 | Race Assign với Pickup | | BLOCKED: chưa có Pickup |
-| Cloud | Mọi ca trên bản đã deploy | | NOT RUN: chưa có tài khoản demo và revision |
+| Ca | Tài khoản (role) | Mã đơn | Trạng thái trước → sau | Lịch sử và thông báo | Quyền truy cập | Lỗi và phục hồi | Môi trường | Kết quả |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| TC01.1 | Customer `usr_01ARZ3NDEKTSV4RRFFQ69G5FAV` (CUSTOMER) | Sinh khi chạy: `sh_`+26 ký tự, `PF`+8 số+6 ký tự | không có → CREATED, `driverId` null | 1 shipment, 1 event (CREATED, actor là Customer, `fromStatus` null), 1 notification (kind CREATED, không chứa số điện thoại), 1 idempotency key | Chủ đơn lấy từ token, không từ body | 201; response khớp `ShipmentResponse` trong OpenAPI | PostgreSQL local, Firebase mock | PASS |
+| TC01.2 | Customer như trên, cùng key và payload | Một đơn duy nhất | CREATED, không đổi | Gửi lặp kể cả hai request cạnh tranh: vẫn 1 shipment, 1 event, 1 notification, 1 key | Như trên | 201 gốc, không tạo bản trùng | PostgreSQL local, Firebase mock | PASS |
+| TC01.3 | Customer như trên, cùng key, payload đổi | Đơn đã tạo | CREATED, không đổi | Số dòng không đổi (1/1/1/1) | Như trên | 409 `IDEMPOTENCY_KEY_CONFLICT` | PostgreSQL local, Firebase mock | PASS |
+| TC01.4 | Customer như trên | Không tạo | không có | Không ghi gì | Như trên | 400 khi key thiếu, sai hoặc là UUID v1, field sai hoặc tham số query lạ | PostgreSQL local, Firebase mock | PASS |
+| TC01.5 | Customer như trên | Không tạo (rollback) | không có | Lỗi ghi event, notification hoặc idempotency: số dòng về 0/0/0/0 | Như trên | 503, không lộ chi tiết lỗi. Hết lỗi, gửi lại cùng key: 201 | PostgreSQL local, Firebase mock | PASS |
+| TC01.6 | Customer như trên; đơn bị đổi sang ASSIGNED bằng SQL | Đơn vừa tạo | response replay vẫn CREATED; trong DB là ASSIGNED | Replay trả đúng snapshot cũ dù hạn giao đã qua, DB giữ ASSIGNED và driver | Như trên | 201 snapshot, không kiểm lại hạn giao | PostgreSQL local, Firebase mock | PASS |
+| Quyền Create | Không token; DRIVER; ADMIN; Customer chưa liên kết `users` | Không tạo | không đổi | Không có statement ghi nào trước khi kiểm quyền | 401 không token; 403 cho DRIVER và ADMIN; 409 `USER_NOT_PROVISIONED` | Không mở transaction | PostgreSQL local, Firebase mock | PASS |
+| TC02.1 | Admin `usr_…05` (ADMIN) gán Driver `usr_…03` (DRIVER); chủ đơn Customer `usr_…01` | Đơn tạo trong test | CREATED → ASSIGNED, `driverId` = driver 1 | `statusHistory` 2 dòng, dòng 2: ASSIGNED, từ CREATED, `newDriverId` driver 1, actor Admin. 1 notification kind ASSIGNED gửi chủ đơn, không chứa số điện thoại | Admin được gán | 200, `Cache-Control: no-store` | PostgreSQL local, Firebase mock | PASS |
+| TC02.2 | Admin `usr_…06` gán lại cùng Driver 1 | Như trên | ASSIGNED, không đổi | Không thêm event hay notification (vẫn 1/1), thời gian giữ nguyên | Như trên | 200, response bằng lần đầu | PostgreSQL local, Firebase mock | PASS |
+| TC02.3 | Admin `usr_…06` gán Driver 2 `usr_…04` thay Driver 1 | Như trên | ASSIGNED (driver 1) → ASSIGNED (driver 2) | Dòng 3: REASSIGNED, `previousDriverId` driver 1, `newDriverId` driver 2, actor Admin 2. Tổng 2 event, 2 notification | Driver 1: chi tiết 403, danh sách rỗng. Driver 2: 200. Customer chủ đơn đọc được lịch sử | 200 | PostgreSQL local, Firebase mock | PASS |
+| TC02.4 | Admin gán; đơn ở các trạng thái khác | Đơn tạo trong test | Trạng thái PICKED_UP, DELIVERED, DELIVERY_FAILED được đặt bằng SQL, không qua API pickup | Không thêm event hay notification | Gán cho Customer: 400 | 404 đơn không tồn tại, 404 tài xế không tồn tại, 400 sai role, 409 `INVALID_STATE_TRANSITION` khi đơn đã lấy hàng hoặc kết thúc | PostgreSQL local, Firebase mock | PASS |
+| Quyền Assign và đọc đơn | Không token; Customer; Driver; Admin chưa liên kết; Admin lệch role | Đơn tạo trong test | không đổi | Không ghi event hay notification (0/0) | 401 không token; 403 cho Customer và Driver khi gán; 409 `USER_NOT_PROVISIONED` khi chưa liên kết hoặc lệch role | Áp dụng cho list, detail và assign | PostgreSQL local, Firebase mock | PASS |
+| TC02.6 | Admin `usr_…05` | Đơn tạo trong test | CREATED → ASSIGNED, response bị mất sau commit | Detail thấy ASSIGNED, driver 1, history 2 dòng. Gọi lại assign: 200, vẫn 1 event, 1 notification | Như TC02.1 | Mất response trả 503; đọc lại detail để phục hồi, không ghi trùng | PostgreSQL local, Firebase mock | PASS |
+| Rollback Assign | Admin `usr_…05` | Đơn tạo trong test | CREATED, `driverId` null (không đổi) | Lỗi ghi event, notification hoặc UPDATE: 0 event, 0 notification | Như TC02.1 | 503, không lộ SQL. Hết lỗi, gán lại: 200 | PostgreSQL local, Firebase mock | PASS |
+| Gán đồng thời | Admin `usr_…05`, 5 request cùng lúc | Một đơn | CREATED → ASSIGNED | 1 event, 1 notification | Như TC02.1 | 5 request đều 200, không ghi trùng | PostgreSQL local, Firebase mock | PASS |
+| TC04.1, TC04.2 | Driver (mock Firebase), broker giả | Không có đơn | không áp dụng | Không ghi SQL ở API | Chỉ DRIVER; actor lấy từ server | 202 chỉ khi broker xác nhận; lỗi hoặc timeout trả 503 | Mock Firebase, mock broker | PASS |
+| GPS Worker ghi, API đọc | Driver `usr_01ARZ3NDEKTSV4RRFFQ69G5FAW` có một đơn ASSIGNED | `sh_01ARZ3NDEKTSV4RRFFQ69G5FAV` (fixture) | ASSIGNED, không đổi | `current_locations` có đúng 1 mẫu; `location_history` có mẫu đó | Admin directory (`GET /v1/drivers`) đọc đúng tọa độ, `clientTimestamp`, `receivedAt` | Mẫu trùng khóa khác tọa độ giữ bản đầu; mẫu cũ không kéo current lùi (kết quả phụ, chưa tính AC04) | PostgreSQL local, bảng GPS dựng theo Prisma | PASS |
+| TC03.1–TC03.4 | Driver, Admin |  | ASSIGNED → PICKED_UP → DELIVERED (chưa chạy) |  |  | Chưa có handler pickup, deliver trên `develop` (TV1) |  | BLOCKED |
+| TC06.1 | Customer, Driver, Admin |  |  | History theo scope và thứ tự (chưa chạy) |  | Chưa có endpoint history riêng (TV1) |  | BLOCKED |
+| TC02.5 | Admin, Driver |  |  |  |  | Cần Pickup để tạo race với Assign |  | BLOCKED |
+| Toàn bộ ca trên Cloud | Tài khoản demo ba role |  |  |  |  | Chưa có tài khoản demo và revision từ TV5 | Cloud | NOT RUN |
+
+Mã đơn và ID người dùng:
+- ID `usr_…01` đến `usr_…06` là ID fixture của bộ test assignments (`id(n)`, 26 ký tự số): 01 Customer chủ đơn, 02 Customer khác, 03 và 04 Driver, 05 và 06 Admin. Bộ test Create dùng ID ULID cố định `usr_01ARZ3NDEKTSV4RRFFQ69G5FAV` (Customer), `…FAW` (Driver), `…FAX` (Customer khác).
+- Mã đơn do hệ thống sinh ngẫu nhiên mỗi lần chạy, nên không có mã cố định để đối chiếu lại. Nếu cần mã cụ thể cho báo cáo, phải chạy lại và ghi lại mã từ log của lần chạy đó.
+- Các ca dựng trạng thái PICKED_UP, DELIVERED, DELIVERY_FAILED hoặc ASSIGNED bằng lệnh SQL (TC01.6, TC02.4) không chứng minh API pickup hay deliver hoạt động.
 
 Ghi chú:
 - Repo không có DDL cho `current_locations` và `location_history`; khi kiểm tra GPS tôi dựng hai bảng theo Prisma (snake_case, không khóa ngoại). `users` và `shipments` lấy từ `packages/database/sql/001-create-shipment.sql`. Kiểm tra này chưa chứng minh DB Cloud có đúng tên cột đó.
