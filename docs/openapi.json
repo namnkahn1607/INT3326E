@@ -35,6 +35,10 @@
     {
       "name": "Health",
       "description": "Week 1 public liveness"
+    },
+    {
+      "name": "Notifications",
+      "description": "In-app notifications for the owning Customer; read-only."
     }
   ],
   "paths": {
@@ -1166,6 +1170,68 @@
           }
         }
       }
+    },
+    "/notifications": {
+      "get": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Danh sách thông báo của Customer (API10)",
+        "description": "CUSTOMER with matching business linkage only. Server scopes to the caller's customerId from the verified business user, never from the query. Sorted createdAt DESC/id DESC with keyset cursor, default limit 20, max 100. Only limit and cursor are accepted. No mark-read, unread count or subscription preferences.",
+        "operationId": "listNotifications",
+        "x-implementation-status": "implemented",
+        "x-acceptance": "Đã kiểm thử HTTP/SQL trên máy (AC08); chưa chạy migration hoặc deploy Cloud. Xem docs/tv6/week-09.md.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DirectoryLimit"
+          },
+          {
+            "$ref": "#/components/parameters/NotificationCursor"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Page of notifications; empty data is valid.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedNotificationsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/409Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1222,6 +1288,17 @@
           "format": "uuid",
           "example": "e4eaaaf2-d142-41e1-b3e4-080027620cdd",
           "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+        }
+      },
+      "NotificationCursor": {
+        "name": "cursor",
+        "in": "query",
+        "required": false,
+        "description": "Opaque keyset cursor from the previous response, bound to the calling Customer. A cursor issued to another Customer, or with a wrong version or format, returns 400. It does not grant access.",
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
         }
       }
     },
@@ -2419,6 +2496,76 @@
         },
         "additionalProperties": false,
         "description": "PF v1.3 SC02, every key required; null is a value, not permission to omit a property. Create replay returns original snapshot."
+      },
+      "NotificationResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "shipmentId",
+          "trackingNumber",
+          "kind",
+          "title",
+          "body",
+          "createdAt"
+        ],
+        "description": "SC07. No readAt, unread count or read receipt in the MVP.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "shipmentId": {
+            "type": "string",
+            "pattern": "^sh_[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+            "example": "sh_01ARZ3NDEKTSV4RRFFQ69G5FAV"
+          },
+          "trackingNumber": {
+            "type": "string",
+            "pattern": "^PF[0-9]{8}[0-9A-HJKMNP-TV-Z]{6}$",
+            "example": "PF202610247K9M3Q"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "CREATED",
+              "ASSIGNED",
+              "REASSIGNED",
+              "PICKED_UP",
+              "DELIVERED",
+              "DELIVERY_FAILED"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PaginatedNotificationsResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "pagination"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NotificationResponse"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/DirectoryPagination"
+          }
+        }
       }
     }
   },

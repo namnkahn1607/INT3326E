@@ -82,7 +82,7 @@ Checkpoint: hoàn thành đầy đủ 8 use case bắt buộc. Đặc tả khôn
 | W9-TV2-01 | Expose query `current_location` cần cho ETA | W8-TV2-02 | Hàm/endpoint đọc nội bộ, null khi thiếu GPS | FR09 |
 | W9-TV2-02 | Kiểm tra độ mới của mẫu (biên 30 giây) | W9-TV2-01 | Quy tắc stale thống nhất với TV3 | AC09, NF04 |
 | W9-TV3-01 | UI failed/late | W9-TV1-01/02 | Hiển thị lý do và cờ trễ từ server | FR07, AC07 |
-| W9-TV3-02 | UI notification, poll thông báo mới | W9-TV6-01 | Danh sách và đánh dấu đã đọc | FR08, AC08 |
+| W9-TV3-02 | UI notification, poll thông báo mới | W9-TV6-01 | Danh sách thông báo từ `GET /v1/notifications`; không có mark-read | FR08, AC08 |
 | W9-TV4-01 | Viết load test script (k6 hoặc wrk2) nhắm GPS ingest | W8-TV4-02 | Script baseline và peak | NF01, NF02, LT01–LT02 |
 | W9-TV4-02 | Kịch bản burst, kịch bản offline-gửi-lại | W9-TV4-01 | Script LT03 | LT03, REC06, TC04.7 |
 | W9-TV5-01 | CI/CD GitHub Actions: build, test | Repo develop | Workflow chạy trên PR | NF12 |
