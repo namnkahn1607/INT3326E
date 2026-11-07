@@ -30,8 +30,8 @@ cần xác nhận migration/runtime trước khi chạy smoke các endpoint mớ
 
 ## Kiểm tra lại ngày 07/11/2026
 
-- Truy vấn driver đọc `current_locations` bằng cột snake_case (`driver_id`, `client_timestamp`, `received_at`) như Worker ghi và Prisma DATA04, đặt alias về `receivedAt`, `clientTimestamp` nên response không đổi. Bản cũ đọc camelCase có quote, lệch với Worker.
+- Truy vấn driver đọc `current_locations` bằng cột camelCase có quote (`"driverId"`, `"clientTimestamp"`, `"receivedAt"`) theo DATA04 của đặc tả v1.4. Ngày 07/11 tôi từng đổi sang snake_case để khớp Worker và Prisma lúc đó, rồi hoàn tác cùng ngày: đặc tả dùng camelCase và Worker của Na (`0626fd0`, chưa merge) đã đổi sang camelCase.
 - Chuyển `admin-directory.repository.ts` vào `admin/repositories/`, cùng kiểu với `controllers/`, `services/`, `dto/`.
 - Test SQL: chạy với PostgreSQL thật trên máy (loopback, database `parcelflow_admin_test`, cụm tạm đã xóa sau khi chạy), không dùng PGlite. Toàn bộ API: 406 test đạt, 73 skip (SQL của shipments/assignments và Firebase Emulator chưa bật), typecheck đạt. Tăng từ 399 đạt vì 7 ca SQL của Admin chạy thật.
 - Sửa test `admin-directory.postgres.spec.ts`: `search_path` được đặt lại mỗi khi pool mở kết nối. Trước đó ca "503 khi thiếu cột GPS" fail trên Postgres thật, cả ở `ea0b74d`, vì `search_path` mất sau khi kết nối bị thay.
-- Chưa kiểm: Cloud SQL, race đa kết nối (ADM12), schema thật của `current_locations` trên Cloud. Tên cột snake_case là theo Worker và Prisma, chưa đối chiếu với DB đã deploy.
+- Chưa kiểm: Cloud SQL, race đa kết nối (ADM12), schema thật của `current_locations` trên Cloud. Tên cột camelCase theo đặc tả, chưa đối chiếu với DB đã deploy. Worker trên `develop` vẫn ghi snake_case cho đến khi nhánh của Na được merge.

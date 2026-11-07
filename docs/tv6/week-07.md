@@ -23,7 +23,7 @@ QA luồng end-to-end create → assign → pickup → deliver.
 
 ## Đã làm được
 
-- 07/11: sửa lệch cột GPS giữa Admin directory và Worker, để `/v1/drivers` đọc đúng bảng mà Worker ghi (chưa kiểm với dữ liệu Worker thật).
+- 07/11: chốt cột GPS theo đặc tả (camelCase, DATA04/05). Lúc đầu tôi đổi Admin directory sang snake_case để khớp Worker trên `develop`, sau đó hoàn tác vì đặc tả và Worker mới của Na đều dùng camelCase. Worker trên `develop` vẫn ghi snake_case cho đến khi nhánh của Na (`0626fd0`) được merge.
 - 07/11: test Admin directory chạy thật trên PostgreSQL local (7 ca SQL); toàn bộ API 406 đạt.
 - Có sẵn kịch bản, fixture và ma trận ca trong `qa-test-plan.md`.
 
@@ -64,7 +64,7 @@ Mã đơn và ID người dùng:
 - Các ca dựng trạng thái PICKED_UP, DELIVERED, DELIVERY_FAILED hoặc ASSIGNED bằng lệnh SQL (TC01.6, TC02.4) không chứng minh API pickup hay deliver hoạt động.
 
 Ghi chú:
-- Repo không có DDL cho `current_locations` và `location_history`; khi kiểm tra GPS tôi dựng hai bảng theo Prisma (snake_case, không khóa ngoại). `users` và `shipments` lấy từ `packages/database/sql/001-create-shipment.sql`. Kiểm tra này chưa chứng minh DB Cloud có đúng tên cột đó.
+- Repo không có DDL cho `current_locations` và `location_history`; khi kiểm tra GPS tôi dựng hai bảng theo Prisma lúc đó (snake_case, không khóa ngoại) và dùng Admin directory bản snake_case. Kết quả "GPS cột" PASS ở trên chỉ đúng với Worker trên `develop` (snake_case) và bản Admin đó; Admin hiện đã về camelCase theo đặc tả nên cần chạy lại sau khi nhánh của Na (camelCase) được merge. `users` và `shipments` lấy từ `packages/database/sql/001-create-shipment.sql`.
 - Trong lúc kiểm tra GPS, mẫu trùng khóa khác tọa độ giữ bản đầu, mẫu cũ không kéo `current_locations` lùi. Đây là kết quả phụ trên PostgreSQL local, chưa tính là đạt AC04 (dedupe và ordering đầy đủ là checkpoint tuần 8).
 - Script kiểm tra GPS là file tạm, đã xóa sau khi chạy, nên chưa chạy lại được từ repo.
 
@@ -81,7 +81,7 @@ Soạn 07/11/2026. Đây là các việc TV6 không tự làm được để đ�
 | 5 | UI tiến độ cho Admin và history thật cho Customer (tab lịch sử Customer còn dữ liệu mẫu theo báo cáo 04/11) | TV3 | Kiểm UI của luồng đầu cuối | Customer chỉ xem history đơn của mình, có loading, rỗng, lỗi; Admin thấy tiến độ nhưng không pickup hay deliver thay Driver | Mục 3 | W7-TV3-01, W7-TV3-02 |
 | 6 | Tài khoản demo ba role trên Firebase project `int3326e`: tạo trong Console, cấp role bằng `npm run auth:set-role` (xem [bàn giao Auth](auth-rbac-handoff.md)), có row tương ứng trong `users` (`firebaseUid` duy nhất, `role` khớp claim). Gửi thông tin đăng nhập cho TV6 qua kênh riêng, không đưa vào Git | TV5 (Firebase project); TV1 hoặc TV5 (seed `users`) | Mọi ca có đăng nhập trên Cloud | Ba tài khoản đăng nhập được, `/v1/auth/me` trả đúng role, `/v1/admin/me` 200 cho Admin và 403 cho hai role còn lại | Không | W7-TV6-01 |
 | 7 | Ghi lại revision đang chạy: SHA nguồn, ngày deploy, migration và schema đã áp dụng (users, shipments, events, notifications, idempotency, GPS) | TV5; TV1 và TV2 xác nhận migration | Kết luận Cloud: hiện chỉ biết route có mặt, chưa biết SHA | Biên bản có SHA khớp một commit trên `develop`, runtime service account, `DATABASE_URL` trỏ đúng database | Không | W7-TV5-01, W7-TV5-02 |
-| 8 | DDL cho `current_locations` và `location_history` (snake_case như Worker ghi và Prisma DATA04/05) áp dụng lên Cloud SQL. Repo hiện không có DDL cho hai bảng này; Admin directory đã đọc theo cột này | TV2 và TV1 (chủ schema); TV5 áp dụng | GPS lưu SQL, Admin đọc vị trí | File SQL trong `packages/database/sql/`, đã chạy trên Cloud SQL, tên cột khớp Worker và `GET /v1/drivers` | Mục 7 | W7-TV2-01 |
+| 8 | DDL cho `current_locations` và `location_history` với cột camelCase theo DATA04/05 (Worker của Na và Admin directory đều dùng cột này) áp dụng lên Cloud SQL. Repo hiện không có DDL cho hai bảng này; Prisma vẫn là bản nháp | TV2 và TV1 (chủ schema); TV5 áp dụng | GPS lưu SQL, Admin đọc vị trí | File SQL trong `packages/database/sql/`, đã chạy trên Cloud SQL, tên cột khớp Worker và `GET /v1/drivers` | Mục 7 | W7-TV2-01 |
 | 9 | Worker chạy với PostgreSQL thật, không rơi về bộ nhớ (kiểm `DATABASE_URL` và log khởi động). Ghi một mẫu và thấy hàng trong SQL, ACK sau commit | TV2; TV5 cấu hình runtime | W7-TV6-02f trên Cloud | Một `eventId` thấy ở `location_history` và `current_locations`; khởi động lại instance vẫn đọc lại được | Mục 7, 8 | W7-TV2-02, W7-TV5-02 |
 | 10 | Chốt cơ chế nhận message: sheet ghi push subscription, code hiện dùng pull (`subscription.on('message')`). Không trỏ push vào URL chỉ có health check | TV2 và TV5 | Cấu hình Cloud của Worker | Quyết định ghi vào tài liệu (nếu đổi runtime thì ghi amendment); cấu hình thực tế khớp quyết định | Không | Sheet tuần 7 của TV5 |
 | 11 | Kiểm một mẫu GPS đi từ API qua Pub/Sub, Worker đến SQL trên máy dev. Cần Docker (`infra/docker-compose.yml` có sẵn emulator) hoặc `gcloud components install beta pubsub-emulator` | TV5 hoặc người có máy chạy được Docker | W7-TV6-02f ở mức local | Một `eventId` đi qua đủ bốn chặng, log Worker và hàng SQL khớp; ghi lại lệnh chạy | Mục 8 | W7-TV6-02f |

@@ -49,11 +49,11 @@ export class AdminDirectoryRepository {
         SELECT p.id, p.name,
           to_char(p."createdAt" AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS "cursorCreatedAt",
           coalesce(a.count, 0) AS "activeShipmentCount",
-          c.lat, c.lng, c.received_at AS "receivedAt", c.client_timestamp AS "clientTimestamp",
+          c.lat, c.lng, c."receivedAt", c."clientTimestamp",
           statement_timestamp() AS "observedAt"
         FROM page p
         LEFT JOIN active a ON a."driverId" = p.id
-        LEFT JOIN current_locations c ON c.driver_id = p.id AND coalesce(a.count, 0) > 0
+        LEFT JOIN current_locations c ON c."driverId" = p.id AND coalesce(a.count, 0) > 0
         ORDER BY p."createdAt" DESC, p.id DESC
       `, [UserRole.DRIVER, query.after?.createdAt ?? null, query.after?.id ?? null, query.limit + 1]);
       return result.rows;
