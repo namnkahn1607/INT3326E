@@ -1,6 +1,6 @@
 # Hợp đồng Auth và RBAC
 
-Trạng thái: hợp đồng đang áp dụng cho Auth/RBAC. Kết quả kiểm tra, hướng dẫn cấp claims và ghi nhận theo ngày nằm ở [Bàn giao Auth và RBAC](auth-rbac-handoff.md). Báo cáo đó là bằng chứng tại thời điểm viết, không thay cho hợp đồng này.
+Trạng thái: hợp đồng đang áp dụng cho Auth/RBAC. Kết quả kiểm tra, hướng dẫn cấp claims và ghi nhận theo ngày nằm ở [Bàn giao Auth và RBAC](tv6/auth-rbac-handoff.md). Báo cáo đó là bằng chứng tại thời điểm viết, không thay cho hợp đồng này.
 
 ## 1. Phạm vi
 
@@ -313,7 +313,7 @@ Quyết định tuần 2 và các nội dung cần phối hợp:
 - Đã chốt: role xác thực lấy từ Firebase custom claims, gồm CUSTOMER/DRIVER/ADMIN; không phụ thuộc PostgreSQL để xác thực.
 - API scaffold đã dùng prefix `/v1` cho nghiệp vụ và giữ `/healthz` công khai ngoài prefix; contract nghiệp vụ vẫn là draft.
 - Bản follow-up review dùng exception filter chung để trả ProblemDetails cho lỗi API, gồm 401/403/409/503. Các ví dụ response Nest ở phần tuần 1 là hồ sơ lịch sử.
-- Đã có SQL lookup và BusinessUserGuard cho liên kết user; migration, seed và nghiệm thu Cloud SQL cần TV1/TV5 phối hợp, xem [mục 6 của bàn giao](auth-rbac-handoff.md#6-follow-up-review-pr-15--danh-tính-nghiệp-vụ-và-lỗi-dependency).
+- Đã có SQL lookup và BusinessUserGuard cho liên kết user; migration, seed và nghiệm thu Cloud SQL cần TV1/TV5 phối hợp, xem [mục 6 của bàn giao](tv6/auth-rbac-handoff.md#6-follow-up-review-pr-15--danh-tính-nghiệp-vụ-và-lỗi-dependency).
 
 ## 10. Phụ thuộc bên ngoài
 
@@ -326,7 +326,7 @@ Việc tích hợp hoàn chỉnh phụ thuộc vào:
 
 API đã có firebase-admin, bootstrap và AuthModule. Tuần 2 dùng guard toàn cục, health được miễn bằng @Public(); không áp dụng lại guard cục bộ trên cùng controller. Module Shipment về sau vẫn phải kiểm tra quyền trên từng đơn hàng (chủ đơn hoặc tài xế được gán); RolesGuard không thay thế kiểm tra ownership.
 
-Bản tích hợp tuần 2 trong [bàn giao](auth-rbac-handoff.md) bổ sung frontend Firebase Web SDK; phạm vi tuần 1 được giữ làm hồ sơ lịch sử.
+Bản tích hợp tuần 2 trong [bàn giao](tv6/auth-rbac-handoff.md) bổ sung frontend Firebase Web SDK; phạm vi tuần 1 được giữ làm hồ sơ lịch sử.
 
 ## 11. Firebase configuration và giới hạn tích hợp
 

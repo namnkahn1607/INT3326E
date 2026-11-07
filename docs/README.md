@@ -19,7 +19,7 @@ tại một thời điểm, không thay thế đặc tả hoặc nghiệm thu m�
 | [Tracking Customer/Admin](live-tracking.md) | Polling, GPS mới/cũ/thiếu và bản đồ tài xế theo trang |
 | [Tạo đơn](create-shipment.md) | Phạm vi API01, chống trùng và transaction |
 | [Admin directory](admin-directory.md) | Danh sách tài xế/khách hàng và điều kiện SQL |
-| [Chia việc tuần 4–13](week-task-breakdown.md) | Đầu việc W<tuần>-TV<người>-<số>, phụ thuộc và tiêu chí |
+| [Chia việc tuần 4–13](tv6/week-task-breakdown.md) | Đầu việc W<tuần>-TV<người>-<số>, phụ thuộc và tiêu chí |
 
 ## Chạy, kiểm tra và bàn giao
 
@@ -27,9 +27,9 @@ tại một thời điểm, không thay thế đặc tả hoặc nghiệm thu m�
 | --- | --- |
 | [API scaffold](api-scaffold.md) | Hướng dẫn khởi động/container; phần runtime tuần 1 là lịch sử |
 | [Cấu hình frontend](frontend-config-handoff.md) | Build frontend, điều kiện backend; thăm dò 18/10/2026 |
-| [Auth/RBAC handoff](auth-rbac-handoff.md) | Tích hợp Auth, cấp claims, kết quả local 17/10/2026 |
-| [Admin directory handoff](admin-directory-handoff.md) | Kết quả kiểm tra local 23/10/2026 |
-| [TV6 theo tuần](tv6-weekly.md) | Mục lục công việc TV6, trỏ sang các tài liệu trên |
+| [Auth/RBAC handoff](tv6/auth-rbac-handoff.md) | Tích hợp Auth, cấp claims, kết quả local 17/10/2026 |
+| [Admin directory handoff](tv6/admin-directory-handoff.md) | Kết quả kiểm tra local 23/10/2026 |
+| [TV6 theo tuần](tv6/tv6-weekly.md) | Mục lục công việc TV6, trỏ sang các tài liệu trên |
 | [Driver dashboard/GPS](driver-dashboard-gps.md) | Client Driver; checkpoint tích hợp 26/10/2026 |
 | [GPS validation](gps-pipeline-validation.md) | Cách kiểm thử và bằng chứng Pub/Sub ngày 16/10/2026 |
 | [GPS merge handoff](gps-merge-fix-handoff.md) | Báo cáo lỗi tại snapshot 20/10/2026; không phải danh sách lỗi hiện tại |

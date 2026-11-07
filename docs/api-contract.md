@@ -174,7 +174,7 @@ Health tests and the TV6 Auth/Admin tests can be run now without Firebase calls.
 
 ## TV6 Auth tuần 2 — 17/10/2026
 
-Bổ sung API đã triển khai `GET /v1/auth/me` (ba role) và `GET /v1/admin/me` (ADMIN). Mọi handler mặc định được guard bảo vệ; health public. API nghiệp vụ còn lại vẫn là draft. Custom claims Firebase là nguồn role, có kiểm tra revocation/account hiện tại; không có role Dispatcher riêng hoặc public API cấp quyền. Xem [bàn giao Auth và RBAC](auth-rbac-handoff.md) cho claims CLI, cấu hình frontend/runtime, kiểm thử và trạng thái cloud chưa nghiệm thu.
+Bổ sung API đã triển khai `GET /v1/auth/me` (ba role) và `GET /v1/admin/me` (ADMIN). Mọi handler mặc định được guard bảo vệ; health public. API nghiệp vụ còn lại vẫn là draft. Custom claims Firebase là nguồn role, có kiểm tra revocation/account hiện tại; không có role Dispatcher riêng hoặc public API cấp quyền. Xem [bàn giao Auth và RBAC](tv6/auth-rbac-handoff.md) cho claims CLI, cấu hình frontend/runtime, kiểm thử và trạng thái cloud chưa nghiệm thu.
 
 
 ### Follow-up review Auth tuần 2
