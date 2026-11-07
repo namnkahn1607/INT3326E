@@ -23,6 +23,7 @@ Tích hợp Firebase Auth đầy đủ (custom claims 3 role), auth guard middle
 - Commit `fe0b6e2` và `16f0cb1` (17/10), `87bb551` (18/10, PR #16). Hai commit đầu do Đạt thực hiện bằng Codex nên Git ghi tác giả `Codex`.
 - Kết quả local ngày 17/10: 121 kiểm tra local và 7 ca Emulator đạt; follow-up PR #15: 111 test API đạt. Chi tiết ở [bàn giao Auth](auth-rbac-handoff.md).
 - Giao diện đăng nhập sau đó được Tuấn làm lại (30/10); logic Firebase là phần của TV6.
+- 07/11: `ApiExceptionFilter` ghi log lỗi không phải HTTP (tên lỗi, method, path, không có message, stack hay query string), trước đó lỗi 500 không để lại log. Có 3 test mới trong `api-exception.filter.spec.ts`; toàn bộ API 402 đạt, 80 skip.
 
 ## Còn thiếu và rủi ro
 
