@@ -1,0 +1,2490 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "ParcelFlow Core Logistics API (MVP)",
+    "description": "Đã triển khai và kiểm thử trên máy API01/02/03/04 theo đặc tả ParcelFlow v1.3: tạo đơn, danh sách/chi tiết theo quyền và phân công tài xế dành cho ADMIN. API nghiệp vụ yêu cầu Firebase hợp lệ và liên kết người dùng nghiệp vụ. Phân công khóa dòng đơn rồi ghi đơn/lịch sử/thông báo trong cùng giao dịch. Gán lại đúng tài xế không ghi thêm dữ liệu. Chưa thay schema hay triển khai Cloud SQL. Pickup/Deliver/Fail, tracking và GPS ingest vẫn là bản nháp. Xem docs/tv1-assignment-week6.md. Giữ Auth, Admin directory và geocoding hiện có.",
+    "version": "0.6.0-shipment-assignment"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000/v1",
+      "description": "Local business API draft; use TV5's verified URL for Cloud Run"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Geocoding",
+      "description": "Server-side VIETMAP address lookup for Hanoi in the legacy administrative format."
+    },
+    {
+      "name": "Shipments",
+      "description": "Shipment lifecycle creation, inspection, and state machine transitions."
+    },
+    {
+      "name": "Tracking & Location",
+      "description": "Async driver telemetry ingestion and consolidated tracking + ETA read-path."
+    },
+    {
+      "name": "Auth",
+      "description": "Verified Firebase account profiles."
+    },
+    {
+      "name": "Admin",
+      "description": "Read-only Admin directories; no account or custom-claim mutation."
+    },
+    {
+      "name": "Health",
+      "description": "Week 1 public liveness"
+    }
+  ],
+  "paths": {
+    "/geocoding/search": {
+      "post": {
+        "tags": [
+          "Geocoding"
+        ],
+        "summary": "VIETMAP search (Hanoi, legacy administrative format)",
+        "description": "Authenticated read-only lookup through ParcelFlow; POST keeps public address/coordinates out of request URLs. Reject unknown body/query fields. No database linkage or writes. Provider key never leaves the server. Missing key, provider errors/quota or timeout -> 503 GEOCODING_UNAVAILABLE. Per instance: 30 requests/account/minute, 300 total/minute, four concurrent upstream calls; excess -> 429. Cache five minutes. Not deployed automatically.",
+        "operationId": "geocodingSearch",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "query"
+                ],
+                "properties": {
+                  "query": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 255
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Mapped result; search returns references, place resolves only the selected reference; reverse may return result:null. Cache-Control:no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "maxItems": 5,
+                  "items": {
+                    "$ref": "#/components/schemas/GeocodingSuggestion"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/429TooManyRequests"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/geocoding/reverse": {
+      "post": {
+        "tags": [
+          "Geocoding"
+        ],
+        "summary": "VIETMAP reverse (Hanoi, legacy administrative format)",
+        "description": "Authenticated read-only lookup through ParcelFlow; POST keeps public address/coordinates out of request URLs. Reject unknown body/query fields. No database linkage or writes. Provider key never leaves the server. Missing key, provider errors/quota or timeout -> 503 GEOCODING_UNAVAILABLE. Per instance: 30 requests/account/minute, 300 total/minute, four concurrent upstream calls; excess -> 429. Cache five minutes. Not deployed automatically.",
+        "operationId": "geocodingReverse",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "lat",
+                  "lng"
+                ],
+                "properties": {
+                  "lat": {
+                    "type": "number",
+                    "minimum": -90,
+                    "maximum": 90
+                  },
+                  "lng": {
+                    "type": "number",
+                    "minimum": -180,
+                    "maximum": 180
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Mapped result; search returns references, place resolves only the selected reference; reverse may return result:null. Cache-Control:no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "result"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "result": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "id",
+                        "label",
+                        "point",
+                        "address"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "label": {
+                          "type": "string"
+                        },
+                        "reference": {
+                          "type": "string",
+                          "maxLength": 2048
+                        },
+                        "point": {
+                          "$ref": "#/components/schemas/Coordinates"
+                        },
+                        "address": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "street",
+                            "area",
+                            "regions"
+                          ],
+                          "properties": {
+                            "street": {
+                              "type": "string"
+                            },
+                            "area": {
+                              "type": "string"
+                            },
+                            "regions": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/429TooManyRequests"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/geocoding/place": {
+      "post": {
+        "tags": [
+          "Geocoding"
+        ],
+        "summary": "VIETMAP place (Hanoi, legacy administrative format)",
+        "description": "Authenticated read-only lookup through ParcelFlow; POST keeps public address/coordinates out of request URLs. Reject unknown body/query fields. No database linkage or writes. Provider key never leaves the server. Missing key, provider errors/quota or timeout -> 503 GEOCODING_UNAVAILABLE. Per instance: 30 requests/account/minute, 300 total/minute, four concurrent upstream calls; excess -> 429. Cache five minutes. Not deployed automatically.",
+        "operationId": "geocodingPlace",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "reference"
+                ],
+                "properties": {
+                  "reference": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2048
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Mapped result; search returns references, place resolves only the selected reference; reverse may return result:null. Cache-Control:no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "id",
+                    "label",
+                    "point",
+                    "address"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "reference": {
+                      "type": "string",
+                      "maxLength": 2048
+                    },
+                    "point": {
+                      "$ref": "#/components/schemas/Coordinates"
+                    },
+                    "address": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "street",
+                        "area",
+                        "regions"
+                      ],
+                      "properties": {
+                        "street": {
+                          "type": "string"
+                        },
+                        "area": {
+                          "type": "string"
+                        },
+                        "regions": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/429TooManyRequests"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/shipments": {
+      "post": {
+        "tags": [
+          "Shipments"
+        ],
+        "summary": "Create a new shipment (Customer only)",
+        "description": "PF SPEC 01 v1.3 API01. CUSTOMER + provisioned usr_ULID required. Reject unknown body/query fields. One transaction commits CREATED shipment, history, notification and 201 snapshot. Idempotency-Key UUID v4 scoped by business actor/CREATE_SHIPMENT/key; stable normalized hash. Same key/hash replays original201 body before dynamic deadline validation, even after state/deadline changes; different payload409. Default window24h, SHIPMENT_IDEMPOTENCY_TTL_SECONDS integer1..31536000 (default86400); expired keys may create a new shipment. Text trim; optional missing/null→null; timestamps valid ISO timezone normalized UTC milliseconds by truncation. No automatic DB migration or cloud acceptance.",
+        "operationId": "createShipment",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKeyRequired"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateShipmentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Committed CREATED shipment or original201 snapshot replay, exact SC02 keys",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShipmentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/409Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/429TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalServerError"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-implementation-status": "implemented-test-branch",
+        "x-acceptance": "Local tests only; see specs/002-create-shipment/acceptance.md. Shared migration/cloud/Firebase E2E require separate review."
+      },
+      "get": {
+        "tags": [
+          "Shipments"
+        ],
+        "summary": "Danh sách đơn theo quyền và phân trang",
+        "description": "API02. CUSTOMER chỉ xem đơn mình tạo; DRIVER xem đơn hiện được gán, gồm đơn đã kết thúc; ADMIN xem tất cả. Bộ lọc không mở rộng quyền. Sắp createdAt DESC,id DESC; limit mặc định 20, tối đa 100. Cursor gắn với người dùng/bộ lọc và giữ độ chính xác micro giây. Tham số lạ, lặp hoặc cursor sai trả 400. Thiếu liên kết người dùng trả 409, lỗi SQL/cấu hình trả 503. Không trả tổng số đơn. isLate của đơn đang xử lý dùng giờ máy chủ; đơn đã kết thúc dùng thời điểm sự kiện kết thúc.",
+        "operationId": "listShipments",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Vị trí phân trang theo createdAt/id của dòng cuối, dùng với cùng người dùng và bộ lọc.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Số dòng mỗi trang, mặc định 20, tối đa 100.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "description": "Lọc theo trạng thái đơn.",
+            "schema": {
+              "$ref": "#/components/schemas/ShipmentStatus"
+            }
+          },
+          {
+            "name": "trackingNumber",
+            "in": "query",
+            "required": false,
+            "description": "Lọc chính xác mã vận đơn trong phạm vi được phép xem.",
+            "schema": {
+              "type": "string",
+              "pattern": "^PF[0-9]{8}[0-9A-HJKMNP-TV-Z]{6}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Danh sách đơn và thông tin phân trang",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedShipmentsResponse"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "Dữ liệu nghiệp vụ không được lưu cache.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/429TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalServerError"
+          },
+          "409": {
+            "$ref": "#/components/responses/409Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
+          },
+          "400": {
+            "$ref": "#/components/responses/400BadRequest"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-implementation-status": "implemented-local",
+        "x-acceptance": "Đã kiểm thử HTTP/SQL trên máy; chưa chạy migration hoặc deploy Cloud. Xem docs/tv1-assignment-week6.md."
+      }
+    },
+    "/shipments/{id}": {
+      "get": {
+        "tags": [
+          "Shipments"
+        ],
+        "summary": "Chi tiết đơn và lịch sử thay đổi",
+        "description": "API03. Trả SC02 và statusHistory theo SC03 từ cùng một phiên bản dữ liệu SQL. Chỉ Customer chủ đơn, Driver hiện hành hoặc Admin được xem. Không có đơn trả 404; ngoài quyền trả 403. Từ chối tham số truy vấn thừa. Không trả lịch sử GPS hoặc cột nội bộ.",
+        "operationId": "getShipmentById",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ShipmentIdParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Chi tiết đơn và lịch sử theo thời gian tăng dần",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShipmentDetailResponse"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "Dữ liệu nghiệp vụ không được lưu cache.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalServerError"
+          },
+          "409": {
+            "$ref": "#/components/responses/409Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
+          },
+          "400": {
+            "$ref": "#/components/responses/400BadRequest"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-implementation-status": "implemented-local",
+        "x-acceptance": "Đã kiểm thử HTTP/SQL trên máy; chưa chạy migration hoặc deploy Cloud. Xem docs/tv1-assignment-week6.md."
+      }
+    },
+    "/shipments/{id}/assign": {
+      "post": {
+        "tags": [
+          "Shipments"
+        ],
+        "summary": "Gán hoặc đổi tài xế cho đơn",
+        "description": "API04 chỉ dành cho ADMIN. Khóa shipment bằng SELECT FOR UPDATE, kiểm tra và khóa role tài xế. CREATED chuyển ASSIGNED; ASSIGNED khác Driver ghi REASSIGNED. Đơn, lịch sử và thông báo cùng commit. Gán lại đúng tài xế giữ nguyên updatedAt/lịch sử/thông báo. Đã lấy hàng hoặc kết thúc trả 409; không có đơn/tài xế trả 404; target sai role trả 400. Chỉ nhận driverId trong body, không nhận query. Một Driver có thể nhận nhiều đơn. Mất phản hồi phải GET Detail để đối chiếu và xin xác nhận mới, không tự retry POST.",
+        "operationId": "assignShipment",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ShipmentIdParam"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignShipmentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Đơn sau phân công; giữ nguyên nếu vẫn là tài xế hiện tại",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShipmentResponse"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "Dữ liệu nghiệp vụ không được lưu cache.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404NotFound"
+          },
+          "409": {
+            "description": "Trạng thái không cho phép phân công; thiếu/lệch liên kết người dùng trả USER_NOT_PROVISIONED.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalServerError"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-implementation-status": "implemented-local",
+        "x-acceptance": "Đã kiểm thử HTTP/SQL trên máy; chưa chạy migration hoặc deploy Cloud. Xem docs/tv1-assignment-week6.md."
+      }
+    },
+    "/shipments/{id}/pickup": {
+      "post": {
+        "tags": [
+          "Shipments"
+        ],
+        "summary": "Driver confirms pickup",
+        "description": "Transitions state from `ASSIGNED` to `PICKED_UP`.\n\n**Authorized Roles:** `DRIVER` (must be assigned driver).\n\n**Natural Idempotency:** If the assigned driver retries `/pickup` when the shipment is already `PICKED_UP`, the server returns `200 OK` with current state instead of `409 Conflict`.",
+        "operationId": "pickupShipment",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ShipmentIdParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Shipment picked up (or already in picked up state by this driver)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShipmentResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/409Conflict"
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalServerError"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-implementation-status": "draft"
+      }
+    },
+    "/shipments/{id}/deliver": {
+      "post": {
+        "tags": [
+          "Shipments"
+        ],
+        "summary": "Driver confirms delivery completion",
+        "description": "Transitions state from `PICKED_UP` to `DELIVERED` (terminal state).\n\n**Authorized Roles:** `DRIVER` (must be assigned driver).\n\n**Natural Idempotency:** If the assigned driver retries `/deliver` when the shipment is already `DELIVERED`, the server returns `200 OK` with the current state.",
+        "operationId": "deliverShipment",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ShipmentIdParam"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeliverShipmentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Shipment delivered (or already in delivered state)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShipmentResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/409Conflict"
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalServerError"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-implementation-status": "draft"
+      }
+    },
+    "/shipments/{id}/fail": {
+      "post": {
+        "tags": [
+          "Shipments"
+        ],
+        "summary": "Report shipment delivery failure (Driver or Admin)",
+        "description": "Transitions state from `PICKED_UP` to `DELIVERY_FAILED` (terminal state).\n\n**Authorized Roles:** `DRIVER` (assigned driver) or `ADMIN`.\n\n**Invariant:** Delivery failure is strictly valid *only* after `PICKED_UP`. If a driver cannot collect an item before pickup, the admin reassigns another driver.\n\n**Audit Trail:** The server records `failedByRole` (`DRIVER` or `ADMIN`) and `failedByUserId` to preserve provenance if a admin steps in after a driver vanishes.\n\n**Natural Idempotency:** Retrying `/fail` on an already failed shipment returns `200 OK`.",
+        "operationId": "failShipment",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ShipmentIdParam"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FailShipmentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Shipment marked as failed (or already marked as failed)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShipmentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/409Conflict"
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalServerError"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-implementation-status": "draft"
+      }
+    },
+    "/locations": {
+      "post": {
+        "tags": [
+          "Tracking & Location"
+        ],
+        "summary": "Submit driver location coordinates (High throughput - Async)",
+        "description": "**Đã tích hợp trên máy, chưa nghiệm thu Cloud:** Driver gửi lat/lng/clientTimestamp, tùy chọn seq/sessionId. Firebase và role guard xác thực DRIVER; BusinessUserGuard ánh xạ sang mã tài xế nội bộ. Không nhận driverId, role, eventId, receivedAt hoặc trường thừa từ client. Timestamp được chuẩn hóa UTC mili giây, cắt phần nhỏ hơn mili giây; từ chối mẫu tương lai vượt receivedAt hơn 60 giây.\n\nAPI tạo eventId/receivedAt, publish EVT01 dưới dạng JSON UTF-8 và chỉ trả 202 sau broker confirmation. Publish lỗi trả 503. 202 chưa xác nhận Worker đã ghi SQL. Worker dedupe theo (driverId, clientTimestamp), không dùng seq để sắp thứ tự xuyên phiên. Xem docs/na-gps-merge.md và docs/gps-event-contract.md cho mức bằng chứng và phần Cloud còn mở.\n\n**Authorized Roles:** `DRIVER`.",
+        "operationId": "submitLocation",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitLocationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Location event accepted and queued for processing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AsyncAcceptedResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/429TooManyRequests"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalServerError"
+          },
+          "409": {
+            "$ref": "#/components/responses/409Conflict"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-implementation-status": "implemented-local"
+      }
+    },
+    "/shipments/{id}/tracking": {
+      "get": {
+        "tags": [
+          "Tracking & Location"
+        ],
+        "summary": "Get real-time tracking and ETA data for a shipment",
+        "description": "**Consolidated Read Path (Polling):**\nClients poll this endpoint periodically (every 5-10s). Returns `pickupLocation`, `dropoffLocation`, current driver coordinates, and real-time ETA.\n\n**Driver Privacy Invariant:**\nTo prevent exposing driver movements outside of active fulfillment, `currentDriverLocation` and `lastLocationUpdatedAt` are **strictly `null`** unless shipment status is `ASSIGNED` or `PICKED_UP`. In `CREATED`, `DELIVERED`, `DELIVERY_FAILED`, driver coordinates return `null`.\n\n**Conditional ETA Rule:**\nThe `eta` field is `null` during `CREATED` and `ASSIGNED` states (driver is en route to pickup). It is calculated only when status is `PICKED_UP` and driver coordinates are available.\n\n**Authorized Roles:** `CUSTOMER` (owner), `ADMIN`, `DRIVER` (assigned).",
+        "operationId": "getShipmentTracking",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ShipmentIdParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Consolidated driver location, pickup/dropoff points, and conditional ETA",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShipmentTrackingResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/429TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/500InternalServerError"
+          },
+          "409": {
+            "$ref": "#/components/responses/409Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-implementation-status": "draft"
+      }
+    },
+    "/healthz": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "operationId": "getHealth",
+        "summary": "Public API liveness check",
+        "description": "Week 1 runtime endpoint. Does not verify a token or check Cloud SQL/Pub/Sub/Firebase availability.",
+        "servers": [
+          {
+            "url": "/"
+          }
+        ],
+        "security": [],
+        "x-implementation-status": "implemented",
+        "responses": {
+          "200": {
+            "description": "API process is running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "status",
+                    "service"
+                  ],
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ok"
+                      ]
+                    },
+                    "service": {
+                      "type": "string",
+                      "enum": [
+                        "api"
+                      ]
+                    }
+                  }
+                },
+                "example": {
+                  "status": "ok",
+                  "service": "api"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Return the authenticated account for any supported role",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Verified current account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthenticatedUser"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/drivers": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "List drivers for dispatching (API11)",
+        "description": "ADMIN only, with matching users business linkage. Server filters DRIVER. Keyset order createdAt DESC/id DESC; only limit/cursor query fields. Counts ASSIGNED/PICKED_UP in the same SQL snapshot as GPS. Without active shipments or current GPS, all location fields are null. Freshness uses clientTimestamp with inclusive 0–30 seconds; receivedAt is lastLocationUpdatedAt. No email, UID, onlineFlag or global total. Requires DATA01/02/04 tables and timestamps; schema/dependency failure returns 503, never fabricated empty data.",
+        "operationId": "listDrivers",
+        "x-implementation-status": "implemented",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DirectoryLimit"
+          },
+          {
+            "$ref": "#/components/parameters/DirectoryCursor"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Page of provisioned business users; empty data is valid.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedDriversResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/409Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/admin/customers": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "List Customer summaries (read-only TV6 scope)",
+        "description": "Read-only addition requested for TV6 on 23/10/2026, outside the original API01–11 catalogue. ADMIN and matching business linkage required. Server filters CUSTOMER. Returns only id/name/email/nullable phone, sorted createdAt DESC/id DESC. Only limit/cursor accepted. No account creation, role assignment or unscoped global count.",
+        "operationId": "listAdminCustomers",
+        "x-implementation-status": "implemented",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DirectoryLimit"
+          },
+          {
+            "$ref": "#/components/parameters/DirectoryCursor"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Page of provisioned business users; empty data is valid.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedCustomersResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/409Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/admin/me": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Return the authenticated Admin account; other roles receive 403",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Verified current account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthenticatedUser"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Firebase Authentication ID Token (JWT)."
+      }
+    },
+    "parameters": {
+      "DirectoryLimit": {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "description": "Page size, default 20, range 1–100. Repeated/invalid values are rejected.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 20
+        }
+      },
+      "DirectoryCursor": {
+        "name": "cursor",
+        "in": "query",
+        "required": false,
+        "description": "Opaque keyset cursor from the previous response for this directory. Wrong scope/version/format returns 400. It does not grant access.",
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        }
+      },
+      "ShipmentIdParam": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Prefixed ULID identifier of the shipment (e.g. `sh_01J7Z8K9M3Q4T5V6W7X8Y9Z012`).",
+        "schema": {
+          "type": "string",
+          "pattern": "^sh_[0-9A-HJKMNP-TV-Z]{26}$",
+          "example": "sh_01J7Z8K9M3Q4T5V6W7X8Y9Z012"
+        }
+      },
+      "IdempotencyKeyRequired": {
+        "name": "Idempotency-Key",
+        "in": "header",
+        "required": true,
+        "description": "Single UUID v4; actor/operation scoped. Replay201 snapshot within configured24h default; changed normalized payload409. Missing, invalid or duplicate header400 IDEMPOTENCY_KEY_MISSING.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "example": "e4eaaaf2-d142-41e1-b3e4-080027620cdd",
+          "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+        }
+      }
+    },
+    "responses": {
+      "400BadRequest": {
+        "description": "Bad Request / Malformed Syntax / Validation Error",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/ProblemDetails"
+            }
+          }
+        }
+      },
+      "401Unauthorized": {
+        "description": "Authentication token missing or invalid",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/ProblemDetails"
+            }
+          }
+        }
+      },
+      "403Forbidden": {
+        "description": "Authenticated user lacks permission for this action/resource",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/ProblemDetails"
+            }
+          }
+        }
+      },
+      "404NotFound": {
+        "description": "Resource not found",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/ProblemDetails"
+            }
+          }
+        }
+      },
+      "409Conflict": {
+        "description": "Business user missing/inconsistent (USER_NOT_PROVISIONED), conflicting state transition, or idempotency conflict",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/ProblemDetails"
+            }
+          }
+        }
+      },
+      "429TooManyRequests": {
+        "description": "Too many requests - Rate limit exceeded",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/ProblemDetails"
+            }
+          }
+        }
+      },
+      "500InternalServerError": {
+        "description": "Internal server error",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/ProblemDetails"
+            }
+          }
+        }
+      },
+      "503ServiceUnavailable": {
+        "description": "Dependency temporarily unavailable or misconfigured, including Firebase Auth or the user database; not an invalid-token error",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/ProblemDetails"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "GeocodingSuggestion": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "label",
+          "address"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "reference": {
+            "type": "string",
+            "maxLength": 2048
+          },
+          "point": {
+            "$ref": "#/components/schemas/Coordinates"
+          },
+          "address": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "street",
+              "area",
+              "regions"
+            ],
+            "properties": {
+              "street": {
+                "type": "string"
+              },
+              "area": {
+                "type": "string"
+              },
+              "regions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ShipmentStatus": {
+        "type": "string",
+        "description": "Five-state baseline from the project scope. Cancellation is a separate unapproved proposal.",
+        "enum": [
+          "CREATED",
+          "ASSIGNED",
+          "PICKED_UP",
+          "DELIVERED",
+          "DELIVERY_FAILED"
+        ],
+        "example": "CREATED"
+      },
+      "Coordinates": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "lat",
+          "lng"
+        ],
+        "description": "Geographic coordinates. Geocoding is delegated entirely to the client.",
+        "properties": {
+          "lat": {
+            "type": "number",
+            "format": "double",
+            "minimum": -90.0,
+            "maximum": 90.0,
+            "example": 21.028511
+          },
+          "lng": {
+            "type": "number",
+            "format": "double",
+            "minimum": -180.0,
+            "maximum": 180.0,
+            "example": 105.854444
+          }
+        }
+      },
+      "CreateShipmentRequest": {
+        "type": "object",
+        "required": [
+          "pickupAddress",
+          "pickupLocation",
+          "dropoffAddress",
+          "dropoffLocation",
+          "recipientName",
+          "recipientPhone"
+        ],
+        "properties": {
+          "pickupAddress": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 255,
+            "example": "144 Xuan Thuy, Cau Giay, Hanoi"
+          },
+          "pickupLocation": {
+            "$ref": "#/components/schemas/Coordinates"
+          },
+          "dropoffAddress": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 255,
+            "example": "1 Dai Co Viet, Hai Ba Trung, Hanoi"
+          },
+          "dropoffLocation": {
+            "$ref": "#/components/schemas/Coordinates"
+          },
+          "recipientName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100,
+            "example": "Nguyen Van A"
+          },
+          "recipientPhone": {
+            "type": "string",
+            "pattern": "^\\+?[0-9]{9,15}$",
+            "example": "+84987654321"
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 500,
+            "example": "Fragile items. Handle with care.",
+            "nullable": true
+          },
+          "packageDescription": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500
+          },
+          "packageWeightKg": {
+            "type": "number",
+            "nullable": true,
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "description": "Finite positive kg; optional."
+          },
+          "expectedDeliveryAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Valid ISO8601 with timezone, UTC ms truncated before hashing; must be after server creation time for a NEW create. Not revalidated on valid replay."
+          }
+        },
+        "additionalProperties": false,
+        "description": "Trim text before validation/hash. Unknown fields rejected. Optional missing/null canonicalize to null. Finite numbers only; no coercion."
+      },
+      "AssignShipmentRequest": {
+        "type": "object",
+        "required": [
+          "driverId"
+        ],
+        "properties": {
+          "driverId": {
+            "type": "string",
+            "pattern": "^usr_[0-9A-HJKMNP-TV-Z]{26}$",
+            "description": "Prefixed ULID of the target driver. Must exist and hold the DRIVER role.",
+            "example": "usr_01J7Z8K9M3Q4T5V6W7X8Y9Z012"
+          }
+        },
+        "additionalProperties": false
+      },
+      "DeliverShipmentRequest": {
+        "type": "object",
+        "properties": {
+          "proofOfDeliveryNotes": {
+            "type": "string",
+            "maxLength": 255,
+            "example": "Delivered to reception desk on 2nd floor."
+          }
+        }
+      },
+      "FailShipmentRequest": {
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 500,
+            "example": "Recipient unreachable after 3 contact attempts at delivery address."
+          }
+        }
+      },
+      "CancelShipmentRequest": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "example": "Customer requested cancellation before pickup."
+          }
+        }
+      },
+      "ShipmentResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "trackingNumber",
+          "customerId",
+          "driverId",
+          "status",
+          "pickupAddress",
+          "pickupLocation",
+          "dropoffAddress",
+          "dropoffLocation",
+          "recipientName",
+          "recipientPhone",
+          "notes",
+          "failureReason",
+          "failedByRole",
+          "failedByUserId",
+          "proofOfDeliveryNotes",
+          "createdAt",
+          "updatedAt",
+          "packageDescription",
+          "packageWeightKg",
+          "expectedDeliveryAt",
+          "isLate"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^sh_[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+            "example": "sh_01J7Z8K9M3Q4T5V6W7X8Y9Z012"
+          },
+          "trackingNumber": {
+            "type": "string",
+            "pattern": "^PF[0-9]{8}[0-9A-HJKMNP-TV-Z]{6}$",
+            "description": "UTC date + six Crockford Base32 characters, unique with bounded collision retry.",
+            "example": "PF202610247K9M3Q"
+          },
+          "customerId": {
+            "type": "string",
+            "pattern": "^usr_[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+            "example": "usr_01J7Z8K9M3Q4T5V6W7X8Y9A001"
+          },
+          "driverId": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^usr_[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+            "example": "usr_01J7Z8K9M3Q4T5V6W7X8Y9D002"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ShipmentStatus"
+          },
+          "pickupAddress": {
+            "type": "string",
+            "example": "144 Xuan Thuy, Cau Giay, Hanoi"
+          },
+          "pickupLocation": {
+            "$ref": "#/components/schemas/Coordinates"
+          },
+          "dropoffAddress": {
+            "type": "string",
+            "example": "1 Dai Co Viet, Hai Ba Trung, Hanoi"
+          },
+          "dropoffLocation": {
+            "$ref": "#/components/schemas/Coordinates"
+          },
+          "recipientName": {
+            "type": "string",
+            "example": "Nguyen Van A"
+          },
+          "recipientPhone": {
+            "type": "string",
+            "example": "+84987654321"
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true,
+            "example": "Fragile items. Handle with care."
+          },
+          "failureReason": {
+            "type": "string",
+            "nullable": true,
+            "example": null
+          },
+          "failedByRole": {
+            "type": "string",
+            "enum": [
+              "DRIVER",
+              "ADMIN"
+            ],
+            "nullable": true,
+            "description": "Audit record of who declared delivery failure.",
+            "example": null
+          },
+          "failedByUserId": {
+            "type": "string",
+            "pattern": "^usr_[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+            "nullable": true,
+            "description": "User ID of the actor who declared delivery failure.",
+            "example": null
+          },
+          "proofOfDeliveryNotes": {
+            "type": "string",
+            "nullable": true,
+            "example": null
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-24T08:30:00.123Z",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-24T08:30:00.123Z",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+          },
+          "packageDescription": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500
+          },
+          "packageWeightKg": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "expectedDeliveryAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "isLate": {
+            "type": "boolean",
+            "nullable": true,
+            "description": "Deadline null→null; otherwise new Create=false. Replay preserves original value."
+          }
+        },
+        "additionalProperties": false,
+        "description": "PF v1.3 SC02, every key required; null is a value, not permission to omit a property. Create replay returns original snapshot."
+      },
+      "PaginatedShipmentsResponse": {
+        "type": "object",
+        "required": [
+          "data",
+          "pagination"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ShipmentResponse"
+            }
+          },
+          "pagination": {
+            "type": "object",
+            "required": [
+              "limit",
+              "hasMore",
+              "nextCursor"
+            ],
+            "properties": {
+              "limit": {
+                "type": "integer",
+                "example": 20
+              },
+              "hasMore": {
+                "type": "boolean",
+                "example": true
+              },
+              "nextCursor": {
+                "type": "string",
+                "nullable": true,
+                "description": "Opaque cursor representing (createdAt, id) of the last record. Null if no more records.",
+                "example": "eyJjcmVhdGVkQXQiOiIyMDI2LTEwLTA1VDA4OjMwOjAwWiIsImlkIjoic2hfMDEifQ=="
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "SubmitLocationRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "lat",
+          "lng",
+          "clientTimestamp"
+        ],
+        "description": "Periodic driver telemetry. sessionId and seq are optional diagnostics. Server-managed identity and event metadata are forbidden in the request. See docs/gps-event-contract.md.",
+        "example": {
+          "lat": 21.0285,
+          "lng": 105.8542,
+          "seq": 1,
+          "clientTimestamp": "2026-10-16T10:00:00.000Z"
+        },
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Optional diagnostic session identifier; never determines GPS ordering."
+          },
+          "seq": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "description": "Client sample counter within one emitter lifetime. Diagnostic only; may restart at 1 after remount. Never use seq alone to reject a newer timestamp.",
+            "example": 142
+          },
+          "lat": {
+            "type": "number",
+            "format": "double",
+            "minimum": -90.0,
+            "maximum": 90.0,
+            "example": 21.0378
+          },
+          "lng": {
+            "type": "number",
+            "format": "double",
+            "minimum": -180.0,
+            "maximum": 180.0,
+            "example": 105.7829
+          },
+          "clientTimestamp": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+            "description": "ISO 8601 measurement timestamp with a timezone. Preserve on retry. API normalizes to UTC milliseconds before hashing, deduplication and publishing, truncating sub-millisecond precision without rounding.",
+            "example": "2026-10-16T10:00:00.000Z"
+          }
+        }
+      },
+      "GpsTelemetryEvent": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Internal Pub/Sub JSON event enriched by the API. This is not the REST request body. Publish retries preserve every field.",
+        "required": [
+          "eventId",
+          "driverId",
+          "lat",
+          "lng",
+          "clientTimestamp",
+          "receivedAt"
+        ],
+        "example": {
+          "eventId": "gps-example-001",
+          "driverId": "demo-driver-1",
+          "lat": 21.0285,
+          "lng": 105.8542,
+          "seq": 1,
+          "clientTimestamp": "2026-10-16T10:00:00.000Z",
+          "receivedAt": "2026-10-16T10:00:00.120Z"
+        },
+        "properties": {
+          "eventId": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^\\S(?:.*\\S)?$",
+            "description": "Unique opaque identifier generated by API per acceptance, distinct from Pub/Sub messageId. No surrounding whitespace."
+          },
+          "driverId": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^\\S(?:.*\\S)?$",
+            "description": "Internal driver identifier derived by API from authenticated identity. No surrounding whitespace."
+          },
+          "lat": {
+            "type": "number",
+            "format": "double",
+            "minimum": -90.0,
+            "maximum": 90.0
+          },
+          "lng": {
+            "type": "number",
+            "format": "double",
+            "minimum": -180.0,
+            "maximum": 180.0
+          },
+          "sessionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "seq": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "clientTimestamp": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+          },
+          "receivedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$",
+            "description": "UTC API reception timestamp, generated once per acceptance."
+          }
+        }
+      },
+      "AsyncAcceptedResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "eventId",
+          "receivedAt"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACCEPTED"
+            ],
+            "example": "ACCEPTED"
+          },
+          "eventId": {
+            "type": "string",
+            "example": "evt_01J7Z9A1B2C3D4E5"
+          },
+          "receivedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Server UTC timestamp when the telemetry packet was accepted.",
+            "example": "2026-10-05T09:30:00.120Z"
+          }
+        }
+      },
+      "EtaDetails": {
+        "type": "object",
+        "required": [
+          "distanceMeters",
+          "estimatedSeconds",
+          "estimatedArrivalAt"
+        ],
+        "properties": {
+          "distanceMeters": {
+            "type": "number",
+            "description": "Direct distance to dropoff in meters computed via Haversine formula.",
+            "example": 4250.5
+          },
+          "estimatedSeconds": {
+            "type": "integer",
+            "description": "Predicted travel time to dropoff in seconds.",
+            "example": 720
+          },
+          "estimatedArrivalAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-05T09:45:00Z"
+          }
+        }
+      },
+      "ShipmentTrackingResponse": {
+        "type": "object",
+        "required": [
+          "shipmentId",
+          "status",
+          "pickupLocation",
+          "dropoffLocation"
+        ],
+        "properties": {
+          "shipmentId": {
+            "type": "string",
+            "pattern": "^sh_[0-9A-HJKMNP-TV-Z]{26}$",
+            "example": "sh_01J7Z8K9M3Q4T5V6W7X8Y9Z012"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ShipmentStatus"
+          },
+          "driverId": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^usr_[0-9A-HJKMNP-TV-Z]{26}$",
+            "example": "usr_01J7Z8K9M3Q4T5V6W7X8Y9D002"
+          },
+          "pickupLocation": {
+            "$ref": "#/components/schemas/Coordinates"
+          },
+          "dropoffLocation": {
+            "$ref": "#/components/schemas/Coordinates"
+          },
+          "currentDriverLocation": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Coordinates"
+              }
+            ],
+            "nullable": true,
+            "description": "Latest driver coordinates. STRICT PRIVACY INVARIANT: only populated when status is ASSIGNED or PICKED_UP. In CREATED, DELIVERED or DELIVERY_FAILED, this is strictly null."
+          },
+          "lastLocationUpdatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Server UTC reception timestamp (receivedAt) of the latest accepted telemetry packet. Strictly null if location is hidden or no telemetry received.",
+            "example": "2026-10-05T09:30:00.120Z"
+          },
+          "eta": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EtaDetails"
+              }
+            ],
+            "nullable": true,
+            "description": "Estimated arrival at dropoff. NULL during CREATED, ASSIGNED, and all terminal states; only calculated once status is PICKED_UP."
+          }
+        }
+      },
+      "ProblemDetails": {
+        "type": "object",
+        "required": [
+          "type",
+          "title",
+          "status",
+          "code",
+          "instance",
+          "timestamp"
+        ],
+        "description": "RFC 9457 Problem Details schema for HTTP APIs with stable machine-readable codes.",
+        "properties": {
+          "type": {
+            "type": "string",
+            "format": "uri",
+            "description": "A URI reference that identifies the problem type.",
+            "example": "https://api.parcelflow.dev/errors/invalid-state-transition"
+          },
+          "title": {
+            "type": "string",
+            "description": "Short, human-readable summary of the problem type.",
+            "example": "Invalid State Transition"
+          },
+          "status": {
+            "type": "integer",
+            "description": "The HTTP status code generated by the origin server.",
+            "example": 409
+          },
+          "detail": {
+            "type": "string",
+            "description": "Human-readable explanation specific to this occurrence of the problem.",
+            "example": "Shipment in status 'ASSIGNED' cannot be marked as failed. Delivery failure is only permitted after 'PICKED_UP'."
+          },
+          "instance": {
+            "type": "string",
+            "description": "URI reference identifying the specific occurrence of the problem.",
+            "example": "/v1/shipments/sh_01J7Z8K9M3Q4T5V6W7X8Y9Z012/fail"
+          },
+          "code": {
+            "type": "string",
+            "description": "Stable, machine-readable application error code.",
+            "enum": [
+              "VALIDATION_ERROR",
+              "UNAUTHENTICATED",
+              "FORBIDDEN_RESOURCE",
+              "RESOURCE_NOT_FOUND",
+              "INVALID_STATE_TRANSITION",
+              "IDEMPOTENCY_KEY_MISSING",
+              "IDEMPOTENCY_KEY_CONFLICT",
+              "RATE_LIMIT_EXCEEDED",
+              "SERVICE_UNAVAILABLE",
+              "GEOCODING_UNAVAILABLE",
+              "INTERNAL_SERVER_ERROR",
+              "USER_NOT_PROVISIONED"
+            ],
+            "example": "INVALID_STATE_TRANSITION"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp in UTC ISO-8601 when error occurred.",
+            "example": "2026-10-05T09:30:00.123Z"
+          },
+          "errors": {
+            "type": "array",
+            "description": "Detailed field-level validation errors (present when code is VALIDATION_ERROR).",
+            "items": {
+              "type": "object",
+              "required": [
+                "field",
+                "message"
+              ],
+              "properties": {
+                "field": {
+                  "type": "string",
+                  "example": "pickupLocation.lat"
+                },
+                "message": {
+                  "type": "string",
+                  "example": "lat must not be less than -90"
+                }
+              }
+            }
+          }
+        }
+      },
+      "DirectoryPagination": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "limit",
+          "hasMore",
+          "nextCursor"
+        ],
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 512
+          }
+        },
+        "description": "SC01: hasMore=true implies a non-null nextCursor; false implies null. No total."
+      },
+      "DriverResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "activeShipmentCount",
+          "currentLocation",
+          "lastLocationUpdatedAt",
+          "locationClientTimestamp",
+          "isLocationStale"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^usr_[0-9A-HJKMNP-TV-Z]{26}$",
+            "example": "usr_01ARZ3NDEKTSV4RRFFQ69G5FAV"
+          },
+          "name": {
+            "type": "string"
+          },
+          "activeShipmentCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "currentLocation": {
+            "type": "object",
+            "nullable": true,
+            "additionalProperties": false,
+            "required": [
+              "lat",
+              "lng"
+            ],
+            "properties": {
+              "lat": {
+                "type": "number",
+                "minimum": -90,
+                "maximum": 90
+              },
+              "lng": {
+                "type": "number",
+                "minimum": -180,
+                "maximum": 180
+              }
+            }
+          },
+          "lastLocationUpdatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "receivedAt of current sample; null when hidden/missing."
+          },
+          "locationClientTimestamp": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "clientTimestamp of current sample; null when hidden/missing."
+          },
+          "isLocationStale": {
+            "type": "boolean",
+            "nullable": true,
+            "description": "False for age in [0,30] seconds, true outside; null when hidden/missing."
+          }
+        }
+      },
+      "CustomerSummaryResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "email",
+          "phone"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^usr_[0-9A-HJKMNP-TV-Z]{26}$",
+            "example": "usr_01ARZ3NDEKTSV4RRFFQ69G5FAV"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "PaginatedDriversResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "pagination"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DriverResponse"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/DirectoryPagination"
+          }
+        }
+      },
+      "PaginatedCustomersResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "pagination"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CustomerSummaryResponse"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/DirectoryPagination"
+          }
+        }
+      },
+      "AuthenticatedUser": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "uid",
+          "role"
+        ],
+        "properties": {
+          "uid": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "CUSTOMER",
+              "DRIVER",
+              "ADMIN"
+            ]
+          }
+        }
+      },
+      "StatusEventResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "shipmentId",
+          "action",
+          "fromStatus",
+          "toStatus",
+          "actorUserId",
+          "actorRole",
+          "previousDriverId",
+          "newDriverId",
+          "reason",
+          "occurredAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "shipmentId": {
+            "type": "string",
+            "pattern": "^sh_[0-7][0-9A-HJKMNP-TV-Z]{25}$"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "CREATED",
+              "ASSIGNED",
+              "REASSIGNED",
+              "PICKED_UP",
+              "DELIVERED",
+              "DELIVERY_FAILED"
+            ]
+          },
+          "fromStatus": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "CREATED",
+              "ASSIGNED",
+              "PICKED_UP",
+              "DELIVERED",
+              "DELIVERY_FAILED",
+              null
+            ]
+          },
+          "toStatus": {
+            "$ref": "#/components/schemas/ShipmentStatus"
+          },
+          "actorUserId": {
+            "type": "string",
+            "pattern": "^usr_[0-7][0-9A-HJKMNP-TV-Z]{25}$"
+          },
+          "actorRole": {
+            "type": "string",
+            "enum": [
+              "CUSTOMER",
+              "DRIVER",
+              "ADMIN"
+            ]
+          },
+          "previousDriverId": {
+            "type": "string",
+            "pattern": "^usr_[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+            "nullable": true
+          },
+          "newDriverId": {
+            "type": "string",
+            "pattern": "^usr_[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+            "nullable": true
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ShipmentDetailResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "trackingNumber",
+          "customerId",
+          "driverId",
+          "status",
+          "pickupAddress",
+          "pickupLocation",
+          "dropoffAddress",
+          "dropoffLocation",
+          "recipientName",
+          "recipientPhone",
+          "notes",
+          "failureReason",
+          "failedByRole",
+          "failedByUserId",
+          "proofOfDeliveryNotes",
+          "createdAt",
+          "updatedAt",
+          "packageDescription",
+          "packageWeightKg",
+          "expectedDeliveryAt",
+          "isLate",
+          "statusHistory"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^sh_[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+            "example": "sh_01J7Z8K9M3Q4T5V6W7X8Y9Z012"
+          },
+          "trackingNumber": {
+            "type": "string",
+            "pattern": "^PF[0-9]{8}[0-9A-HJKMNP-TV-Z]{6}$",
+            "description": "UTC date + six Crockford Base32 characters, unique with bounded collision retry.",
+            "example": "PF202610247K9M3Q"
+          },
+          "customerId": {
+            "type": "string",
+            "pattern": "^usr_[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+            "example": "usr_01J7Z8K9M3Q4T5V6W7X8Y9A001"
+          },
+          "driverId": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^usr_[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+            "example": "usr_01J7Z8K9M3Q4T5V6W7X8Y9D002"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ShipmentStatus"
+          },
+          "pickupAddress": {
+            "type": "string",
+            "example": "144 Xuan Thuy, Cau Giay, Hanoi"
+          },
+          "pickupLocation": {
+            "$ref": "#/components/schemas/Coordinates"
+          },
+          "dropoffAddress": {
+            "type": "string",
+            "example": "1 Dai Co Viet, Hai Ba Trung, Hanoi"
+          },
+          "dropoffLocation": {
+            "$ref": "#/components/schemas/Coordinates"
+          },
+          "recipientName": {
+            "type": "string",
+            "example": "Nguyen Van A"
+          },
+          "recipientPhone": {
+            "type": "string",
+            "example": "+84987654321"
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true,
+            "example": "Fragile items. Handle with care."
+          },
+          "failureReason": {
+            "type": "string",
+            "nullable": true,
+            "example": null
+          },
+          "failedByRole": {
+            "type": "string",
+            "enum": [
+              "DRIVER",
+              "ADMIN"
+            ],
+            "nullable": true,
+            "description": "Audit record of who declared delivery failure.",
+            "example": null
+          },
+          "failedByUserId": {
+            "type": "string",
+            "pattern": "^usr_[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+            "nullable": true,
+            "description": "User ID of the actor who declared delivery failure.",
+            "example": null
+          },
+          "proofOfDeliveryNotes": {
+            "type": "string",
+            "nullable": true,
+            "example": null
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-24T08:30:00.123Z",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-24T08:30:00.123Z",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+          },
+          "packageDescription": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500
+          },
+          "packageWeightKg": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "expectedDeliveryAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "isLate": {
+            "type": "boolean",
+            "nullable": true,
+            "description": "Deadline null→null; otherwise new Create=false. Replay preserves original value."
+          },
+          "statusHistory": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StatusEventResponse"
+            }
+          }
+        },
+        "additionalProperties": false,
+        "description": "PF v1.3 SC02, every key required; null is a value, not permission to omit a property. Create replay returns original snapshot."
+      }
+    }
+  },
+  "x-proposals": {
+    "cancellation": {
+      "status": "pending-team-approval",
+      "proposedShipmentStatus": "CANCELLED",
+      "path": "/shipments/{id}/cancel",
+      "operation": {
+        "post": {
+          "tags": [
+            "Shipments"
+          ],
+          "summary": "Cancel shipment",
+          "description": "Transitions state from `CREATED` or `ASSIGNED` to `CANCELLED` (terminal state).\n\n**Authorized Roles & State Constraints:**\n- `CUSTOMER`: Allowed ONLY when shipment is in `CREATED` status.\n- `ADMIN`: Allowed when shipment is in `CREATED` or `ASSIGNED` status.\n- Once a shipment is `PICKED_UP`, `DELIVERED`, or `DELIVERY_FAILED`, cancellation is rejected with `409 Conflict`.\n\n**Natural Idempotency:** If the permitted caller retries cancelling an already cancelled shipment, returns `200 OK`.",
+          "operationId": "cancelShipment",
+          "parameters": [
+            {
+              "$ref": "#/components/parameters/ShipmentIdParam"
+            }
+          ],
+          "requestBody": {
+            "required": false,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CancelShipmentRequest"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Shipment cancelled successfully (or already cancelled)",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ShipmentResponse"
+                  }
+                }
+              }
+            },
+            "401": {
+              "$ref": "#/components/responses/401Unauthorized"
+            },
+            "403": {
+              "$ref": "#/components/responses/403Forbidden"
+            },
+            "404": {
+              "$ref": "#/components/responses/404NotFound"
+            },
+            "409": {
+              "$ref": "#/components/responses/409Conflict"
+            },
+            "500": {
+              "$ref": "#/components/responses/500InternalServerError"
+            }
+          },
+          "security": [
+            {
+              "BearerAuth": []
+            }
+          ]
+        }
+      },
+      "description": "Preserved from the original TV1 draft; not part of the five-state baseline or week 1 runtime."
+    }
+  }
+}

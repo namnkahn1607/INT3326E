@@ -1,0 +1,22 @@
+.shipment-lifecycle { margin-top: 24px; min-width: 0; }
+.shipment-lifecycle h3 { font-size: 18px; margin-bottom: 16px; }
+.shipment-outcome { display: grid; gap: 12px; margin-bottom: 24px; }
+.shipment-outcome dt { font-size: 14px; color: var(--ui-muted, #655a70); }
+.shipment-outcome dd { margin: 4px 0 0; overflow-wrap: anywhere; }
+.shipment-proof { margin-bottom: 24px; overflow-wrap: anywhere; }
+.shipment-history { padding: 0; list-style: none; }
+.shipment-history li { padding: 16px 0; border-top: 1px solid var(--ui-line, #e8e3ed); overflow-wrap: anywhere; }
+.shipment-event-heading { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; }
+.shipment-event-heading time, .shipment-history p, .shipment-history-empty { font-size: 14px; line-height: 1.6; color: var(--ui-muted, #655a70); }
+.shipment-history p { margin-top: 4px; }
+.shipment-event-heading strong { font-size: 16px; }
+.admin-shipment-detail-page .admin-detail-panel { background: white; padding: clamp(16px, 3vw, 28px); border: 1px solid var(--ui-line, #e8e3ed); }
+.shipment-failure-form { margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--ui-line, #e8e3ed); }
+.shipment-failure-form h2 { font-size: 19px; margin-bottom: 16px; }
+.shipment-failure-form textarea { display: block; width: 100%; min-height: 100px; resize: vertical; padding: 10px 12px; font: inherit; font-size: 16px; color: inherit; border: 1px solid var(--ui-line, #d8d2df); border-radius: 6px; }
+.shipment-required, .shipment-action-error { color: #b42318; }
+.shipment-action-error { margin: 12px 0; font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+.shipment-action-notice { font-size: 14px; line-height: 1.6; margin: 16px 0; }
+.shipment-failure-review { margin-top: 20px; padding: 16px 0; border-block: 1px solid var(--ui-line, #e8e3ed); }
+.shipment-failure-review p { white-space: pre-wrap; overflow-wrap: anywhere; margin-bottom: 8px; }
+.shipment-failure-review:focus-visible, .shipment-failure-form textarea:focus-visible { outline: 2px solid var(--primary-purple, #6d28d9); outline-offset: 3px; }
