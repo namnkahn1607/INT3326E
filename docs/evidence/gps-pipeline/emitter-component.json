@@ -1,0 +1,45 @@
+{
+  "startedAt": "2026-10-16T15:25:17.473Z",
+  "finishedAt": "2026-10-16T15:25:17.497Z",
+  "status": "PASS",
+  "level": "React Test Renderer with Node mock timers; no browser or network integration",
+  "reactVersion": "19.3.0",
+  "checks": [
+    "Initial state: Start enabled, Stop disabled, no sample",
+    "Start emits no immediate sample and disables Start",
+    "No sample before 8000 ms",
+    "Exactly two samples after two periods, even under StrictMode",
+    "Stop preserves sample count and payload for two periods",
+    "Restart continues sequence with one sample per period",
+    "Unmount cancels emission",
+    "Remount starts a new sequence at 1",
+    "Blank identifier \"\" disables Start",
+    "Blank identifier \"   \" disables Start"
+  ],
+  "events": [
+    {
+      "lat": 21.0285,
+      "lng": 105.8542,
+      "seq": 1,
+      "clientTimestamp": "2026-10-16T10:00:08.000Z"
+    },
+    {
+      "lat": 21.0285,
+      "lng": 105.8542,
+      "seq": 2,
+      "clientTimestamp": "2026-10-16T10:00:16.000Z"
+    },
+    {
+      "lat": 21.0285,
+      "lng": 105.8542,
+      "seq": 3,
+      "clientTimestamp": "2026-10-16T10:00:40.000Z"
+    },
+    {
+      "lat": 21.0285,
+      "lng": 105.8542,
+      "seq": 1,
+      "clientTimestamp": "2026-10-16T10:01:04.000Z"
+    }
+  ]
+}

@@ -1,0 +1,92 @@
+import { useEffect, useRef, useState } from 'react'
+import { MAX_GPS_SEQUENCE } from '@parcelflow/types'
+import type { GpsLocationRequest } from '@parcelflow/types'
+
+export type GpsEmitterDraftEvent = GpsLocationRequest
+
+interface GpsEmitterProps {
+  driverId: string
+  onEmit?: (event: GpsEmitterDraftEvent) => void
+}
+
+const EMIT_INTERVAL_MS = 8000
+const SAMPLE_COORDINATES = { lat: 21.028511, lng: 105.804817 }
+
+export function GpsEmitter({ driverId, onEmit }: GpsEmitterProps) {
+  const [running, setRunning] = useState(false)
+  const [lastEvent, setLastEvent] = useState<GpsEmitterDraftEvent | null>(null)
+  const [eventCount, setEventCount] = useState(0)
+  const sequence = useRef(0)
+  const emitCallback = useRef(onEmit)
+
+  useEffect(() => {
+    emitCallback.current = onEmit
+  }, [onEmit])
+
+  useEffect(() => {
+    if (!running || !driverId.trim()) return
+
+    const intervalId = window.setInterval(() => {
+      if (sequence.current >= MAX_GPS_SEQUENCE) {
+        window.clearInterval(intervalId)
+        setRunning(false)
+        return
+      }
+
+      const event: GpsEmitterDraftEvent = {
+        ...SAMPLE_COORDINATES,
+        clientTimestamp: new Date().toISOString(),
+        seq: ++sequence.current,
+      }
+
+      setLastEvent(event)
+      setEventCount(sequence.current)
+      if (sequence.current === MAX_GPS_SEQUENCE) {
+        window.clearInterval(intervalId)
+        setRunning(false)
+      }
+      emitCallback.current?.(event)
+    }, EMIT_INTERVAL_MS)
+
+    return () => window.clearInterval(intervalId)
+  }, [running, driverId])
+
+  return (
+    <section aria-labelledby="gps-emitter-title" style={{ marginTop: '24px', textAlign: 'left' }}>
+      <h3 id="gps-emitter-title">GPS emitter — bản phác thảo</h3>
+      <p style={{ color: '#64748b', marginTop: '8px' }}>
+        Phát tọa độ mẫu mỗi 8 giây để xem payload. Chưa gửi dữ liệu lên máy chủ.
+      </p>
+      <p style={{ marginTop: '12px' }}>Tài xế mẫu: {driverId}</p>
+      <p role="status">
+        Trạng thái: {running && driverId.trim() ? 'Đang phát mẫu' : 'Đã dừng'} · Số mẫu: {eventCount}
+      </p>
+      <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          disabled={running || !driverId.trim() || eventCount >= MAX_GPS_SEQUENCE}
+          onClick={() => setRunning(true)}
+        >
+          Bắt đầu phát mẫu
+        </button>
+        <button
+          type="button"
+          className="btn btn-outline"
+          disabled={!running}
+          onClick={() => setRunning(false)}
+        >
+          Dừng
+        </button>
+      </div>
+      <p className="ui-disabled-reason">{!driverId.trim() ? 'Cần mã tài xế để phát mẫu.' : running ? 'Đang phát mẫu. Chọn Dừng để kết thúc trước khi bắt đầu lại.' : 'Nút Dừng khả dụng sau khi bắt đầu phát mẫu.'}</p>
+      {lastEvent ? (
+        <pre style={{ marginTop: '16px', padding: '12px', background: '#f0fdf4', overflowX: 'auto' }}>
+          <code>{JSON.stringify(lastEvent, null, 2)}</code>
+        </pre>
+      ) : (
+        <p style={{ marginTop: '16px' }}>Chưa có mẫu. Mẫu đầu tiên xuất hiện sau 8 giây khi bắt đầu.</p>
+      )}
+    </section>
+  )
+}
