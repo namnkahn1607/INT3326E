@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "ParcelFlow Core Logistics API (MVP)",
-    "description": "Đã triển khai và kiểm thử trên máy API01/02/03/04 theo đặc tả ParcelFlow v1.3: tạo đơn, danh sách/chi tiết theo quyền và phân công tài xế dành cho ADMIN. API nghiệp vụ yêu cầu Firebase hợp lệ và liên kết người dùng nghiệp vụ. Phân công khóa dòng đơn rồi ghi đơn/lịch sử/thông báo trong cùng giao dịch. Gán lại đúng tài xế không ghi thêm dữ liệu. Chưa thay schema hay triển khai Cloud SQL. Pickup/Deliver/Fail, tracking và GPS ingest vẫn là bản nháp. Xem docs/tv1-assignment-week6.md. Giữ Auth, Admin directory và geocoding hiện có.",
-    "version": "0.6.0-shipment-assignment"
+    "description": "Đã triển khai và kiểm thử trên máy API01/02/03/04/05/06 theo đặc tả ParcelFlow v1.4: tạo đơn, danh sách/chi tiết theo quyền, phân công tài xế dành cho ADMIN, và nhận hàng/giao hàng dành cho DRIVER hiện hành. API nghiệp vụ yêu cầu Firebase hợp lệ và liên kết người dùng nghiệp vụ. Các thao tác đổi trạng thái khóa dòng đơn rồi ghi đơn/lịch sử/thông báo trong cùng giao dịch. Gọi lặp cùng bước bởi actor hợp lệ là no-op, không ghi thêm dữ liệu. Chưa thay schema hay triển khai Cloud SQL. Fail và tracking vẫn là bản nháp. Xem docs/tv1-shipment-week7/spec.md. Giữ Auth, Admin directory, Notifications và geocoding hiện có.",
+    "version": "0.7.0-shipment-pickup-deliver"
   },
   "servers": [
     {
@@ -650,7 +650,7 @@
           "Shipments"
         ],
         "summary": "Driver confirms pickup",
-        "description": "Transitions state from `ASSIGNED` to `PICKED_UP`.\n\n**Authorized Roles:** `DRIVER` (must be assigned driver).\n\n**Natural Idempotency:** If the assigned driver retries `/pickup` when the shipment is already `PICKED_UP`, the server returns `200 OK` with current state instead of `409 Conflict`.",
+        "description": "API05. Chuyển trạng thái từ `ASSIGNED` sang `PICKED_UP`. Chỉ dành cho `DRIVER` hiện đang được gán cho đơn (`shipment.driverId === actor.id`). Khóa dòng đơn bằng `SELECT FOR UPDATE`, kiểm tra quyền sở hữu tài nguyên trước khi xét trạng thái, sau đó cập nhật đơn, ghi `shipment_status_events` (`PICKED_UP`) và `notifications` trong cùng giao dịch. Nếu đơn đã `PICKED_UP` bởi đúng tài xế này, trả `200 OK` (no-op) giữ nguyên dữ liệu hiện tại.",
         "operationId": "pickupShipment",
         "parameters": [
           {
@@ -660,6 +660,17 @@
         "responses": {
           "200": {
             "description": "Shipment picked up (or already in picked up state by this driver)",
+            "headers": {
+              "Cache-Control": {
+                "description": "Dữ liệu nghiệp vụ không được lưu cache.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -667,6 +678,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "$ref": "#/components/responses/400BadRequest"
           },
           "401": {
             "$ref": "#/components/responses/401Unauthorized"
@@ -692,7 +706,8 @@
             "BearerAuth": []
           }
         ],
-        "x-implementation-status": "draft"
+        "x-implementation-status": "implemented-local",
+        "x-acceptance": "Đã kiểm thử HTTP/SQL trên máy (AC03, TC02.5, TC06.1); chưa chạy migration hoặc deploy Cloud. Xem docs/tv1-shipment-week7/spec.md."
       }
     },
     "/shipments/{id}/deliver": {
@@ -701,7 +716,7 @@
           "Shipments"
         ],
         "summary": "Driver confirms delivery completion",
-        "description": "Transitions state from `PICKED_UP` to `DELIVERED` (terminal state).\n\n**Authorized Roles:** `DRIVER` (must be assigned driver).\n\n**Natural Idempotency:** If the assigned driver retries `/deliver` when the shipment is already `DELIVERED`, the server returns `200 OK` with the current state.",
+        "description": "API06. Chuyển trạng thái từ `PICKED_UP` sang `DELIVERED` (terminal state). Chỉ dành cho `DRIVER` hiện đang được gán cho đơn (`shipment.driverId === actor.id`). Khóa dòng đơn bằng `SELECT FOR UPDATE`, lưu `proofOfDeliveryNotes` tùy chọn (sau khi trim tối đa 255 ký tự Unicode), ghi `shipment_status_events` (`DELIVERED`) và `notifications` trong cùng giao dịch. Nếu đơn đã `DELIVERED` bởi đúng tài xế này, trả `200 OK` (no-op) giữ nguyên `proofOfDeliveryNotes` và thời gian ban đầu.",
         "operationId": "deliverShipment",
         "parameters": [
           {
@@ -721,6 +736,17 @@
         "responses": {
           "200": {
             "description": "Shipment delivered (or already in delivered state)",
+            "headers": {
+              "Cache-Control": {
+                "description": "Dữ liệu nghiệp vụ không được lưu cache.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -728,6 +754,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "$ref": "#/components/responses/400BadRequest"
           },
           "401": {
             "$ref": "#/components/responses/401Unauthorized"
@@ -753,7 +782,8 @@
             "BearerAuth": []
           }
         ],
-        "x-implementation-status": "draft"
+        "x-implementation-status": "implemented-local",
+        "x-acceptance": "Đã kiểm thử HTTP/SQL trên máy (AC03, TC06.1); chưa chạy migration hoặc deploy Cloud. Xem docs/tv1-shipment-week7/spec.md."
       }
     },
     "/shipments/{id}/fail": {
@@ -1554,9 +1584,11 @@
       },
       "DeliverShipmentRequest": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
           "proofOfDeliveryNotes": {
             "type": "string",
+            "nullable": true,
             "maxLength": 255,
             "example": "Delivered to reception desk on 2nd floor."
           }
