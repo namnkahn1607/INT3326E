@@ -19,3 +19,16 @@
 .driver-gps-source label { font-weight: 600; }
 .driver-gps-source select { width: 100%; max-width: 360px; min-height: 44px; padding: 8px 12px; border: 1px solid #b6c9bd; border-radius: 8px; background: #fff; color: #17352b; font: inherit; }
 .driver-gps-source select:focus-visible { outline: 2px solid #166534; outline-offset: 2px; }
+.driver-shipment-controls, .driver-shipment-form { display: grid; gap: 10px; margin: 16px 0; }
+.driver-shipment-controls select, .driver-shipment-form textarea { width: 100%; min-width: 0; min-height: 44px; padding: 10px; border: 1px solid #b6c9bd; border-radius: 8px; background: #fff; color: #17352b; font: inherit; }
+.driver-shipment-list { display: grid; gap: 16px; padding: 0; margin: 16px 0; list-style: none; }
+.driver-shipment-list li, .driver-shipment-review { border: 1px solid #dce7df; border-radius: 10px; padding: 14px; overflow-wrap: anywhere; }
+.driver-shipment-list h3 { margin-bottom: 8px; }
+.driver-shipment-list .btn { margin-top: 12px; }
+.driver-shipment-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 16px; }
+.driver-shipment-detail { overflow-wrap: anywhere; }
+.driver-shipment-detail h1 { font-size: 24px; margin-bottom: 16px; }
+.driver-shipment-detail dl { margin: 16px 0; }
+.driver-shipment-detail dt { font-weight: 600; margin-top: 12px; }
+.driver-shipment-detail dd { margin: 4px 0; white-space: pre-wrap; }
+.driver-shipment-review { margin-top: 16px; background: #f0fdf4; }

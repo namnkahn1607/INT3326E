@@ -6,6 +6,7 @@ import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { assertGpsLocationRequest } from '../../../packages/types/src/gps.ts'
+import { shipmentFixture } from '../src/features/customer/shipment-fixture.ts'
 
 const require = createRequire(import.meta.url)
 const { chromium } = require(process.env.DRIVER_REVIEW_PLAYWRIGHT || 'playwright')
@@ -45,6 +46,7 @@ import { setTokenReader } from '../../src/features/auth/session'
 import { ProtectedRoute } from '../../src/features/auth/ProtectedRoute'
 import { DriverLayout } from '../../src/layouts/DriverLayout'
 import { DriverPlaceholderPage } from '../../src/features/driver/DriverPlaceholderPage'
+import { DriverShipmentDetailPage } from '../../src/features/driver/DriverShipmentDetailPage'
 import '../../src/index.css'
 import '../../src/components/ui/ui.css'
 import '../../src/features/auth/auth.css'
@@ -60,13 +62,14 @@ export function Review() {
   return <AuthContext.Provider value={{ user, token: user ? 'local-review-token' : null,
     loading: false, error: null, login: async () => {}, refresh: async () => {},
     logout: async () => setUser(null) }}>
-    <MemoryRouter initialEntries={['/driver']}>
+    <MemoryRouter initialEntries={[params.has('detail') ? '/driver/shipments/${shipmentFixture.id}' : '/driver']}>
       <p style={{ padding: 8, overflowWrap: 'anywhere' }}>Local review: Auth và API được giả lập.</p>
       <div className="app-experience"><Routes>
         <Route path="/login" element={<h1>Đăng nhập thử</h1>} />
         <Route path="/other" element={<h1>Đã rời trang Driver</h1>} />
         <Route path="/driver" element={<ProtectedRoute role="DRIVER"><DriverLayout /></ProtectedRoute>}>
           <Route index element={<DriverPlaceholderPage />} />
+          <Route path="shipments/:id" element={<DriverShipmentDetailPage />} />
         </Route>
       </Routes></div>
       <aside style={{ padding: 8, display: 'flex', flexWrap: 'wrap', gap: 12 }}>
@@ -80,20 +83,58 @@ export function Review() {
 createRoot(document.getElementById('root')).render(<StrictMode><Review /></StrictMode>)
 `
 
-async function reviewPage({ width = 390, height = 844, query = '', mode = 'accepted', geolocation, permissions = [] } = {}) {
+async function reviewPage({ width = 390, height = 844, query = '', mode = 'accepted', shipmentMode = 'accepted', geolocation, permissions = [] } = {}) {
   const context = await browser.newContext({ viewport: { width, height }, reducedMotion: 'reduce', serviceWorkers: 'block',
     geolocation, permissions })
   const page = await context.newPage()
   const sent = []
   const aborted = []
+  const shipmentRequests = []
+  const shipmentAborted = []
+  let currentShipment = { ...shipmentFixture, driverId: 'usr_01ARZ3NDEKTSV4RRFFQ69G5FAX',
+    status: shipmentMode === 'picked' || shipmentMode === 'deliver-pending' ? 'PICKED_UP' : 'ASSIGNED' }
+  let failReads = false
   page.on('pageerror', error => errors.push(error.message))
   page.on('requestfailed', request => {
     if (request.url() === `${origin}/v1/locations`) aborted.push(request.failure()?.errorText)
+    if (/\/v1\/shipments\/.+\/(pickup|deliver)$/.test(request.url())) shipmentAborted.push(request.failure()?.errorText)
   })
   await context.route('**/*', async route => {
     const request = route.request()
     const url = new URL(request.url())
     if (url.origin !== origin) { externalRequests.push(url.origin); await route.abort(); return }
+    if (url.pathname.startsWith('/v1/shipments')) {
+      assert.equal(request.headers().authorization, 'Bearer local-review-token')
+      shipmentRequests.push({ method: request.method(), path: url.pathname + url.search, body: request.postDataJSON() })
+      let status = 200
+      let body
+      if (request.method() === 'GET') {
+        if (failReads || shipmentMode === 'read-error') { status = 503; body = { code: 'SERVICE_UNAVAILABLE' } }
+        else if (url.pathname === '/v1/shipments') body = { data: shipmentMode === 'empty' ? [] : [currentShipment],
+          pagination: { limit: 20, hasMore: false, nextCursor: null } }
+        else body = { ...currentShipment, statusHistory: [] }
+      } else {
+        assert.equal(request.method(), 'POST')
+        assert.ok(/\/(pickup|deliver)$/.test(url.pathname))
+        if (shipmentMode === 'pending' || shipmentMode === 'deliver-pending') return
+        if (shipmentMode === 'unsupported') { status = 404; body = { code: 'NOT_FOUND' } }
+        else if (shipmentMode === 'invalid') body = { status: 'OK' }
+        else if (url.pathname.endsWith('/pickup')) {
+          assert.equal(request.postData(), null)
+          currentShipment = { ...currentShipment, status: 'PICKED_UP' }
+          body = currentShipment
+          if (shipmentMode === 'conflict') { status = 409; body = { code: 'INVALID_STATE_TRANSITION' } }
+        } else {
+          const payload = request.postDataJSON()
+          assert.ok(Object.keys(payload).every(key => key === 'proofOfDeliveryNotes'))
+          currentShipment = { ...currentShipment, status: 'DELIVERED', proofOfDeliveryNotes: payload.proofOfDeliveryNotes || null }
+          body = currentShipment
+        }
+        if (shipmentMode === 'confirmed-read-error') failReads = true
+      }
+      await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
+      return
+    }
     if (url.pathname !== '/v1/locations') { await route.continue(); return }
     assert.equal(request.method(), 'POST')
     assert.equal(request.headers().authorization, 'Bearer local-review-token')
@@ -112,7 +153,7 @@ async function reviewPage({ width = 390, height = 844, query = '', mode = 'accep
   await page.clock.pauseAt(new Date('2026-11-02T01:00:01.000Z'))
   await page.goto(`${origin}/.vitest/driver-dashboard-review/index.html${query}`)
   await page.locator('h1').first().waitFor()
-  return { page, sent, context, aborted }
+  return { page, sent, context, aborted, shipmentRequests, shipmentAborted }
 }
 
 async function start(page) { await page.getByRole('button', { name: 'Bắt đầu phát mẫu', exact: true }).click() }
@@ -317,12 +358,81 @@ try {
       } finally { await context.close() }
     })
   }
+  for (const width of [320, 390, 1440]) {
+    await check(`assigned shipment list and detail layout ${width}px`, async () => {
+      const { page, context } = await reviewPage({ width })
+      try {
+        await contains(page, shipmentFixture.trackingNumber)
+        await noOverflow(page)
+        await page.screenshot({ path: path.join(output, `shipments-${width}.png`), fullPage: true })
+        await page.getByRole('link', { name: 'Xem đơn ' + shipmentFixture.trackingNumber, exact: true }).click()
+        await page.getByRole('button', { name: 'Đã lấy hàng', exact: true }).waitFor()
+        await contains(page, shipmentFixture.recipientPhone)
+        await noOverflow(page)
+        await page.screenshot({ path: path.join(output, `shipment-detail-${width}.png`), fullPage: true })
+      } finally { await context.close() }
+    })
+  }
+  for (const shipmentMode of ['empty', 'read-error']) {
+    await check(`shipment list ${shipmentMode}`, async () => {
+      const { page, context } = await reviewPage({ shipmentMode })
+      try { await contains(page, shipmentMode === 'empty' ? 'Chưa có đơn trên trang này' : 'Chưa kết nối được máy chủ') }
+      finally { await context.close() }
+    })
+  }
+  await check('Driver pickup and delivery confirmation with real adapters and API mocks', async () => {
+    const { page, context, shipmentRequests } = await reviewPage({ query: '?detail=1' })
+    try {
+      await page.getByRole('button', { name: 'Đã lấy hàng', exact: true }).click()
+      assert.equal(shipmentRequests.filter(request => request.method === 'POST').length, 0)
+      await page.getByRole('button', { name: 'Hủy xác nhận', exact: true }).click()
+      await page.getByRole('button', { name: 'Đã lấy hàng', exact: true }).click()
+      await page.getByRole('button', { name: 'Xác nhận đã lấy hàng', exact: true }).click()
+      await contains(page, 'Máy chủ đã xác nhận lấy hàng')
+      await page.getByLabel('Ghi chú giao hàng (không bắt buộc)').fill('  Gửi lễ tân  ')
+      await page.getByRole('button', { name: 'Giao thành công', exact: true }).click()
+      await page.screenshot({ path: path.join(output, 'delivery-confirmation.png'), fullPage: true })
+      await page.getByRole('button', { name: 'Xác nhận giao thành công', exact: true }).click()
+      await contains(page, 'Máy chủ đã xác nhận giao thành công')
+      await contains(page, 'Gửi lễ tân')
+      assert.deepEqual(shipmentRequests.filter(request => request.method === 'POST').map(request => request.body), [null, { proofOfDeliveryNotes: 'Gửi lễ tân' }])
+      assert.equal(await page.getByRole('button', { name: 'Giao thành công', exact: true }).count(), 0)
+    } finally { await context.close() }
+  })
+  for (const shipmentMode of ['unsupported', 'conflict', 'invalid', 'confirmed-read-error']) {
+    await check(`Driver action recovery ${shipmentMode} without automatic POST retry`, async () => {
+      const { page, context, shipmentRequests } = await reviewPage({ query: '?detail=1', shipmentMode })
+      try {
+        await page.getByRole('button', { name: 'Đã lấy hàng', exact: true }).click()
+        await page.getByRole('button', { name: 'Xác nhận đã lấy hàng', exact: true }).click()
+        await contains(page, shipmentMode === 'confirmed-read-error' ? 'Chưa tải được thông tin bổ sung' : 'Đã đọc lại trạng thái hiện tại')
+        assert.equal(shipmentRequests.filter(request => request.method === 'POST').length, 1)
+        if (shipmentMode !== 'confirmed-read-error') assert.ok(!(await text(page)).includes('Máy chủ đã xác nhận'))
+        else assert.equal(await page.getByRole('button', { name: 'Giao thành công', exact: true }).count(), 0)
+      } finally { await context.close() }
+    })
+  }
+  for (const action of ['Rời trang thử', 'Đăng xuất', 'Đổi tài khoản thử']) {
+    await check(`Driver pending pickup cleanup: ${action}`, async () => {
+      const { page, context, shipmentRequests, shipmentAborted } = await reviewPage({ query: '?detail=1', shipmentMode: 'pending' })
+      try {
+        await page.getByRole('button', { name: 'Đã lấy hàng', exact: true }).click()
+        await page.getByRole('button', { name: 'Xác nhận đã lấy hàng', exact: true }).click()
+        await eventually(() => assert.equal(shipmentRequests.filter(request => request.method === 'POST').length, 1))
+        await page.getByRole(action === 'Rời trang thử' ? 'link' : 'button', { name: action, exact: true }).click()
+        await eventually(() => assert.deepEqual(shipmentAborted, ['net::ERR_ABORTED']))
+        assert.ok(!(await text(page)).includes('Máy chủ đã xác nhận'))
+      } finally { await context.close() }
+    })
+  }
   assert.deepEqual(errors, [], 'browser runtime errors')
   assert.deepEqual(externalRequests, [], 'unexpected external requests')
   const sourceRevision = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repo, encoding: 'utf8' }).trim()
   const sourceFiles = ['apps/web/src/features/driver/DriverPlaceholderPage.tsx', 'apps/web/src/features/driver/GpsEmitter.tsx',
     'apps/web/src/features/driver/driver.css', 'apps/web/src/layouts/DriverLayout.tsx',
-    'apps/web/src/api/client.ts', 'apps/web/src/api/endpoints/locations.ts', 'apps/web/scripts/verify-driver-dashboard.mjs']
+    'apps/web/src/api/client.ts', 'apps/web/src/api/endpoints/locations.ts', 'apps/web/scripts/verify-driver-dashboard.mjs',
+    'apps/web/src/features/driver/DriverShipments.tsx', 'apps/web/src/features/driver/DriverShipmentDetailPage.tsx',
+    'apps/web/src/features/driver/driver-shipment-error.ts', 'apps/web/src/api/endpoints/shipments.ts', 'apps/web/src/App.tsx']
   const sourceSha256 = Object.fromEntries(await Promise.all(sourceFiles.map(async file =>
     [file, createHash('sha256').update(await readFile(path.join(repo, file))).digest('hex')])))
   const report = { status: 'PASS', generatedAt: new Date().toISOString(), sourceRevision,

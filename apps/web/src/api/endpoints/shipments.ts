@@ -119,3 +119,32 @@ export async function failShipment(id: string, reason: string, signal?: AbortSig
   if (result.id !== id || result.status !== 'DELIVERY_FAILED') throw invalid()
   return result
 }
+
+export async function pickupShipment(id: string, signal?: AbortSignal): Promise<ShipmentResponse> {
+  if (!isShipmentId(id)) throw new ApiError(400, 'INVALID_SHIPMENT_ID')
+  const value = await apiClient<unknown>(`/shipments/${encodeURIComponent(id)}/pickup`, {
+    method: 'POST', signal, expectedStatus: 200,
+  })
+  const result = shipment(value)
+  if (result.id !== id || result.status !== 'PICKED_UP') throw invalid()
+  return result
+}
+
+export function normalizeDeliveryNotes(notes: string): string {
+  const value = notes.trim()
+  if (characterCount(value) > 255) throw new ApiError(400, 'VALIDATION_ERROR', [
+    { field: 'proofOfDeliveryNotes', message: 'Ghi chú giao hàng tối đa 255 ký tự.' },
+  ])
+  return value
+}
+
+export async function deliverShipment(id: string, notes: string, signal?: AbortSignal): Promise<ShipmentResponse> {
+  if (!isShipmentId(id)) throw new ApiError(400, 'INVALID_SHIPMENT_ID')
+  const proofOfDeliveryNotes = normalizeDeliveryNotes(notes)
+  const value = await apiClient<unknown>(`/shipments/${encodeURIComponent(id)}/deliver`, {
+    method: 'POST', body: JSON.stringify(proofOfDeliveryNotes ? { proofOfDeliveryNotes } : {}), signal, expectedStatus: 200,
+  })
+  const result = shipment(value)
+  if (result.id !== id || result.status !== 'DELIVERED') throw invalid()
+  return result
+}

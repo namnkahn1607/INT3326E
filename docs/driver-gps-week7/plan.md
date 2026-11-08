@@ -30,3 +30,21 @@ Không có mâu thuẫn nghiêm trọng trong R1–R7. Giới hạn cần ghi r�
   chính sách stale/retry tuần 8 trong nhiệm vụ này.
 - Bảng tồn đọng QA đề cập nhận/giao đơn rộng hơn E25 của sheet; không lấy đó làm
   phạm vi bổ sung. Nghiệm thu chuỗi GPS Cloud vẫn phụ thuộc tài khoản và runtime.
+
+## Bổ sung theo yêu cầu nhận/giao
+
+1. Dùng component danh sách riêng trong dashboard; route chi tiết nằm trong
+   DriverLayout/ProtectedRoute hiện có. Remount theo account và ID để dọn dữ liệu.
+2. Dùng getShipments/getShipmentById, StatusBadge và ShipmentLifecycleDetails.
+   Thêm adapter pickup/deliver vào shipments.ts theo đúng OpenAPI đã kiểm tra.
+3. Detail dùng pha loading/ready/review/submitting/reconciling/blocked; AbortController
+   và khóa ref chống double click. Không PATCH enum hoặc tự tạo history.
+4. Test contract, cursor/lọc, lỗi/quyền, xác nhận/cancel, lost response, đọc lại
+   lỗi và account/route cleanup. Chạy suite frontend, lint/build, browser local.
+5. Bàn giao tách kết quả mock/local với handler TV1 và nghiệm thu Cloud còn mở.
+
+Analyze chỉ đọc trước implement: không có mâu thuẫn nghiêm trọng D1–D5.
+Firebase UID không phải business driverId; scope do backend xác thực. OpenAPI
+pickup/deliver vẫn draft nhưng đã có method/body/response; frontend có thể dùng
+contract này và hiển thị lỗi thật, không giả backend thành công. Phạm vi mới
+được người dùng cấp trực tiếp, không lấy bảng QA làm yêu cầu tự mở rộng.
