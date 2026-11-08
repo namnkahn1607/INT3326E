@@ -1,5 +1,29 @@
 # API contract
 
+## TV1 tuần 7 — Tài xế lấy hàng, giao hàng và lịch sử trạng thái
+
+Đã triển khai và kiểm thử local hai API chuyển trạng thái cho `DRIVER`:
+`POST /v1/shipments/:id/pickup` (`ASSIGNED → PICKED_UP`) và
+`POST /v1/shipments/:id/deliver` (`PICKED_UP → DELIVERED`), đồng bộ cùng chuỗi
+lịch sử `statusHistory` của `GET /v1/shipments/:id` và `GET /v1/shipments`.
+
+- Chỉ `DRIVER` hiện đang được phân công (`shipment.driverId === actor.userId`)
+  mới được gọi; không nhận `driverId`/`actorId` từ body hoặc query.
+- Thứ tự kiểm tra bắt buộc dưới khóa dòng `SELECT ... FOR UPDATE OF s`:
+  `401` xác thực → `403` role/provisioning (`409 USER_NOT_PROVISIONED`) →
+  `404 SHIPMENT_NOT_FOUND` → `403 FORBIDDEN_RESOURCE` (không phải tài xế hiện tại,
+  kể cả khi đơn đã ở trạng thái đích) → `200 OK` No-op tự nhiên nếu đơn đã ở
+  trạng thái đích → `409 INVALID_STATUS_TRANSITION` nếu sai trạng thái nguồn.
+- Ghi nguyên tử trong một giao dịch SQL: cập nhật `shipments` (lấy thời điểm từ
+  `clock_timestamp()`, giữ `proofOfDeliveryNotes` chỉ khi `DELIVERED`), thêm dòng
+  `shipment_status_events` (`previousDriverId = driverId`, `newDriverId = driverId`)
+  và thêm dòng `notifications` cho Customer (`senderId`).
+- `pickup` chỉ chấp nhận body rỗng hoặc `{}`. `deliver` chấp nhận body rỗng, `{}`
+  hoặc `{ proofOfDeliveryNotes?: string | null }` (trim khoảng trắng hai đầu,
+  tối đa 255 ký tự Unicode, chuỗi rỗng sau trim chuẩn hóa thành `null`).
+- Chưa triển khai `POST /v1/shipments/:id/fail` và `GET /v1/shipments/:id/tracking`
+  (thuộc phạm vi Tuần 8–10). Chưa chạy nghiệm thu trên Cloud SQL.
+
 ## Tích hợp GPS — 02/11/2026
 
 `POST /v1/locations` của Na đã được tích hợp local, dùng DRIVER và
