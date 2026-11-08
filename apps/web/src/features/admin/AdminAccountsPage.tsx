@@ -33,7 +33,7 @@ export function AdminAccountsPage() {
       </div>
 
       <div className="section-block">
-        <div className="data-table-wrapper">
+        <div className="data-table-wrapper" role="region" aria-label="Tài khoản minh họa, cuộn ngang để xem đầy đủ" tabIndex={0}>
           <table className="data-table">
             <thead>
               <tr>

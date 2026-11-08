@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react'
 export interface Coordinates {
   lat: number
   lng: number
+  latitude: number
+  longitude: number
 }
 
 export function useDriverLocation(watch = false) {
@@ -19,21 +21,34 @@ export function useDriverLocation(watch = false) {
       return
     }
 
-    if (!watch) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        (err) => setError(err.message)
-      )
-      return
+    const geolocation = navigator.geolocation
+    let active = true
+    const onPosition = (pos: GeolocationPosition) => {
+      if (!active) return
+      setCoords({
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        latitude: pos.coords.latitude,
+        longitude: pos.coords.longitude,
+      })
+      setError(null)
+    }
+    const onError = (err: GeolocationPositionError) => {
+      if (active) setError(err.message)
     }
 
-    const watchId = navigator.geolocation.watchPosition(
-      (pos) => setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      (err) => setError(err.message),
+    if (!watch) {
+      geolocation.getCurrentPosition(onPosition, onError)
+      return () => { active = false }
+    }
+
+    const watchId = geolocation.watchPosition(
+      onPosition,
+      onError,
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     )
 
-    return () => navigator.geolocation.clearWatch(watchId)
+    return () => { active = false; geolocation.clearWatch(watchId) }
   }, [watch])
 
   return { coords, error }

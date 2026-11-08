@@ -13,9 +13,9 @@ async function bootstrap(): Promise<void> {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
   }
 
-  const { port } = validateEnvironment(process.env);
+  const { port, corsOrigins } = validateEnvironment(process.env);
   const app = await NestFactory.create(AppModule);
-  configureApp(app);
+  configureApp(app, corsOrigins);
   app.enableShutdownHooks();
   await app.listen(port, '0.0.0.0');
 }

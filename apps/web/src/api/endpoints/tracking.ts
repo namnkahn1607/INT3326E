@@ -18,7 +18,8 @@ export interface TrackingData {
 
 export async function getShipmentTracking(
   shipmentId: string,
-  token?: string | null
+  token?: string | null,
+  signal?: AbortSignal
 ): Promise<TrackingData> {
-  return apiClient<TrackingData>(`/shipments/${shipmentId}/tracking`, { token })
+  return apiClient<TrackingData>(`/shipments/${shipmentId}/tracking`, { token, signal })
 }

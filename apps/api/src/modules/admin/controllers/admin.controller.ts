@@ -1,11 +1,27 @@
-import { Controller, UseGuards } from '@nestjs/common';
+import { Controller, Get, Header, Inject, Query, Req, UseGuards } from '@nestjs/common';
 
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { UserRole } from '../../auth/enums/user-role.enum';
-import { FirebaseAuthGuard } from '../../auth/guards/firebase-auth.guard';
-import { RolesGuard } from '../../auth/guards/roles.guard';
+import { AuthenticatedRequest } from '../../auth/interfaces/authenticated-request.interface';
+import { BusinessUserGuard } from '../../users/business-user.guard';
+import { parseAdminListQuery } from '../dto/admin-list-query';
+import { AdminService } from '../services/admin.service';
 
 @Controller('admin')
-@UseGuards(FirebaseAuthGuard, RolesGuard)
 @Roles(UserRole.ADMIN)
-export class AdminController {}
+export class AdminController {
+  constructor(@Inject(AdminService) private readonly admin: AdminService) {}
+
+  @Get('me')
+  @Header('Cache-Control', 'no-store')
+  me(@Req() request: AuthenticatedRequest) {
+    return request.user;
+  }
+
+  @Get('customers')
+  @UseGuards(BusinessUserGuard)
+  @Header('Cache-Control', 'no-store')
+  customers(@Query() query: Record<string, unknown>) {
+    return this.admin.listCustomers(parseAdminListQuery(query, 'customers'));
+  }
+}

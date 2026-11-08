@@ -1,18 +1,23 @@
-import { NavLink, Outlet } from 'react-router'
+import { NavLink, Outlet, useLocation } from 'react-router'
 import { Navigation, type NavigationItem } from '../components/ui/Navigation'
+import { SessionControls } from '../features/auth/SessionControls'
+import { DemoNotice } from '../components/ui/DemoNotice'
 
 const adminNavItems: NavigationItem[] = [
   { path: '/admin', label: 'Tổng quan' },
   { path: '/admin/shipments', label: 'Đơn hàng' },
-  { path: '/admin/assignment', label: 'Phân công', badge: 3 },
+  { path: '/admin/assignment', label: 'Phân công' },
   { path: '/admin/live-map', label: 'Bản đồ trực tiếp' },
   { path: '/admin/drivers', label: 'Tài xế' },
   { path: '/admin/accounts', label: 'Tài khoản' },
 ]
 
 export function AdminLayout() {
+  const { pathname } = useLocation()
+  const apiPage = ['/admin/shipments', '/admin/assignment', '/admin/drivers'].includes(pathname.replace(/\/$/, ''))
   return (
     <div className="admin-layout">
+      <a href="#admin-main" className="ui-skip-link">Đến nội dung chính</a>
       <aside className="admin-sidebar admin-sidebar-right">
         <div className="sidebar-header">
           <NavLink to="/admin" className="brand-title admin-brand">
@@ -48,11 +53,12 @@ export function AdminLayout() {
           </div>
 
           <div className="topbar-right">
-            <span className="admin-live-status"><i /> Hệ thống ổn định</span>
+            <SessionControls />
           </div>
         </header>
 
-        <main className="admin-content-area">
+        <main className="admin-content-area" id="admin-main" tabIndex={-1}>
+          {!apiPage && <div className="ui-admin-demo"><DemoNotice>Màn hình này dùng dữ liệu mẫu, chưa phải dữ liệu vận hành thật. Đơn hàng, Phân công và Tài xế đã dùng API; các trang minh họa còn lại chưa được kết nối.</DemoNotice></div>}
           <Outlet />
         </main>
       </div>

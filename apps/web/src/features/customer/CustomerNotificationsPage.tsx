@@ -1,3 +1,6 @@
+import { CustomerHomeIcon } from './CustomerHomeIcon'
+import { DemoNotice } from '../../components/ui/DemoNotice'
+
 export function CustomerNotificationsPage() {
   const notifications = [
     {
@@ -24,7 +27,7 @@ export function CustomerNotificationsPage() {
   ]
 
   return (
-    <div className="page-container">
+    <div className="page-container customer-api-page customer-notifications-page">
       <div className="page-header">
         <div>
           <h1 className="page-title">Thông báo khách hàng</h1>
@@ -34,18 +37,19 @@ export function CustomerNotificationsPage() {
         </div>
       </div>
 
+      <DemoNotice>Thông báo bên dưới là dữ liệu mẫu; chưa nhận cập nhật trạng thái từ máy chủ.</DemoNotice>
       <div className="notifications-list">
         {notifications.map((item) => (
           <div
             key={item.id}
             className={`notification-item ${item.unread ? 'unread' : ''}`}
           >
-            <div className="notification-icon">
-              {item.unread ? '🔔' : '✓'}
+            <div className="notification-icon" aria-hidden="true">
+              <CustomerHomeIcon name={item.unread ? 'box' : 'check'} />
             </div>
             <div className="notification-body">
               <div className="notification-top">
-                <h4>{item.title}</h4>
+                <h2>{item.title}</h2>
                 <span className="notification-time">{item.time}</span>
               </div>
               <p>{item.message}</p>

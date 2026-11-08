@@ -8,6 +8,6 @@ export default defineConfig({
   test: {
     globals: true,
     root: './',
-    include: ['apps/worker/src/**/*.spec.ts'],
+    include: ['apps/worker/src/**/*.spec.ts', 'packages/types/src/**/*.spec.ts', 'infra/pubsub/**/*.spec.ts'],
   },
 });

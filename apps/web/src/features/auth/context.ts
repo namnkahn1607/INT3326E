@@ -10,8 +10,11 @@ export interface UserProfile {
 export interface AuthContextType {
   user: UserProfile | null
   token: string | null
-  login: (token: string, profile: UserProfile) => void
-  logout: () => void
+  loading: boolean
+  error: string | null
+  login: (email: string, password: string) => Promise<void>
+  logout: () => Promise<void>
+  refresh: () => Promise<void>
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined)

@@ -1,164 +1,122 @@
-import { useState } from 'react'
-import { Link } from 'react-router'
+import { useEffect, useState } from 'react'
+import { Link, useSearchParams } from 'react-router'
+import { getShipments } from '../../api/endpoints/shipments'
 import { StatusBadge } from '../../components/ui/StatusBadge'
-import type { ShipmentStatus } from '../../types/shipment'
-
-interface MockShipment {
-  id: string
-  trackingCode: string
-  pickup: string
-  destination: string
-  status: ShipmentStatus
-  driverName?: string
-  driverPhone?: string
-  eta?: string
-  createdAt: string
-}
-
-const mockShipments: MockShipment[] = [
-  {
-    id: 's-101',
-    trackingCode: 'PF-2026-001',
-    pickup: '144 Xuân Thủy, Cầu Giấy, Hà Nội',
-    destination: '8 Tôn Thất Thuyết, Nam Từ Liêm, Hà Nội',
-    status: 'PICKED_UP',
-    driverName: 'Lê Văn Tài (Driver #4)',
-    driverPhone: '0981112233',
-    eta: '~18 phút (Haversine)',
-    createdAt: '05/10/2026 10:15',
-  },
-  {
-    id: 's-102',
-    trackingCode: 'PF-2026-002',
-    pickup: 'Khu công nghệ cao Hòa Lạc',
-    destination: 'Đại học Quốc Gia Hà Nội, Cầu Giấy',
-    status: 'ASSIGNED',
-    driverName: 'Trần Văn Nam',
-    driverPhone: '0912223344',
-    eta: 'Đang đến điểm lấy',
-    createdAt: '05/10/2026 11:00',
-  },
-  {
-    id: 's-103',
-    trackingCode: 'PF-2026-003',
-    pickup: 'Số 1 Đại Cồ Việt, Hai Bà Trưng',
-    destination: '144 Xuân Thủy, Cầu Giấy',
-    status: 'CREATED',
-    eta: 'Chờ điều phối gán xe',
-    createdAt: '05/10/2026 11:30',
-  },
-]
+import { AppliedFilters, type AppliedFilter } from '../../components/ui/AppliedFilters'
+import { DataSkeleton } from '../../components/ui/DataSkeleton'
+import { formatDateTime } from '../../utils'
+import { SHIPMENT_STATUS_MAP, type ShipmentStatus } from '../../types/shipment'
+import type { ShipmentPage } from '../../types/shipment-api'
+import { useAuth } from '../auth/useAuth'
+import { shipmentErrorMessage } from './shipment-form'
+import './customer-api.css'
 
 export function CustomerShipmentsPage() {
-  const [filter, setFilter] = useState<string>('ALL')
+  const { user } = useAuth()
+  return <CustomerList key={user?.id ?? 'signed-out'} />
+}
 
-  const filteredList =
-    filter === 'ALL'
-      ? mockShipments
-      : mockShipments.filter((s) => s.status === filter)
-
-  return (
-    <div className="page-container">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Đơn hàng của tôi</h1>
-          <p className="page-subtitle">
-            Danh sách các kiện hàng đang được luân chuyển hoặc xử lý trong hệ thống.
-          </p>
-        </div>
-        <div>
-          <Link to="/customer/create" className="btn btn-primary">
-            + Tạo đơn mới
-          </Link>
-        </div>
-      </div>
-
-      <div className="filter-toolbar">
-        <span className="filter-label">Lọc trạng thái:</span>
-        <button
-          className={`filter-chip ${filter === 'ALL' ? 'active' : ''}`}
-          onClick={() => setFilter('ALL')}
-        >
-          Tất cả ({mockShipments.length})
-        </button>
-        <button
-          className={`filter-chip ${filter === 'CREATED' ? 'active' : ''}`}
-          onClick={() => setFilter('CREATED')}
-        >
-          Chờ gán xe
-        </button>
-        <button
-          className={`filter-chip ${filter === 'ASSIGNED' ? 'active' : ''}`}
-          onClick={() => setFilter('ASSIGNED')}
-        >
-          Đã gán tài xế
-        </button>
-        <button
-          className={`filter-chip ${filter === 'PICKED_UP' ? 'active' : ''}`}
-          onClick={() => setFilter('PICKED_UP')}
-        >
-          Đang giao
-        </button>
-      </div>
-
-      <div className="shipment-cards-grid">
-        {filteredList.map((item) => (
-          <div key={item.id} className="shipment-card">
-            <div className="shipment-card-header">
-              <span className="tracking-code">{item.trackingCode}</span>
-              <StatusBadge status={item.status} />
-            </div>
-
-            <div className="shipment-routes">
-              <div className="route-point">
-                <span className="route-dot pickup-dot" />
-                <div>
-                  <small>Điểm lấy hàng:</small>
-                  <p>{item.pickup}</p>
-                </div>
-              </div>
-              <div className="route-divider" />
-              <div className="route-point">
-                <span className="route-dot dest-dot" />
-                <div>
-                  <small>Điểm giao hàng:</small>
-                  <p>{item.destination}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="shipment-meta-box">
-              <div className="meta-item">
-                <span>Tài xế phụ trách:</span>
-                <strong>{item.driverName || 'Chưa phân công'}</strong>
-              </div>
-              <div className="meta-item">
-                <span>Dự kiến (ETA):</span>
-                <strong className="eta-text">{item.eta || 'Chưa có dữ liệu'}</strong>
-              </div>
-            </div>
-
-            <div className="shipment-card-footer">
-              <span className="created-time">Tạo lúc: {item.createdAt}</span>
-              <button
-                type="button"
-                className="btn btn-outline btn-sm"
-                onClick={() =>
-                  alert(
-                    `Tính năng Leaflet Tracking Map và Polling vị trí (5-10s) sẽ được tích hợp ở Tuần 5 cho đơn ${item.trackingCode}!`,
-                  )
-                }
-              >
-                Bản đồ theo dõi (Tuần 5)
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <p className="data-note">
-        * Dữ liệu trên nhằm mục đích hiển thị khung giao diện Tuần 1. Sẽ kết nối API NestJS ở Tuần 2 và Leaflet Map ở Tuần 5.
-      </p>
+function CustomerList() {
+  const [params, setParams] = useSearchParams()
+  const trackingNumber = params.get('trackingNumber')?.trim() || undefined
+  const rawStatus = params.get('status') ?? ''
+  const filter = Object.hasOwn(SHIPMENT_STATUS_MAP, rawStatus) ? rawStatus as ShipmentStatus : ''
+  const scope = JSON.stringify([trackingNumber, filter])
+  const [paging, setPaging] = useState<{ scope: string; cursors: (string | undefined)[] }>({ scope, cursors: [undefined] })
+  // A cursor belongs to its filter set, including when browser Back changes the URL.
+  const cursors = paging.scope === scope ? paging.cursors : [undefined]
+  const [reload, setReload] = useState(0)
+  const cursor = cursors.at(-1)
+  function update(filters: { status?: string; trackingNumber?: string }) {
+    const next = new URLSearchParams(params)
+    for (const [key, value] of Object.entries(filters)) {
+      if (value) next.set(key, value)
+      else next.delete(key)
+    }
+    setPaging({ scope: '', cursors: [undefined] })
+    setParams(next)
+  }
+  function clear() { update({ status: '', trackingNumber: '' }); document.getElementById('customer-status')?.focus() }
+  const applied: AppliedFilter[] = []
+  if (filter) applied.push({ key: 'status', label: 'Trạng thái', value: SHIPMENT_STATUS_MAP[filter].label,
+    onRemove: () => { update({ status: '' }); document.getElementById('customer-status')?.focus() } })
+  if (trackingNumber) applied.push({ key: 'tracking', label: 'Mã vận đơn', value: trackingNumber,
+    onRemove: () => { update({ trackingNumber: '' }); document.getElementById('customer-status')?.focus() } })
+  return <div className="page-container customer-api-page">
+    <div className="page-header"><div>
+      <h1 className="page-title">Đơn hàng của tôi</h1>
+      <p className="page-subtitle">Tra cứu thông tin và trạng thái mới nhất từ hệ thống.</p>
+    </div></div>
+    <form className="ui-search-form" onSubmit={event => {
+      event.preventDefault()
+      update({ trackingNumber: String(new FormData(event.currentTarget).get('trackingNumber') ?? '').trim() })
+    }}>
+      <div className="ui-search-field"><label htmlFor="customer-tracking">Mã vận đơn</label>
+        <input key={trackingNumber ?? ''} id="customer-tracking" name="trackingNumber" defaultValue={trackingNumber ?? ''}
+          placeholder="Nhập chính xác mã vận đơn…" spellCheck={false} autoComplete="off" /></div>
+      <button type="submit" className="btn btn-outline">Tra cứu</button>
+    </form>
+    <div className="filter-toolbar" role="group" aria-label="Lọc đơn hàng">
+      <label htmlFor="customer-status">Trạng thái</label>
+      <select id="customer-status" value={filter} onChange={event => {
+        update({ status: event.target.value })
+      }}>
+        <option value="">Tất cả trạng thái</option>
+        {Object.entries(SHIPMENT_STATUS_MAP).map(([value, meta]) => <option key={value} value={value}>{meta.label}</option>)}
+      </select>
+      <button type="button" className="btn btn-outline" onClick={() => setReload(value => value + 1)}>Làm mới</button>
     </div>
-  )
+    <AppliedFilters filters={applied} onClear={clear} />
+    <ShipmentListData key={scope + ':' + cursor + ':' + reload} status={filter || undefined} cursor={cursor}
+      trackingNumber={trackingNumber}
+      onClear={clear} pageNumber={cursors.length} onPrevious={() => setPaging({ scope, cursors: cursors.slice(0, -1) })}
+      onNext={next => setPaging({ scope, cursors: [...cursors, next] })} onRetry={() => setReload(value => value + 1)} />
+  </div>
+}
+
+function ShipmentListData({ status, cursor, trackingNumber, pageNumber, onPrevious, onNext, onRetry, onClear }: {
+  status?: ShipmentStatus; cursor?: string; pageNumber: number
+  trackingNumber?: string
+  onPrevious: () => void; onNext: (cursor: string) => void; onRetry: () => void
+  onClear: () => void
+}) {
+  const [page, setPage] = useState<ShipmentPage | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  useEffect(() => {
+    const controller = new AbortController()
+    getShipments({ status, cursor, ...(trackingNumber ? { trackingNumber } : {}) }, controller.signal).then(value => {
+      if (!controller.signal.aborted) setPage(value)
+    }).catch(cause => { if (!controller.signal.aborted) setError(shipmentErrorMessage(cause)) })
+    return () => controller.abort()
+  }, [status, cursor, trackingNumber])
+
+  if (error) return <div className="customer-error" role="alert"><h2>Chưa tải được danh sách</h2><p>{error}</p>
+    <button type="button" className="btn btn-outline" onClick={onRetry}>Thử lại</button></div>
+  if (!page) return <DataSkeleton label="Đang tải danh sách đơn…" />
+  const filtered = !!status || !!trackingNumber
+  return <>
+    <p className="ui-result-count" role="status">{page.data.length} đơn trên trang {pageNumber}{filtered ? ' theo bộ lọc hiện tại' : ''}.</p>
+    {page.data.length === 0 ? <section className="customer-empty">
+      <h2>{filtered ? 'Không có kết quả phù hợp' : pageNumber > 1 ? 'Không còn đơn trên trang này' : 'Chưa có đơn hàng'}</h2>
+      <p>{filtered ? 'Thử bỏ bớt điều kiện hoặc kiểm tra lại mã vận đơn.' : pageNumber > 1 ? 'Quay về trang trước để tiếp tục xem đơn.' : 'Chọn “Tạo đơn mới” trên thanh điều hướng để tạo đơn giao hàng đầu tiên.'}</p>
+      {filtered && <button type="button" className="btn btn-outline" onClick={onClear}>Xóa bộ lọc</button>}
+    </section> : <div className="data-table-wrapper customer-orders-table" role="region" aria-label="Đơn hàng, cuộn ngang để xem đầy đủ" tabIndex={0}>
+      <table className="data-table"><thead><tr><th scope="col">Mã vận đơn / Ngày tạo</th><th scope="col">Điểm lấy → Điểm giao</th>
+        <th scope="col">Người nhận</th><th scope="col">Trạng thái</th><th scope="col">Thao tác</th></tr></thead>
+        <tbody>{page.data.map(item => <tr key={item.id}>
+          <td><strong className="tracking-code" translate="no">{item.trackingNumber}</strong><time className="ui-table-secondary" dateTime={item.createdAt}>{formatDateTime(item.createdAt)}</time></td>
+          <td><span className="ui-order-address"><strong>Lấy:</strong> {item.pickupAddress}</span><span className="ui-order-address"><strong>Giao:</strong> {item.dropoffAddress}</span></td>
+          <td>{item.recipientName}</td><td><StatusBadge status={item.status} /></td>
+          <td><Link className="btn btn-outline" to={'/customer/shipments/' + item.id} aria-label={'Xem chi tiết đơn ' + item.trackingNumber}>Xem chi tiết</Link></td>
+        </tr>)}</tbody></table>
+    </div>}
+    <nav className="customer-pagination" aria-label="Phân trang đơn hàng">
+      <button type="button" className="btn btn-outline" disabled={pageNumber === 1} aria-describedby={pageNumber === 1 ? 'customer-page-boundary' : undefined} onClick={onPrevious}>Trang trước</button>
+      <span>Trang {pageNumber}</span>
+      <button type="button" className="btn btn-outline" data-testid="next-page" disabled={!page.pagination.hasMore} aria-describedby={!page.pagination.hasMore ? 'customer-page-boundary' : undefined}
+        onClick={() => { if (page.pagination.nextCursor) onNext(page.pagination.nextCursor) }}>Trang tiếp</button>
+    </nav>
+    <p id="customer-page-boundary" className="ui-disabled-reason">{pageNumber === 1 ? 'Bạn đang ở trang đầu. ' : ''}{!page.pagination.hasMore ? 'Không còn trang tiếp theo trong kết quả hiện tại.' : ''}</p>
+    <p className="data-note">Không phải tổng số đơn của tài khoản; số hiển thị chỉ thuộc trang hiện tại.</p>
+  </>
 }
