@@ -262,7 +262,7 @@ describe('Week 6 UI → real Nest HTTP → isolated SQL (Firebase/address fixtur
 })
 
 describe('Driver list/detail → real Nest HTTP → isolated SQL (Firebase fixture)', () => {
-  it('shows only assigned orders and reports the missing pickup handler without faking a state change', async () => {
+  it('shows only assigned orders and completes real pickup and delivery through the UI', async () => {
     const own = await create(), other = await create()
     session.actor = 'admin'
     await assignShipment(own.id, userId(3)); await assignShipment(other.id, userId(4))
@@ -272,11 +272,25 @@ describe('Driver list/detail → real Nest HTTP → isolated SQL (Firebase fixtu
     await follow('Xem đơn')
     await eventually(() => expect(node.textContent).toContain('Lịch sử trạng thái'))
     await click('Đã lấy hàng'); await click('Xác nhận đã lấy hàng')
-    await eventually(() => expect(node.textContent).toContain('Đã đọc lại trạng thái hiện tại'))
-    const writes = requests.filter(request => request.path.endsWith('/pickup'))
-    expect(writes).toHaveLength(1); expect(writes[0].status).toBe(404)
-    expect(node.textContent).not.toContain('Máy chủ đã xác nhận lấy hàng')
-    expect((await server.query('SELECT status FROM shipments WHERE id=$1', [own.id])).rows[0].status).toBe('ASSIGNED')
+    await eventually(() => expect(node.textContent).toContain('Máy chủ đã xác nhận lấy hàng.'))
+    const pickups = requests.filter(request => request.path.endsWith('/pickup'))
+    expect(pickups).toHaveLength(1); expect(pickups[0].status).toBe(200)
+    expect((await server.query('SELECT status FROM shipments WHERE id=$1', [own.id])).rows[0].status).toBe('PICKED_UP')
+    await act(async () => {
+      const notes = node.querySelector<HTMLTextAreaElement>('#driver-delivery-notes')!
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(notes, '  Giao tận tay  ')
+      notes.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    await click('Giao thành công'); await click('Xác nhận giao thành công')
+    await eventually(() => expect(node.textContent).toContain('Máy chủ đã xác nhận giao thành công.'))
+    const deliveries = requests.filter(request => request.path.endsWith('/deliver'))
+    expect(deliveries).toHaveLength(1); expect(deliveries[0].status).toBe(200)
+    expect(node.querySelector('.shipment-history')?.textContent).toContain('Đang giao hàng → Giao thành công')
+    expect(node.textContent).toContain('Giao tận tay')
+    expect((await server.query('SELECT status, "proofOfDeliveryNotes" FROM shipments WHERE id=$1', [own.id])).rows[0]).toEqual({
+      status: 'DELIVERED',
+      proofOfDeliveryNotes: 'Giao tận tay',
+    })
   })
   it('removes the old Driver access after a real reassignment', async () => {
     const order = await create(); session.actor = 'admin'; await assignShipment(order.id, userId(3))
