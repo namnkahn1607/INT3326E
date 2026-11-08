@@ -4,8 +4,11 @@
 
 Yêu cầu hiện hành: [PF SPEC 01, nội dung v1.3 và thứ tự ưu tiên nguồn](docs/spec-baseline.md).
 Tuần 1 được bảo toàn theo VII.2; Auth/API thật từ tuần 2. Xem
-[hồ sơ tái nghiệm thu tuần 1](openspec/week1-reacceptance/acceptance.md)
+[hồ sơ tái nghiệm thu tuần 1](docs/frontend-week1-handoff.md)
 để phân biệt kết quả hiện tại, bằng chứng lịch sử và việc còn mở.
+
+Đặc tả tính năng, contract và báo cáo bàn giao dùng chung được dẫn tại
+[docs/README.md](docs/README.md).
 
 | | |
 |---|---|
@@ -179,7 +182,7 @@ All business operations (create shipment, assign, notifications, auth, ...) go t
 
 To meet the load requirements, the **write path** and **read path** of GPS data are fully separated:
 
-- **Write path (driver sends GPS):** The driver calls `POST /v1/locations`. The backend only **publishes** a message to Google Cloud Pub/Sub and immediately returns `HTTP 202` (draft) - it does not wait for a database write.
+- **Write path (driver sends GPS):** The driver calls `POST /v1/locations`. The backend only **publishes** a message to Google Cloud Pub/Sub and immediately returns `HTTP 202` after broker confirmation - it does not wait for a database write.
 - **Background processing (worker):** A standalone service (**GPS Worker**) subscribes to Pub/Sub and writes the data into Cloud SQL.
 - **Read path (customer tracking):** The Customer app uses **REST polling** (every 5 to 10s) to read the `current_location` table from Postgres.
 
@@ -239,7 +242,7 @@ Design assumptions: at any moment there are **~300–500 active shipments**, and
 
 ## Week 1 API scaffold
 
-The API boots with Shipment, Auth and Admin modules and exposes public `GET /healthz`, Firebase profile endpoints, and Admin-only read endpoints `GET /v1/drivers` (API11) and `GET /v1/admin/customers`. The lists validate business identity and read PostgreSQL; deployment requires the matching schema. See [Admin directory](docs/tv6-admin-directory.md) and the draft [QA test plan](docs/qa-test-plan.md). Shipment/GPS business handlers remain deferred. [Run and container instructions](docs/api-scaffold.md) preserve the week 1 setup; [contract decisions](docs/api-contract.md) and `docs/openapi.json` distinguish the implemented reads from future operations. Cancellation remains an unapproved proposal outside the five-state baseline. Week 1 deployment evidence is tracked in issue #9.
+The API boots with Shipment, Auth and Admin modules and exposes public `GET /healthz`, Firebase profile endpoints, and Admin-only read endpoints `GET /v1/drivers` (API11) and `GET /v1/admin/customers`. The lists validate business identity and read PostgreSQL; deployment requires the matching schema. See [Admin directory](docs/tv6-admin-directory.md) and the draft [QA test plan](docs/qa-test-plan.md). Shipment Create, role-scoped List/Detail and ADMIN Assign/reassign are implemented locally; GPS ingest (`POST /v1/locations`) is integrated locally; see [Na GPS merge](docs/na-gps-merge.md) for validation and Cloud acceptance still pending. See [TV1 week 6](docs/tv1-assignment-week6.md) for behavior, SQL tests and Cloud acceptance. [Run and container instructions](docs/api-scaffold.md) preserve the week 1 setup; [contract decisions](docs/api-contract.md) and `docs/openapi.json` distinguish the implemented reads from future operations. Cancellation remains an unapproved proposal outside the five-state baseline. Week 1 deployment evidence is tracked in issue #9.
 
 ## Frontend integration and Hosting
 

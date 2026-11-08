@@ -2,7 +2,7 @@
 
 ## Phạm vi và trạng thái
 
-Contract được đồng bộ theo [PF SPEC 01 nội dung v1.3](spec-baseline.md), VI.API00/API08/EVT01 và VII.3. Type thực thi nằm tại `packages/types/src/gps.ts`; REST được mô tả trong `docs/openapi.json`. Review độc lập của người phụ trách GPS pipeline còn mở. API ingest và worker ghi vị trí chưa được triển khai.
+Contract được đồng bộ theo [PF SPEC 01 nội dung v1.3](spec-baseline.md), VI.API00/API08/EVT01 và VII.3. Type thực thi nằm tại `packages/types/src/gps.ts`; REST được mô tả trong `docs/openapi.json`. Ngày 02/11/2026 đã tích hợp API ingest và mã Worker từ nhánh Na. API được kiểm chứng HTTP local với broker giả lập; Worker giữ logic của Na, chưa nghiệm thu SQL/Pub/Sub Cloud. Xem [bàn giao merge](na-gps-merge.md).
 
 Luồng tích hợp: Driver gửi `POST /v1/locations` qua REST, API publish JSON UTF-8 lên Pub/Sub, worker đọc sự kiện. Frontend không giữ credentials hay publish trực tiếp lên Pub/Sub. API chỉ trả `202 Accepted` sau khi publish thành công; phản hồi này chưa chứng minh dữ liệu đã được ghi vào Cloud SQL.
 
@@ -25,9 +25,9 @@ Luồng tích hợp: Driver gửi `POST /v1/locations` qua REST, API publish JSO
 | `sessionId` | Tùy chọn; UUID | Phiên client nếu có, chỉ phục vụ chẩn đoán |
 | `clientTimestamp` | ISO 8601 có timezone, ngày giờ hợp lệ | Thời điểm đo mẫu trên client; giữ nguyên khi retry |
 
-Ba trường `lat`, `lng`, `clientTimestamp` là bắt buộc. Không ép kiểu chuỗi thành số, không nhận `null`, không nhận trường thừa. Request không chứa `driverId`, `role`, `eventId` hoặc `receivedAt`. API phải lấy tài xế từ danh tính Driver đã xác thực và ánh xạ sang định danh tài xế nội bộ; không tin định danh do client tự khai báo. Quy tắc xác thực/phân quyền sẽ được thực hiện cùng endpoint.
+Ba trường `lat`, `lng`, `clientTimestamp` là bắt buộc. Không ép kiểu chuỗi thành số, không nhận `null`, không nhận trường thừa. Request không chứa `driverId`, `role`, `eventId` hoặc `receivedAt`. API phải lấy tài xế từ danh tính Driver đã xác thực và ánh xạ sang định danh tài xế nội bộ; không tin định danh do client tự khai báo. Endpoint dùng Firebase/role guard và BusinessUserGuard; không dùng Firebase UID thay cho định danh nội bộ.
 
-API chuẩn hóa timestamp sang UTC mili giây trước hash/dedupe/publish, cắt phần nhỏ hơn mili giây và không làm tròn. Ví dụ `2026-10-16T17:00:00.123456+07:00` thành `2026-10-16T10:00:00.123Z`. Validator request chỉ kiểm tra đầu vào, không thay đổi payload; validator event yêu cầu timestamp đã canonical hóa dạng `YYYY-MM-DDTHH:mm:ss.SSSZ`. Chuẩn hóa tại API thuộc bước tích hợp endpoint.
+API chuẩn hóa timestamp sang UTC mili giây trước hash/dedupe/publish, cắt phần nhỏ hơn mili giây và không làm tròn. Ví dụ `2026-10-16T17:00:00.123456+07:00` thành `2026-10-16T10:00:00.123Z`. Validator request chỉ kiểm tra đầu vào, không thay đổi payload; validator event yêu cầu timestamp đã canonical hóa dạng `YYYY-MM-DDTHH:mm:ss.SSSZ`. API ingest thực hiện chuẩn hóa này trước khi publish.
 
 ## Event nội bộ
 
@@ -66,12 +66,12 @@ Giữ nguyên event khi retry publish. Pub/Sub gán `messageId` riêng; `message
 
 ## Ánh xạ và bàn giao
 
-Emitter mẫu trên `/driver` tạo bốn trường request, hiển thị định danh mẫu riêng và chưa gọi REST. API bổ sung ba trường server trước publish. Worker cần dùng cùng type/validation khi triển khai consumer nghiệp vụ. `CurrentLocation` hiện chưa có `clientTimestamp`, lịch sử chưa có unique constraint theo cặp dedupe; contract không coi schema Prisma hiện tại đã đáp ứng các invariant này. Không sửa migration hoặc triển khai worker trong phạm vi tuần 2.
+Emitter độc lập tạo bốn trường request và có thể chỉ xem payload. Dashboard `/driver` hiện nối callback gửi REST bằng phiên Driver, hiển thị trạng thái HTTP 202 theo `AsyncAcceptedResponse`; API ingest đã được nối vào module gốc và kiểm chứng HTTP local. Xem [bàn giao Driver/GPS](driver-dashboard-gps.md) để kiểm chứng và phân biệt mock/local/cloud. API bổ sung ba trường server trước publish. Worker của Na đọc được event canonical từ API trong kiểm thử tích hợp. Prisma đã được Na bổ sung nhưng vẫn là bản tham khảo, chưa phải migration cho database nhóm; schema GPS và khả năng ghi SQL phải được đối chiếu riêng trước triển khai.
 
 Các mục cần review độc lập: định danh nội bộ từ Auth, ánh xạ timestamp vào schema lưu trữ, constraint dedupe và việc áp dụng chính sách clock skew đã chốt. Người phụ trách GPS pipeline xác nhận review qua quy trình nhóm; tài liệu này không ghi nhận thay cho người đó.
 
 ## Kiểm chứng và tham chiếu
 
-Xem [quy trình kiểm thử Pub/Sub](gps-pipeline-validation.md) cho lệnh chạy, ma trận kiểm thử và mức bằng chứng. Phạm vi và tác vụ nằm ở mục 10 của [đặc tả Driver và GPS emitter](../openspec/driver-gps-emitter-draft.md).
+Xem [quy trình kiểm thử Pub/Sub](gps-pipeline-validation.md) cho lệnh chạy, ma trận kiểm thử và mức bằng chứng; [Driver dashboard/GPS](driver-dashboard-gps.md) mô tả phần client, còn [baseline](spec-baseline.md) dẫn nguồn yêu cầu và lịch triển khai.
 
 Pub/Sub emulator cung cấp môi trường thử cục bộ và có thể khác dịch vụ thật; cấu hình Node.js dùng `PUBSUB_EMULATOR_HOST` theo [hướng dẫn Google Cloud](https://docs.cloud.google.com/pubsub/docs/emulator). Việc NACK để yêu cầu giao lại dùng `modifyAckDeadline` với deadline bằng 0 theo [Pub/Sub API](https://docs.cloud.google.com/pubsub/docs/reference/rest/v1/projects.subscriptions/modifyAckDeadline).

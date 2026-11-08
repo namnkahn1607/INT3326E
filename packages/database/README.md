@@ -26,3 +26,12 @@ explicit loopback test DB. Never apply the fresh baseline directly to a populate
 or shared Cloud SQL database. TV1/TV6 must inspect the existing schema/data and own
 an in-place migration/provisioning plan before integration; TV5 coordinates rollout.
 See [Create quickstart](../../specs/002-create-shipment/quickstart.md).
+
+## GPS branch integrated on 02/11/2026
+
+Na's Prisma draft now includes GPS history/current-location metadata and the
+first-write-wins key. Its snake_case mappings are not an approved replacement
+for the camelCase SQL baseline used by the running Shipment/Auth handlers.
+No migration or Prisma generation runs during this merge. Reconcile the actual
+GPS tables and grants before enabling the SQL Worker; see
+[merge handoff](../../docs/na-gps-merge.md).

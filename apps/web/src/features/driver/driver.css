@@ -1,0 +1,17 @@
+.driver-dashboard { padding: 24px 16px; display: grid; gap: 20px; color: #17352b; }
+.driver-welcome { padding: 8px 4px; overflow-wrap: anywhere; }
+.driver-eyebrow { color: #166534; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; margin-bottom: 8px; }
+.driver-welcome h1 { font-size: 26px; line-height: 1.25; margin-bottom: 8px; }
+.driver-welcome > p:last-child { color: #52655c; }
+.driver-panel { padding: 20px 16px; border: 1px solid #dce7df; border-radius: 16px; background: #fff; min-width: 0; }
+.driver-panel h2 { font-size: 20px; margin-bottom: 10px; }
+.driver-panel p { line-height: 1.6; }
+.driver-panel h3 { font-size: 17px; }
+.driver-panel button { min-height: 44px; }
+.driver-panel pre { font-size: 13px; max-width: 100%; }
+.driver-send-status { margin-top: 20px; padding: 14px; border-radius: 10px; background: #f0fdf4; }
+.driver-send-status dl { margin-top: 10px; font-size: 13px; }
+.driver-send-status dt { color: #52655c; margin-top: 8px; }
+.driver-send-status dd { margin: 2px 0 0; overflow-wrap: anywhere; }
+.driver-send-error { margin-top: 12px; padding: 12px; border-radius: 8px; background: #fef2f2; color: #991b1b; }
+.driver-note { margin-top: 14px; font-size: 13px; color: #52655c; }

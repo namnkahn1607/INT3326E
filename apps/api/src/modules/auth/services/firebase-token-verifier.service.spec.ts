@@ -1,11 +1,16 @@
 import 'reflect-metadata';
-import { describe, expect, it, vi } from 'vitest';
+import { Logger } from '@nestjs/common';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { UserRole } from '../enums/user-role.enum';
 import { FirebaseTokenVerifierService } from './firebase-token-verifier.service';
 
 const verifyIdToken = vi.fn();
 const getUser = vi.fn();
+
+const errorLog = vi.fn();
+beforeEach(() => { errorLog.mockClear(); vi.spyOn(Logger.prototype, 'error').mockImplementation(errorLog); });
+afterEach(() => { vi.restoreAllMocks(); });
 
 describe('FirebaseTokenVerifierService', () => {
   it.each(Object.values(UserRole))('accepts the verified claim %s', async (role) => {
@@ -15,6 +20,7 @@ describe('FirebaseTokenVerifierService', () => {
     await expect(new FirebaseTokenVerifierService({ verifyIdToken, getUser }).verify('signed-id-token'))
       .resolves.toEqual({ uid: 'user-1', email: 'user@example.com', role });
     expect(verifyIdToken).toHaveBeenLastCalledWith('signed-id-token', true);
+    expect(errorLog).not.toHaveBeenCalled();
   });
 
   it.each(['DISPATCHER', 'customer', '', undefined, null, 123, ['DRIVER'], { role: 'DRIVER' }])(
@@ -31,6 +37,7 @@ describe('FirebaseTokenVerifierService', () => {
     verifyIdToken.mockRejectedValue(error);
     await expect(new FirebaseTokenVerifierService({ verifyIdToken, getUser }).verify('expired-id-token'))
       .rejects.toMatchObject({ status: 401, message: 'Invalid or expired authentication token' });
+    expect(errorLog).not.toHaveBeenCalled();
   });
 
   it.each(['app/network-error', 'auth/internal-error', 'auth/insufficient-permission', 'auth/invalid-credential', undefined])(
@@ -38,6 +45,9 @@ describe('FirebaseTokenVerifierService', () => {
       verifyIdToken.mockRejectedValue(Object.assign(new Error('private SDK details'), { code }));
       await expect(new FirebaseTokenVerifierService({ verifyIdToken, getUser }).verify('token'))
         .rejects.toMatchObject({ status: 503, message: 'Authentication service temporarily unavailable' });
+      expect(errorLog).toHaveBeenCalledExactlyOnceWith(JSON.stringify({
+        event: 'dependency_failure', stage: 'auth.verify-token', code: code ?? 'UNKNOWN',
+      }));
     },
   );
 
@@ -46,6 +56,9 @@ describe('FirebaseTokenVerifierService', () => {
     getUser.mockRejectedValueOnce(Object.assign(new Error('private backend address'), { code: 'app/network-error' }));
     await expect(new FirebaseTokenVerifierService({ verifyIdToken, getUser }).verify('token'))
       .rejects.toMatchObject({ status: 503 });
+    expect(errorLog).toHaveBeenCalledExactlyOnceWith(JSON.stringify({
+      event: 'dependency_failure', stage: 'auth.lookup-user', code: 'app/network-error',
+    }));
   });
 
   it.each([undefined, 'DISPATCHER', UserRole.CUSTOMER])('rejects a stale ADMIN token after the current role becomes %j', async (role) => {

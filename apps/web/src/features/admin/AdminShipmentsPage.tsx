@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { getShipments } from '../../api/endpoints/shipments'
 import { StatusBadge } from '../../components/ui/StatusBadge'
+import { AppliedFilters } from '../../components/ui/AppliedFilters'
 import { SHIPMENT_STATUS_MAP, type ShipmentStatus } from '../../types/shipment'
 import { formatDateTime } from '../../utils'
 import { useAuth } from '../auth/useAuth'
@@ -29,7 +30,6 @@ function ShipmentList() {
   }
   return <div className="admin-page admin-api-page">
     <div className="page-header"><div>
-      <span className="admin-page-kicker">VẬN HÀNH</span>
       <h1 className="page-title">Đơn hàng</h1>
       <p className="page-subtitle">Dữ liệu từ API. Chọn đơn để xem chi tiết hoặc phân công trước khi lấy hàng.</p>
     </div><Link to="/admin/assignment" className="btn btn-primary">Phân công tài xế</Link></div>
@@ -46,6 +46,10 @@ function ShipmentList() {
       <button className="btn btn-outline" type="button" onClick={() => setParams({})}>Xóa bộ lọc</button>
       <button className="btn btn-outline" type="button" disabled={state.loading} onClick={state.refresh}>Làm mới</button>
     </form>
+    <AppliedFilters filters={[
+      ...(status ? [{ key: 'status', label: 'Trạng thái', value: SHIPMENT_STATUS_MAP[status].label, onRemove: () => filter('status', '') }] : []),
+      ...(trackingNumber ? [{ key: 'trackingNumber', label: 'Mã đơn', value: trackingNumber, onRemove: () => filter('trackingNumber', '') }] : []),
+    ]} onClear={() => setParams({})} />
     <AdminPageFeedback loading={state.loading} error={state.error} empty={state.page?.data.length === 0} label="đơn hàng" onRetry={state.refresh} />
     {state.page && <>
       <p className="ui-result-count" role="status">{state.page.data.length} đơn trong trang đang hiển thị{trackingNumber ? ' · Mã: ' + trackingNumber : ''}.</p>
@@ -58,9 +62,12 @@ function ShipmentList() {
           <td>{item.recipientName}</td><td><StatusBadge status={item.status} /></td>
           <td className="admin-api-id">{item.driverId ?? 'Chưa phân công'}</td>
           <td><time dateTime={item.createdAt}>{formatDateTime(item.createdAt)}</time></td>
-          <td><Link className="action-btn action-primary" to={'/admin/assignment?shipmentId=' + encodeURIComponent(item.id)}>
-            {item.status === 'CREATED' ? 'Phân công' : item.status === 'ASSIGNED' ? 'Xem / gán lại' : 'Xem chi tiết'}
-          </Link></td>
+          <td><Link className="action-btn" to={'/admin/shipments/' + encodeURIComponent(item.id)}>Xem chi tiết</Link>
+            {(item.status === 'CREATED' || item.status === 'ASSIGNED') &&
+              <Link className="action-btn action-primary" to={'/admin/assignment?shipmentId=' + encodeURIComponent(item.id)}>
+                {item.status === 'CREATED' ? 'Phân công' : 'Gán lại'}
+              </Link>}
+          </td>
         </tr>)}</tbody></table>
       </div>}
       <AdminPager label="đơn hàng" number={state.number} hasMore={state.page.pagination.hasMore} onPrevious={state.previous} onNext={state.next} />

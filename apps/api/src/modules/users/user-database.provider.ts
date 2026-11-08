@@ -1,5 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { Pool } from 'pg';
+import { logDependencyFailure } from '../../common/dependency-diagnostics';
 
 export const USER_DATABASE = Symbol('USER_DATABASE');
 
@@ -11,7 +12,7 @@ export const userDatabaseProvider = {
       connectionString: process.env.DATABASE_URL,
       max: 5, connectionTimeoutMillis: 5000, statement_timeout: 5000,
     });
-    pool.on('error', () => new Logger('UserDatabase').error('Idle database connection failed'));
+    pool.on('error', error => logDependencyFailure(new Logger('UserDatabase'), 'database.idle', error));
     return pool;
   },
 };

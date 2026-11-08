@@ -1,239 +1,83 @@
-import { useEffect, useMemo, useState } from 'react'
-import { divIcon } from 'leaflet'
-import {
-  MapContainer as LeafletMap,
-  Marker,
-  Popup,
-  ZoomControl,
-  useMap,
-} from 'react-leaflet'
-import 'leaflet/dist/leaflet.css'
+import { lazy, Suspense, useCallback, useRef, useState } from 'react'
+import { getDrivers } from '../../api/endpoints/drivers'
+import { usePolledResource } from '../../hooks/usePolledResource'
+import { useAuth } from '../auth/useAuth'
+import { gpsFreshness } from '../../components/shipment/gps-freshness'
+import { useGpsClock } from '../../components/shipment/useGpsClock'
+import type { TrackingPin } from '../../components/map/TrackingMap'
 import { AppliedFilters } from '../../components/ui/AppliedFilters'
-import { OsmBaseLayer } from '../../components/map/OsmBaseLayer'
-import { useReducedMotion } from '../auth/motion'
+import { formatDateTime } from '../../utils'
+import { AdminPageFeedback, AdminPager } from './AdminPageFeedback'
+import '../../components/map/tracking-map.css'
 
-type DriverState = 'DELIVERING' | 'AVAILABLE' | 'PAUSED'
-
-interface LiveDriver {
-  id: string
-  name: string
-  phone: string
-  vehicle: string
-  position: [number, number]
-  state: DriverState
-  stateLabel: string
-  currentOrder?: string
-  lastUpdated: string
-}
-
-const drivers: LiveDriver[] = [
-  {
-    id: 'D01',
-    name: 'Lê Văn Tài',
-    phone: '0981 112 233',
-    vehicle: '29V1-456.78',
-    position: [21.0368, 105.7827],
-    state: 'DELIVERING',
-    stateLabel: 'Đang giao hàng',
-    currentOrder: 'PF-89021',
-    lastUpdated: '8 giây trước',
-  },
-  {
-    id: 'D02',
-    name: 'Nguyễn Văn Hùng',
-    phone: '0981 234 567',
-    vehicle: '29H1-123.45',
-    position: [21.0274, 105.8342],
-    state: 'DELIVERING',
-    stateLabel: 'Đang giao hàng',
-    currentOrder: 'PF-89024',
-    lastUpdated: '12 giây trước',
-  },
-  {
-    id: 'D03',
-    name: 'Trần Văn Nam',
-    phone: '0912 345 678',
-    vehicle: '29X2-543.21',
-    position: [21.0181, 105.8158],
-    state: 'AVAILABLE',
-    stateLabel: 'Sẵn sàng nhận đơn',
-    lastUpdated: '18 giây trước',
-  },
-  {
-    id: 'D04',
-    name: 'Phạm Văn Nam',
-    phone: '0933 445 566',
-    vehicle: '29C-998.81',
-    position: [20.9951, 105.8661],
-    state: 'PAUSED',
-    stateLabel: 'Tạm nghỉ',
-    lastUpdated: '1 phút trước',
-  },
-  {
-    id: 'D05',
-    name: 'Đỗ Minh Quân',
-    phone: '0977 221 118',
-    vehicle: '30K1-882.19',
-    position: [21.0543, 105.8214],
-    state: 'AVAILABLE',
-    stateLabel: 'Sẵn sàng nhận đơn',
-    lastUpdated: '21 giây trước',
-  },
-]
-
-const stateClass: Record<DriverState, string> = {
-  DELIVERING: 'delivering',
-  AVAILABLE: 'available',
-  PAUSED: 'paused',
-}
-
-function createDriverIcon(driver: LiveDriver, selected: boolean) {
-  return divIcon({
-    className: 'driver-map-marker-shell',
-    html: `<span class="driver-map-marker ${stateClass[driver.state]}${selected ? ' selected' : ''}"><i></i></span>`,
-    iconSize: [44, 44],
-    iconAnchor: [22, 22],
-    popupAnchor: [0, -20],
-  })
-}
-
-function FocusDriver({ driver, animate }: { driver?: LiveDriver; animate: boolean }) {
-  const map = useMap()
-  const reduced = useReducedMotion()
-
-  useEffect(() => {
-    if (driver) {
-      const zoom = Math.max(map.getZoom(), 14)
-      if (reduced || !animate) map.setView(driver.position, zoom, { animate: false })
-      else map.flyTo(driver.position, zoom, { duration: 0.2 })
-    }
-  }, [driver, map, reduced, animate])
-
-  return null
-}
+const TrackingMap = lazy(() => import('../../components/map/TrackingMap'))
+type Filter = 'all' | 'fresh' | 'stale' | 'missing'
+const labels: Record<Filter, string> = { all: 'Tất cả', fresh: 'GPS mới', stale: 'GPS cũ', missing: 'Chưa có GPS' }
 
 export function AdminLiveMapPage() {
-  const [filter, setFilter] = useState<'ALL' | DriverState>('ALL')
-  const [selectedId, setSelectedId] = useState(drivers[0].id)
-  const [animateFocus, setAnimateFocus] = useState(false)
-  const filterLabels = { ALL: 'Tất cả', DELIVERING: 'Đang giao', AVAILABLE: 'Sẵn sàng', PAUSED: 'Tạm nghỉ' }
-
-  const visibleDrivers = useMemo(
-    () => drivers.filter((driver) => filter === 'ALL' || driver.state === filter),
-    [filter],
-  )
-  const selectedDriver =
-    visibleDrivers.find((driver) => driver.id === selectedId) ?? visibleDrivers[0]
-  function clearFilter() {
-    setAnimateFocus(false); setFilter('ALL')
-    document.querySelector<HTMLButtonElement>('.map-filter-tabs button')?.focus()
-  }
-
-  return (
-    <div className="admin-page admin-map-page">
-      <div className="page-header">
-        <div>
-          <span className="admin-page-kicker">GIÁM SÁT TRỰC TIẾP</span>
-          <h1 className="page-title">Bản đồ tài xế</h1>
-          <p className="page-subtitle">
-            Theo dõi vị trí và trạng thái của đội ngũ đang hoạt động.
-          </p>
-        </div>
-        <div className="map-live-indicator">
-          Dữ liệu mẫu · chưa có GPS trực tiếp
-        </div>
+  const { user } = useAuth(), account = user?.id ?? '', now = useGpsClock()
+  const [paging, setPaging] = useState<{ account: string; cursors: (string | undefined)[] }>({ account, cursors: [undefined] })
+  const cursors = paging.account === account ? paging.cursors : [undefined], cursor = cursors.at(-1)
+  const load = useCallback((signal: AbortSignal) => getDrivers({ limit: 20, cursor }, signal), [cursor])
+  const scope = JSON.stringify([account, cursor])
+  const result = usePolledResource(load, scope)
+  const [filter, setFilter] = useState<Filter>('all')
+  const [selectedId, setSelectedId] = useState<string>()
+  const drivers = (result.data?.data ?? []).map(driver => ({ ...driver,
+    freshness: gpsFreshness(driver.currentLocation, driver.locationClientTimestamp, driver.isLocationStale, Math.max(now, result.updatedAt ?? 0)) }))
+  const visible = drivers.filter(driver => filter === 'all' || driver.freshness === filter)
+  const selected = visible.some(driver => driver.id === selectedId) ? selectedId : undefined
+  const pins: TrackingPin[] = visible.flatMap(driver => driver.currentLocation ? [{ id: driver.id,
+    label: driver.name + ' · ' + labels[driver.freshness], position: driver.currentLocation,
+    kind: driver.freshness === 'fresh' ? 'fresh' as const : 'stale' as const }] : [])
+  const firstFilter = useRef<HTMLButtonElement>(null)
+  const clearFilter = () => { setFilter('all'); firstFilter.current?.focus() }
+  return <div className="admin-page admin-map-page">
+    <div className="page-header"><div><h1 className="page-title">Bản đồ tài xế</h1>
+      <p className="page-subtitle">Vị trí GPS trong trang tài xế đang hiển thị.</p></div>
+      <button type="button" className="btn btn-outline" disabled={result.loading || result.refreshing} onClick={result.refresh}>Tải lại vị trí</button>
+    </div>
+    <div className="tracking-meta" role="status">
+      <span>Trang {cursors.length} · {drivers.length} tài xế đã tải</span>
+      {result.updatedAt && <span>Cập nhật {formatDateTime(new Date(result.updatedAt).toISOString())}</span>}
+    </div>
+    <AdminPageFeedback loading={result.loading} error={result.error} empty={!!result.data && drivers.length === 0}
+      label="vị trí tài xế" onRetry={result.refresh} />
+    {result.data && <>
+      <div className="tracking-fleet-stats" aria-label="GPS trong trang đã tải">
+        {(['fresh', 'stale', 'missing'] as const).map(state => <span key={state}><strong>{drivers.filter(driver => driver.freshness === state).length}</strong>{labels[state]}</span>)}
       </div>
-
-      <div className="live-map-stats">
-        <div><span className="map-stat-dot all" /><strong>{drivers.length}</strong><small>Đang hoạt động</small></div>
-        <div><span className="map-stat-dot delivering" /><strong>{drivers.filter(driver => driver.state === 'DELIVERING').length}</strong><small>Đang giao hàng</small></div>
-        <div><span className="map-stat-dot available" /><strong>{drivers.filter(driver => driver.state === 'AVAILABLE').length}</strong><small>Sẵn sàng</small></div>
-        <div><span className="map-stat-dot paused" /><strong>{drivers.filter(driver => driver.state === 'PAUSED').length}</strong><small>Tạm nghỉ</small></div>
-      </div>
-      <AppliedFilters filters={filter === 'ALL' ? [] : [{ key: 'state', label: 'Trạng thái', value: filterLabels[filter], onRemove: clearFilter }]} onClear={clearFilter} />
-
+      <AppliedFilters filters={filter === 'all' ? [] : [{ key: 'gps', label: 'GPS', value: labels[filter], onRemove: clearFilter }]} onClear={clearFilter} />
       <div className="live-map-workspace">
         <aside className="driver-map-sidebar">
-          <div className="driver-map-sidebar-header">
-            <div>
-              <h2>Danh sách tài xế</h2>
-              <span role="status">{visibleDrivers.length} tài xế minh họa được hiển thị</span>
-            </div>
+          <div className="driver-map-sidebar-header"><h2>Tài xế trong trang</h2></div>
+          <div className="map-filter-tabs" role="group" aria-label="Lọc dữ liệu GPS">
+            {(Object.keys(labels) as Filter[]).map(value => <button key={value} ref={value === 'all' ? firstFilter : undefined} type="button" aria-pressed={filter === value}
+              className={filter === value ? 'active' : ''} onClick={() => { setFilter(value); setSelectedId(undefined) }}>{labels[value]}</button>)}
           </div>
-
-          <div className="map-filter-tabs" role="group" aria-label="Lọc trạng thái tài xế">
-            {(Object.keys(filterLabels) as (keyof typeof filterLabels)[]).map(value => <button key={value} type="button"
-              aria-pressed={filter === value} className={filter === value ? 'active' : ''}
-              onClick={() => { setAnimateFocus(false); setFilter(value) }}>{filterLabels[value]}</button>)}
-          </div>
-
           <div className="driver-map-list">
-            {visibleDrivers.map((driver) => (
-              <button
-                type="button"
-                key={driver.id}
-                className={`driver-map-card ${selectedDriver?.id === driver.id ? 'selected' : ''}`}
-                aria-pressed={selectedDriver?.id === driver.id}
-                onClick={event => { setAnimateFocus(event.detail > 0); setSelectedId(driver.id) }}
-              >
-                <span className="driver-list-avatar">{driver.name.split(' ').slice(-1)[0][0]}</span>
-                <span className="driver-list-info">
-                  <strong>{driver.name}</strong>
-                  <small>{driver.vehicle} · {driver.lastUpdated}</small>
-                  <span className={`map-driver-status ${stateClass[driver.state]}`}>
-                    <i /> {driver.stateLabel}
-                  </span>
-                </span>
-                <span className="driver-list-arrow">›</span>
-              </button>
-            ))}
+            {visible.map(driver => <button type="button" key={driver.id} className={'driver-map-card' + (selected === driver.id ? ' selected' : '')}
+              aria-pressed={selected === driver.id} onClick={() => setSelectedId(driver.id)}>
+              <span className="driver-list-avatar" aria-hidden="true">{driver.name.slice(0, 1)}</span>
+              <span className="driver-list-info"><strong>{driver.name}</strong>
+                <small>{driver.activeShipmentCount} đơn đang xử lý</small>
+                <span className="tracking-gps-state" data-gps={driver.freshness}>{labels[driver.freshness]}</span>
+                {driver.locationClientTimestamp && <time className="tracking-driver-meta" dateTime={driver.locationClientTimestamp}>{formatDateTime(driver.locationClientTimestamp)}</time>}
+                {driver.currentLocation && <small>{driver.currentLocation.lat}, {driver.currentLocation.lng}</small>}
+              </span>
+            </button>)}
+            {visible.length === 0 && <p className="tracking-fleet-empty">Không có tài xế trong bộ lọc này.</p>}
           </div>
         </aside>
-
         <div className="live-map-canvas">
-          <LeafletMap
-            center={[21.0285, 105.8342]}
-            zoom={13}
-            minZoom={1}
-            maxZoom={20}
-            maxBounds={[[-85, -180], [85, 180]]}
-            maxBoundsViscosity={1}
-            zoomControl={false}
-            scrollWheelZoom
-            className="admin-leaflet-map"
-          >
-            <OsmBaseLayer />
-            <ZoomControl position="bottomright" />
-            <FocusDriver driver={selectedDriver} animate={animateFocus} />
-            {visibleDrivers.map((driver) => (
-              <Marker
-                key={driver.id}
-                alt={driver.name}
-                title={driver.name}
-                position={driver.position}
-                icon={createDriverIcon(driver, selectedDriver?.id === driver.id)}
-                eventHandlers={{ click: event => { setAnimateFocus(event.originalEvent instanceof MouseEvent && event.originalEvent.detail > 0); setSelectedId(driver.id) } }}
-              >
-                <Popup>
-                  <div className="driver-map-popup">
-                    <strong>{driver.name}</strong>
-                    <span>{driver.stateLabel}</span>
-                    <small>{driver.currentOrder ? `Đơn ${driver.currentOrder}` : 'Chưa có đơn hiện tại'}</small>
-                    <small>{driver.phone} · {driver.vehicle}</small>
-                    <em>Cập nhật {driver.lastUpdated}</em>
-                  </div>
-                </Popup>
-              </Marker>
-            ))}
-          </LeafletMap>
-
-          <div className="map-legend">
-            <span><i className="delivering" />Đang giao</span>
-            <span><i className="available" />Sẵn sàng</span>
-            <span><i className="paused" />Tạm nghỉ</span>
-          </div>
+          {pins.length > 0 ? <Suspense fallback={<p role="status">Đang mở bản đồ…</p>}>
+            <TrackingMap pins={pins} scope={scope} selectedId={selected} onSelect={setSelectedId} />
+          </Suspense> : <p className="tracking-message">Chưa có vị trí GPS trong bộ lọc này.</p>}
         </div>
       </div>
-    </div>
-  )
+    </>}
+    <AdminPager number={cursors.length} hasMore={result.data?.pagination.hasMore ?? false} disabled={result.loading || result.refreshing}
+      label="bản đồ tài xế" onPrevious={() => setPaging({ account, cursors: cursors.slice(0, -1) })}
+      onNext={() => { if (result.data?.pagination.nextCursor) setPaging({ account, cursors: [...cursors, result.data.pagination.nextCursor] }) }} />
+  </div>
 }

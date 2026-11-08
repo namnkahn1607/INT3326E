@@ -7,6 +7,8 @@ import { invalidField, type CreateShipmentDto } from './dto/create-shipment.dto'
 import type { ShipmentResponseDto } from './dto/shipment-response.dto';
 import { shipmentIdentifiers } from './shipment-identifiers';
 import { ShipmentsRepository } from './shipments.repository';
+import { ShipmentsReadRepository } from './shipments-read.repository';
+import { parseShipmentId, parseShipmentListQuery } from './dto/shipment-list-query';
 
 export const SHIPMENT_IDEMPOTENCY_TTL = Symbol('SHIPMENT_IDEMPOTENCY_TTL');
 export const shipmentIdempotencyTtlProvider = {
@@ -25,10 +27,20 @@ export class ShipmentsService {
   constructor(
     @Inject(ShipmentsRepository) private readonly shipments: ShipmentsRepository,
     @Inject(SHIPMENT_IDEMPOTENCY_TTL) private readonly ttl: number,
+    @Inject(ShipmentsReadRepository) private readonly reads: ShipmentsReadRepository,
   ) {}
 
+  list(actor: BusinessUser, query: Record<string, unknown>) {
+    return this.reads.list(actor, parseShipmentListQuery(query, actor));
+  }
+
+  detail(actor: BusinessUser, id: string, query: Record<string, unknown>) {
+    if (Object.keys(query).length) invalidField('query', 'Yêu cầu này không nhận tham số truy vấn');
+    return this.reads.detail(actor, parseShipmentId(id));
+  }
+
   async create(actor: BusinessUser, payload: CreateShipmentDto, key: string): Promise<ShipmentResponseDto> {
-    if (actor.role !== UserRole.CUSTOMER) throw new ApiProblem(403, 'FORBIDDEN_RESOURCE', 'Access denied');
+    if (actor.role !== UserRole.CUSTOMER) throw new ApiProblem(403, 'FORBIDDEN_RESOURCE', 'Không có quyền truy cập');
     if (!/^usr_[0-7][0-9A-HJKMNP-TV-Z]{25}$/.test(actor.id)) {
       throw new ApiProblem(409, 'USER_NOT_PROVISIONED', 'Business user ID does not match the contract');
     }

@@ -1,4 +1,26 @@
-# API contract — Week 1 draft
+# API contract
+
+## Tích hợp GPS — 02/11/2026
+
+`POST /v1/locations` của Na đã được tích hợp local, dùng DRIVER và
+BusinessUserGuard, publish EVT01 canonical rồi mới trả 202. Chưa nghiệm thu
+Pub/Sub Cloud hoặc Worker SQL. Xem [bàn giao merge](na-gps-merge.md).
+Các nhận định GPS chưa có handler trong snapshot cũ bên dưới là lịch sử.
+
+
+## TV1 tuần 6 — Đọc đơn và phân công tài xế
+
+Đã triển khai và kiểm thử trên máy ba API: `GET /v1/shipments`,
+`GET /v1/shipments/:id` và `POST /v1/shipments/:id/assign` chỉ dành cho ADMIN.
+Dùng schema SQL hiện có, giữ tên cột camelCase có dấu nháy kép.
+Customer chỉ xem đơn mình tạo, Driver chỉ xem đơn hiện được gán; chi tiết và
+lịch sử lấy từ cùng một phiên bản dữ liệu. Phân công khóa dòng đơn rồi ghi
+trạng thái, lịch sử và thông báo trong cùng giao dịch. Gán lại đúng tài xế hiện
+tại không ghi thêm dữ liệu. Khi mất phản hồi, client đọc lại chi tiết để đối chiếu.
+
+Xem [hướng dẫn TV1 tuần 6](tv1-assignment-week6.md) để chạy test và tích hợp.
+Chưa thay schema production, IAM hoặc triển khai lên Cloud. Các mục có ngày
+bên dưới giữ kết quả tại thời điểm bàn giao trước đó.
 
 ## VIETMAP geocoding integration — 2026-10-25
 
@@ -73,9 +95,9 @@ client retains its key. All SC02 keys are explicit, including nullable fields.
 
 This is **test-branch implementation, not a deployed Cloud SQL acceptance**.
 Baseline SQL requires an empty schema; see [DB safety](../packages/database/README.md)
-and [Spec Kit/verification](../specs/002-create-shipment/quickstart.md).
-GET List/Detail, Assign and GPS remain unimplemented; preserving the frontend does
-not activate those routes. Historical draft statements below are retained, not current
+and [Create shipment handoff](create-shipment-handoff.md).
+At the 24/10 checkpoint, List/Detail, Assign and GPS were not implemented.
+List/Detail/Assign are now available locally as described above; GPS ingest is integrated locally as described above. Historical draft statements below are retained, not current
 Create requirements. No migration, seed, IAM, deploy or auth changes run automatically.
 
 Current Admin read endpoints: `GET /v1/drivers` (API11/SC06) and

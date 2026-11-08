@@ -50,4 +50,6 @@ ui-debug.log*
 
 /.agents/
 /.specify/
+/openspec/
+/specs/
 /apps.zip

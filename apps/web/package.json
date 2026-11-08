@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:integration": "npm run build --workspace=@parcelflow/api && tsc -p tsconfig.integration.json && vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {
     "@types/leaflet": "^1.9.22",

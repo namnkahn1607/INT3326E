@@ -27,7 +27,7 @@ function Assignment() {
   const state = useAdminPage(load, status)
   function clear() { setParams({}) }
   return <div className="admin-page admin-api-page">
-    <div className="page-header"><div><span className="admin-page-kicker">ĐIỀU PHỐI</span>
+    <div className="page-header"><div>
       <h1 className="page-title">Phân công tài xế</h1>
       <p className="page-subtitle">Chọn đơn, kiểm tra thông tin và xác nhận tài xế. Chỉ phân công hoặc gán lại trước khi lấy hàng.</p>
     </div></div>
