@@ -62,10 +62,10 @@ function DriverDashboard({ accountId, displayName, email }: { accountId: string;
     </section>
 
     <section className="driver-panel" aria-labelledby="driver-gps-title">
-      <h2 id="driver-gps-title">Thử gửi vị trí GPS</h2>
-      <p>Dùng tọa độ mô phỏng để thử kết nối. Chưa lấy vị trí thật từ thiết bị.</p>
+      <h2 id="driver-gps-title">Gửi vị trí GPS</h2>
+      <p>Chọn vị trí trình duyệt để gửi vị trí thiết bị, hoặc Mô phỏng để thử theo tuyến mẫu.</p>
       <GpsEmitter driverId={accountId} onEmit={publish}
-        description="Mẫu đầu sau 8 giây khi bắt đầu, sau đó gửi qua API mỗi 8 giây. Dừng để ngừng gửi mẫu mới; yêu cầu đã gửi có thể hoàn tất." />
+        description="Sau khi bắt đầu, mỗi 8 giây tạo hoặc lấy một mẫu rồi gửi. Dừng để ngừng lấy và gửi mẫu mới; yêu cầu đã gửi có thể hoàn tất." />
       <div className="driver-send-status" role="status" aria-live="polite" aria-busy={sending}>
         <p>{sending ? 'Đang gửi mẫu GPS…' : 'Không có yêu cầu đang gửi.'}</p>
         <p>Số mẫu được API chấp nhận: <strong>{acceptedCount}</strong></p>

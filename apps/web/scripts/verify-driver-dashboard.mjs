@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { mkdir, rm, rmdir, writeFile } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
+import { mkdir, readFile, rm, rmdir, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
@@ -79,8 +80,9 @@ export function Review() {
 createRoot(document.getElementById('root')).render(<StrictMode><Review /></StrictMode>)
 `
 
-async function reviewPage({ width = 390, height = 844, query = '', mode = 'accepted' } = {}) {
-  const context = await browser.newContext({ viewport: { width, height }, reducedMotion: 'reduce', serviceWorkers: 'block' })
+async function reviewPage({ width = 390, height = 844, query = '', mode = 'accepted', geolocation, permissions = [] } = {}) {
+  const context = await browser.newContext({ viewport: { width, height }, reducedMotion: 'reduce', serviceWorkers: 'block',
+    geolocation, permissions })
   const page = await context.newPage()
   const sent = []
   const aborted = []
@@ -168,11 +170,98 @@ try {
       await page.clock.runFor(8000)
       await contains(page, 'Số mẫu được API chấp nhận: 2')
       assert.equal(sent[1].seq, 2)
+      assert.notDeepEqual([sent[0].lat, sent[0].lng], [sent[1].lat, sent[1].lng])
       await stop(page)
       await noOverflow(page)
       await page.screenshot({ path: path.join(output, 'accepted-stopped.png'), fullPage: true })
     } finally { await context.close() }
   })
+  await check('native browser geolocation, measured timestamp and changing coordinates', async () => {
+    const { page, context, sent } = await reviewPage({ geolocation: { latitude: 10.762622, longitude: 106.660172 },
+      permissions: ['geolocation'] })
+    try {
+      await page.evaluate(() => {
+        const getPosition = navigator.geolocation.getCurrentPosition.bind(navigator.geolocation)
+        navigator.geolocation.getCurrentPosition = (success, error, options) => getPosition(position => {
+          window.driverReviewMeasuredAt = position.timestamp
+          success(position)
+        }, error, options)
+      })
+      await page.getByLabel('Chọn nguồn vị trí').selectOption('browser')
+      await page.clock.runFor(16000)
+      assert.equal(sent.length, 0)
+      await start(page)
+      assert.equal(await page.getByLabel('Chọn nguồn vị trí').isDisabled(), true)
+      await page.clock.runFor(8000)
+      await contains(page, 'Số mẫu được API chấp nhận: 1')
+      assert.deepEqual([sent[0].lat, sent[0].lng], [10.762622, 106.660172])
+      const measuredAt = await page.evaluate(() => window.driverReviewMeasuredAt)
+      assert.equal(sent[0].clientTimestamp, new Date(measuredAt).toISOString())
+      await context.setGeolocation({ latitude: 10.763, longitude: 106.661 })
+      await page.clock.runFor(8000)
+      await contains(page, 'Số mẫu được API chấp nhận: 2')
+      assert.deepEqual([sent[1].lat, sent[1].lng], [10.763, 106.661])
+      await stop(page)
+      await noOverflow(page)
+      await page.screenshot({ path: path.join(output, 'browser-position.png'), fullPage: true })
+    } finally { await context.close() }
+  })
+  await check('native browser denies geolocation and requires an explicit simulator choice', async () => {
+    const { page, context, sent } = await reviewPage()
+    try {
+      await context.grantPermissions([], { origin })
+      assert.equal(await page.evaluate(async () => (await navigator.permissions.query({ name: 'geolocation' })).state), 'denied')
+      await page.getByLabel('Chọn nguồn vị trí').selectOption('browser')
+      await start(page)
+      await page.clock.runFor(8000)
+      await contains(page, 'Chưa được cấp quyền')
+      await contains(page, 'Đã dừng')
+      assert.equal(sent.length, 0)
+      assert.equal(await page.getByLabel('Chọn nguồn vị trí').inputValue(), 'browser')
+      await page.screenshot({ path: path.join(output, 'browser-permission-denied.png'), fullPage: true })
+      await page.getByLabel('Chọn nguồn vị trí').selectOption('simulator')
+      await start(page)
+      await page.clock.runFor(8000)
+      await contains(page, 'Số mẫu được API chấp nhận: 1')
+    } finally { await context.close() }
+  })
+  await check('browser acquisition deadline ignores a late callback after restart', async () => {
+    const { page, context, sent } = await reviewPage()
+    try {
+      await page.evaluate(() => {
+        navigator.geolocation.getCurrentPosition = success => { window.driverReviewPosition = success }
+      })
+      await page.getByLabel('Chọn nguồn vị trí').selectOption('browser')
+      await start(page)
+      await page.clock.runFor(8000)
+      await contains(page, 'Đang lấy vị trí')
+      await page.clock.runFor(7000)
+      await contains(page, 'Chưa lấy được vị trí trong 7 giây')
+      await start(page)
+      await page.evaluate(() => window.driverReviewPosition({ coords: { latitude: 10, longitude: 106 }, timestamp: Date.now() }))
+      assert.equal(sent.length, 0)
+      await stop(page)
+    } finally { await context.close() }
+  })
+  for (const action of ['Dừng', 'Rời trang thử', 'Đăng xuất', 'Đổi tài khoản thử']) {
+    await check(`pending geolocation cleanup: ${action}`, async () => {
+      const { page, context, sent } = await reviewPage()
+      try {
+        await page.evaluate(() => {
+          navigator.geolocation.getCurrentPosition = success => { window.driverReviewPosition = success }
+        })
+        await page.getByLabel('Chọn nguồn vị trí').selectOption('browser')
+        await start(page)
+        await page.clock.runFor(8000)
+        await contains(page, 'Đang lấy vị trí')
+        await page.getByRole(action === 'Rời trang thử' ? 'link' : 'button', { name: action, exact: true }).click()
+        await page.evaluate(() => window.driverReviewPosition({ coords: { latitude: 10, longitude: 106 }, timestamp: Date.now() }))
+        await page.clock.runFor(16000)
+        assert.equal(sent.length, 0)
+        assert.ok(!(await text(page)).includes('Đang lấy vị trí'))
+      } finally { await context.close() }
+    })
+  }
   for (const [mode, message] of [[401, 'đăng nhập lại'], [403, 'không có quyền'], [404, 'chưa sẵn sàng'],
     [409, 'kiểm tra dịch vụ'], [503, 'kiểm tra dịch vụ'], ['invalid', 'chưa đúng định dạng'], ['network', 'Không kết nối được']]) {
     await check(`rejection ${mode} is visible and not counted`, async () => {
@@ -231,10 +320,16 @@ try {
   assert.deepEqual(errors, [], 'browser runtime errors')
   assert.deepEqual(externalRequests, [], 'unexpected external requests')
   const sourceRevision = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repo, encoding: 'utf8' }).trim()
+  const sourceFiles = ['apps/web/src/features/driver/DriverPlaceholderPage.tsx', 'apps/web/src/features/driver/GpsEmitter.tsx',
+    'apps/web/src/features/driver/driver.css', 'apps/web/src/layouts/DriverLayout.tsx',
+    'apps/web/src/api/client.ts', 'apps/web/src/api/endpoints/locations.ts', 'apps/web/scripts/verify-driver-dashboard.mjs']
+  const sourceSha256 = Object.fromEntries(await Promise.all(sourceFiles.map(async file =>
+    [file, createHash('sha256').update(await readFile(path.join(repo, file))).digest('hex')])))
   const report = { status: 'PASS', generatedAt: new Date().toISOString(), sourceRevision,
     browser: `Microsoft Edge ${browser.version()}`, level: 'local-browser-with-auth-and-api-mocks', checks,
     runtimeErrors: errors, externalRequests, cloudGpsPublished: false,
-    sourceFiles: ['DriverPlaceholderPage.tsx', 'GpsEmitter.tsx', 'DriverLayout.tsx', 'api/client.ts', 'api/endpoints/locations.ts'] }
+    uncommittedChanges: !!execFileSync('git', ['status', '--porcelain'], { cwd: repo, encoding: 'utf8' }).trim(),
+    sourceFiles, sourceSha256 }
   await writeFile(path.join(output, 'report.json'), JSON.stringify(report, null, 2) + '\n')
   console.log(`PASS ${checks.length} browser scenarios; evidence: ${output}`)
 } catch (error) {

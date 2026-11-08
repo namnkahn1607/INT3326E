@@ -14,12 +14,16 @@ const accepted: LocationAccepted = { status: 'ACCEPTED', eventId: 'gps-test-1', 
 const driver: UserProfile = { id: 'firebase-driver-uid', displayName: 'An', email: 'driver@example.test', role: 'DRIVER' }
 let node: HTMLDivElement
 let root: Root
+let locate: ReturnType<typeof vi.fn<Geolocation['getCurrentPosition']>>
 
 beforeEach(() => {
   vi.useFakeTimers()
   vi.setSystemTime(new Date('2026-10-26T03:00:00.000Z'))
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   send.mockReset().mockResolvedValue(accepted)
+  locate = vi.fn()
+  vi.stubGlobal('isSecureContext', true)
+  vi.stubGlobal('navigator', { geolocation: { getCurrentPosition: locate } })
   node = document.createElement('div')
   document.body.append(node)
   root = createRoot(node)
@@ -45,6 +49,13 @@ async function click(label: string) {
   await act(async () => button.click())
 }
 async function tick(ms: number) { await act(async () => vi.advanceTimersByTimeAsync(ms)) }
+async function browserSource() {
+  await act(async () => {
+    const select = node.querySelector('select')!
+    select.value = 'browser'
+    select.dispatchEvent(new Event('change', { bubbles: true }))
+  })
+}
 function deferred() {
   let resolve!: (value: LocationAccepted) => void
   const promise = new Promise<LocationAccepted>(done => { resolve = done })
@@ -181,5 +192,47 @@ describe('Driver dashboard and GPS integration', () => {
     expect(node.textContent).toContain('Đang kiểm tra')
     expect(node.querySelector('button')).toBeNull()
     expect(send).not.toHaveBeenCalled()
+  })
+
+  it('sends the measured browser position through the existing Driver adapter', async () => {
+    await render()
+    await browserSource()
+    expect(locate).not.toHaveBeenCalled()
+    await click('Bắt đầu phát mẫu')
+    await tick(8000)
+    await act(async () => locate.mock.calls[0][0]({ coords: { latitude: 10.76, longitude: 106.66 },
+      timestamp: Date.parse('2026-10-26T03:00:07.500Z') } as GeolocationPosition))
+    expect(send).toHaveBeenCalledTimes(1)
+    expect(send.mock.calls[0][0]).toEqual({ lat: 10.76, lng: 106.66, seq: 1,
+      clientTimestamp: '2026-10-26T03:00:07.500Z' })
+    expect(node.textContent).toContain('Số mẫu được API chấp nhận: 1')
+  })
+
+  it('shows a permission denial without sending or counting a location', async () => {
+    await render()
+    await browserSource()
+    await click('Bắt đầu phát mẫu')
+    await tick(8000)
+    await act(async () => locate.mock.calls[0][1]!({ code: 1 } as GeolocationPositionError))
+    expect(node.querySelector('[role="alert"]')?.textContent).toContain('Chưa được cấp quyền')
+    await tick(16000)
+    expect(send).not.toHaveBeenCalled()
+    expect(node.textContent).toContain('Số mẫu được API chấp nhận: 0')
+  })
+
+  it.each(['stop', 'account', 'logout', 'unmount'])('does not publish a late browser position after %s', async action => {
+    await render()
+    await browserSource()
+    await click('Bắt đầu phát mẫu')
+    await tick(8000)
+    const success = locate.mock.calls[0][0]
+    if (action === 'stop') await click('Dừng')
+    if (action === 'account') await render({ ...driver, id: 'second-driver', displayName: 'Bình' })
+    if (action === 'logout') await render(null)
+    if (action === 'unmount') await act(async () => root.render(<p>Other route</p>))
+    await act(async () => success({ coords: { latitude: 10.76, longitude: 106.66 }, timestamp: Date.now() } as GeolocationPosition))
+    await tick(16000)
+    expect(send).not.toHaveBeenCalled()
+    expect(locate).toHaveBeenCalledTimes(1)
   })
 })
