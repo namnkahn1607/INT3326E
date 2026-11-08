@@ -294,3 +294,11 @@ từ Start → API → Pub/Sub → Worker → SQL. Kiểm tra Stop, quyền và 
 bản triển khai đó. Không pull/ACK subscription nghiệp vụ để chụp bằng chứng.
 HTTP 202 và kiểm thử local không đóng checkpoint Cloud hoặc cả tuần 7 của nhóm.
 Chưa commit/push/deploy trong nhiệm vụ này.
+
+## Bổ sung danh sách đơn và nhận/giao — 08/11/2026
+
+Yêu cầu mới của người dùng cho phép triển khai phần frontend lifecycle TV4.
+Dashboard hiện tải danh sách đơn qua API, có lọc/cursor và link chi tiết Driver;
+chi tiết có xác nhận lấy/giao theo contract OpenAPI, không còn placeholder đơn.
+Xem [bàn giao nhận/giao](driver-shipments-handoff.md) để biết kết quả kiểm thử và
+các API backend còn chờ. Phần này không đóng GPS Cloud W707.

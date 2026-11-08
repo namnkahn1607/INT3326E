@@ -9,6 +9,9 @@ import { ProtectedRoute } from '../auth/ProtectedRoute'
 import { DriverPlaceholderPage } from './DriverPlaceholderPage'
 
 vi.mock('../../api/endpoints/locations', () => ({ sendLocation: vi.fn() }))
+vi.mock('../../api/endpoints/shipments', () => ({ getShipments: vi.fn(async () => ({
+  data: [], pagination: { limit: 20, hasMore: false, nextCursor: null },
+})) }))
 const send = vi.mocked(sendLocation)
 const accepted: LocationAccepted = { status: 'ACCEPTED', eventId: 'gps-test-1', receivedAt: '2026-10-26T03:00:08.120Z' }
 const driver: UserProfile = { id: 'firebase-driver-uid', displayName: 'An', email: 'driver@example.test', role: 'DRIVER' }
@@ -51,7 +54,7 @@ async function click(label: string) {
 async function tick(ms: number) { await act(async () => vi.advanceTimersByTimeAsync(ms)) }
 async function browserSource() {
   await act(async () => {
-    const select = node.querySelector('select')!
+    const select = node.querySelector<HTMLSelectElement>('#gps-source')!
     select.value = 'browser'
     select.dispatchEvent(new Event('change', { bubbles: true }))
   })
@@ -63,11 +66,11 @@ function deferred() {
 }
 
 describe('Driver dashboard and GPS integration', () => {
-  it('shows the signed-in account and a shipment placeholder without making requests on mount', async () => {
+  it('shows the signed-in account and an empty shipment list without sending GPS on mount', async () => {
     await render()
     expect(node.textContent).toContain('Xin chào, An')
     expect(node.textContent).toContain(driver.email)
-    expect(node.textContent).toContain('Danh sách đơn chưa được kết nối')
+    expect(node.textContent).toContain('Chưa có đơn trên trang này')
     expect(node.textContent).not.toContain('demo-driver-1')
     await tick(16000)
     expect(send).not.toHaveBeenCalled()

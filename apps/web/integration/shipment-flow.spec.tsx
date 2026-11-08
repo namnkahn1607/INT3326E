@@ -2,18 +2,21 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createShipment } from '../src/api/endpoints/shipments'
+import { assignShipment, createShipment } from '../src/api/endpoints/shipments'
 import { AdminAssignmentPage } from '../src/features/admin/AdminAssignmentPage'
 import { AdminShipmentsPage } from '../src/features/admin/AdminShipmentsPage'
 import { AdminShipmentDetailPage } from '../src/features/admin/AdminShipmentDetailPage'
 import { CustomerCreatePage } from '../src/features/customer/CustomerCreatePage'
 import { CustomerShipmentsPage } from '../src/features/customer/CustomerShipmentsPage'
 import { CustomerShipmentDetailPage } from '../src/features/customer/CustomerShipmentDetailPage'
+import { DriverShipments } from '../src/features/driver/DriverShipments'
+import { DriverShipmentDetailPage } from '../src/features/driver/DriverShipmentDetailPage'
 import type { ShipmentAddressValue } from '../src/features/customer/ShipmentAddressModal'
 import { startServer, userId } from './fixture-client'
 
 const session = vi.hoisted(() => ({ actor: 'customer', saveAddress: null as null | ((value: ShipmentAddressValue) => void) }))
-vi.mock('../src/features/auth/useAuth', () => ({ useAuth: () => ({ user: { id: session.actor, displayName: session.actor } }) }))
+vi.mock('../src/features/auth/useAuth', () => ({ useAuth: () => ({ user: { id: session.actor, displayName: session.actor,
+  role: session.actor.startsWith('driver') ? 'DRIVER' : session.actor === 'admin' ? 'ADMIN' : 'CUSTOMER' } }) }))
 vi.mock('../src/features/auth/session', () => ({ readSessionToken: async () => session.actor }))
 vi.mock('../src/features/customer/ShipmentAddressModal', () => ({ ShipmentAddressModal: ({ onSave }: {
   onSave: (value: ShipmentAddressValue) => void
@@ -82,6 +85,8 @@ async function mount(path: string, actor = 'customer') {
     <Route path="/admin/shipments" element={<AdminShipmentsPage />} />
     <Route path="/admin/shipments/:id" element={<AdminShipmentDetailPage />} />
     <Route path="/admin/assignment" element={<AdminAssignmentPage />} />
+    <Route path="/driver" element={<DriverShipments />} />
+    <Route path="/driver/shipments/:id" element={<DriverShipmentDetailPage />} />
   </Routes></MemoryRouter>))
 }
 function button(text: string) {
@@ -253,5 +258,37 @@ describe('Week 6 UI → real Nest HTTP → isolated SQL (Firebase/address fixtur
     expect(requests.at(-1)?.status).toBe(403)
     expect(node.textContent).not.toContain(shipment.trackingNumber)
     expect(node.querySelector('.shipment-history')).toBeNull()
+  })
+})
+
+describe('Driver list/detail → real Nest HTTP → isolated SQL (Firebase fixture)', () => {
+  it('shows only assigned orders and reports the missing pickup handler without faking a state change', async () => {
+    const own = await create(), other = await create()
+    session.actor = 'admin'
+    await assignShipment(own.id, userId(3)); await assignShipment(other.id, userId(4))
+    await mount('/driver', 'driver1')
+    await eventually(() => expect(node.textContent).toContain(own.trackingNumber))
+    expect(node.textContent).not.toContain(other.trackingNumber)
+    await follow('Xem đơn')
+    await eventually(() => expect(node.textContent).toContain('Lịch sử trạng thái'))
+    await click('Đã lấy hàng'); await click('Xác nhận đã lấy hàng')
+    await eventually(() => expect(node.textContent).toContain('Đã đọc lại trạng thái hiện tại'))
+    const writes = requests.filter(request => request.path.endsWith('/pickup'))
+    expect(writes).toHaveLength(1); expect(writes[0].status).toBe(404)
+    expect(node.textContent).not.toContain('Máy chủ đã xác nhận lấy hàng')
+    expect((await server.query('SELECT status FROM shipments WHERE id=$1', [own.id])).rows[0].status).toBe('ASSIGNED')
+  })
+  it('removes the old Driver access after a real reassignment', async () => {
+    const order = await create(); session.actor = 'admin'; await assignShipment(order.id, userId(3))
+    await mount('/driver/shipments/' + order.id, 'driver1')
+    await eventually(() => expect(node.textContent).toContain(order.trackingNumber))
+    session.actor = 'admin'; await assignShipment(order.id, userId(4)); session.actor = 'driver1'
+    await click('Đọc lại thông tin đơn')
+    await eventually(() => expect(node.textContent).toContain('Bạn không còn quyền'))
+    expect(node.textContent).not.toContain(order.trackingNumber)
+    expect(node.textContent).not.toContain(payload.recipientPhone)
+    expect(node.querySelector('form')).toBeNull()
+    await mount('/driver', 'driver2')
+    await eventually(() => expect(node.textContent).toContain(order.trackingNumber))
   })
 })

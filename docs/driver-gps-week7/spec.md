@@ -44,3 +44,33 @@ migration hoặc UI pickup/delivery từ đề xuất QA khi chưa có yêu cầ
 
 Chi tiết kỹ thuật R2/R4 đối chiếu [W3C Geolocation](https://www.w3.org/TR/geolocation/):
 `getCurrentPosition`, `maximumAge`, `timeout`, timestamp đo và mã lỗi.
+
+## Bổ sung Driver nhận/giao — 08/11/2026
+
+Nguồn chính thức là yêu cầu mới của người dùng: làm phần TV4 có thể làm của
+danh sách đơn và nhận/giao, trên nhánh lấy từ develop. Phần này bổ sung phạm vi
+lifecycle đã loại trừ trong lượt GPS trước; không thay yêu cầu GPS R1–R7.
+Nhánh `feature/driver-shipments`, base `origin/develop@cbec8fb` sau fetch.
+Repo không có `.specify/memory/constitution.md` hoặc skill Spec Kit đã cài;
+không tạo constitution. Tiếp tục review artifact và kiểm chứng trong repo.
+
+- D1: `/driver` tải danh sách qua GET `/v1/shipments` bằng client/Auth hiện có,
+  phân trang cursor và lọc trạng thái; có loading, rỗng, lỗi và thử đọc lại.
+  Server giới hạn đơn theo Driver; không gửi hoặc so sánh Firebase UID với
+  `driverId` nghiệp vụ. Không dùng dữ liệu mẫu hoặc tự lọc một trang để giả scope.
+- D2: chi tiết `/driver/shipments/:id` dùng GET Detail hiện có, hiển thị mã đơn,
+  trạng thái, địa chỉ lấy/giao, người nhận/liên hệ, ghi chú và statusHistory.
+  Không hiển thị snapshot cũ sau lỗi quyền hoặc đổi tài khoản/đơn.
+- D3: theo OpenAPI API05/06: ASSIGNED mới được xác nhận đã lấy hàng (POST pickup,
+  không body); PICKED_UP mới được xác nhận giao thành công (POST deliver, body
+  chỉ có `proofOfDeliveryNotes` tùy chọn, tối đa 255 Unicode code point).
+  Có bước xem lại/xác nhận, hủy, khóa khi gửi; không tự chuyển trạng thái.
+  Adapter chỉ nhận HTTP 200 và ShipmentResponse đúng ID/trạng thái đích.
+- D4: không tự retry POST. Sau thành công đọc lại Detail để lấy history. Khi
+  timeout/network/409/5xx/response sai hoặc API chưa sẵn sàng, chỉ đọc lại;
+  GET không chứng minh POST thành công. Nếu GET lỗi thì khóa thao tác và bỏ
+  snapshot cũ, trừ response POST đã được xác nhận hợp lệ. Ý định/ghi chú cũ
+  bị xóa trước một xác nhận mới. Rời trang/đổi phiên hủy request, bỏ kết quả muộn.
+- D5: giữ GPS và role gate hiện hành; không sửa backend, schema, role, API
+  contract, dependency hoặc triển khai. Backend pickup/deliver chưa có ở base;
+  test frontend/mock không đóng nghiệm thu thực tế với TV1/TV5/TV6 hoặc W707.

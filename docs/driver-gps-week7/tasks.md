@@ -26,3 +26,20 @@
   tick được xử lý trong cùng lượt để bảo đảm không tự gọi định vị lại sau lỗi.
   Bằng chứng: test từng FAIL (3 lần gọi thay vì 1), sau sửa `fail` thì suite
   frontend 462/462 và browser 26/26 PASS.
+
+- [x] W709 — D1/D2: danh sách/chi tiết Driver, scope server, trạng thái dữ liệu,
+  cursor/lọc và cleanup; tái sử dụng UI/client hiện có.
+  Bằng chứng: DriverShipments.spec.tsx, 2 ca Driver mới trong shipment-flow.spec.tsx.
+- [x] W710 — D3/D4: adapter pickup/deliver, xác nhận/hủy, chống gửi lặp,
+  đối chiếu GET sau POST và xử lý kết quả chưa rõ.
+  Bằng chứng: driver-actions.spec.ts và DriverShipments.spec.tsx; browser có 404/409,
+  response sai, đọc lại lỗi, xác nhận và cleanup; chưa xác nhận backend nghiệp vụ.
+- [x] W711 — D1–D5: test contract/UI/cleanup, test frontend, lint/build và browser local.
+  Bằng chứng: frontend 493/493, integration 10/10, lint/build exit 0, Edge 39/39;
+  docs/evidence/driver-shipments/report.json và ảnh; chi tiết ở bàn giao nhận/giao.
+- [x] W712 — D5: review/converge, cập nhật bằng chứng và bàn giao phụ thuộc.
+  Bằng chứng: docs/driver-shipments-handoff.md; D1–D5 không còn thiếu sót local,
+  W713/W707 giữ mở cho backend/môi trường thật. Lượt implement chưa commit/push/deploy;
+  commit/push/merge được người dùng cho phép riêng sau bàn giao, không deploy.
+- [ ] W713 — D5: cùng TV1/5/6 nghiệm thu list → pickup → deliver trên backend thật;
+  cần handler TV1, revision/config và tài khoản có linkage. Không đóng bằng mock.

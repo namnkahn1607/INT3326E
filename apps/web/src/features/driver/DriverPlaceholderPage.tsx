@@ -3,6 +3,7 @@ import { ApiError } from '../../api/client'
 import { sendLocation, type LocationAccepted } from '../../api/endpoints/locations'
 import { useAuth } from '../auth/useAuth'
 import { GpsEmitter, type GpsEmitterDraftEvent } from './GpsEmitter'
+import { DriverShipments } from './DriverShipments'
 import './driver.css'
 
 function sendError(error: unknown): string {
@@ -56,10 +57,7 @@ function DriverDashboard({ accountId, displayName, email }: { accountId: string;
       <p>{email || accountId} · Tài xế</p>
     </section>
 
-    <section className="driver-panel" aria-labelledby="driver-shipments-title">
-      <h2 id="driver-shipments-title">Đơn được phân công</h2>
-      <p>Khu vực nhận và giao đơn đang được chuẩn bị. Danh sách đơn chưa được kết nối.</p>
-    </section>
+    <DriverShipments />
 
     <section className="driver-panel" aria-labelledby="driver-gps-title">
       <h2 id="driver-gps-title">Gửi vị trí GPS</h2>
