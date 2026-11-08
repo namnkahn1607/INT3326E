@@ -1,0 +1,5 @@
+export * from './CustomerOverviewPage'
+export * from './CustomerCreatePage'
+export * from './CustomerShipmentsPage'
+export * from './CustomerHistoryPage'
+export * from './CustomerNotificationsPage'
