@@ -1,4 +1,4 @@
-import { Coordinates, ShipmentStatus } from './index';
+import type { Coordinates, ShipmentStatus } from './index';
 
 export const EARTH_RADIUS_METERS = 6371000;
 export const DEFAULT_SPEED_KMH = 20;
@@ -131,7 +131,6 @@ export function evaluateEtaAndFreshness(
   // PICKED_UP check 2: Is location fresh? Fresh condition: 0 <= serverNow - clientTime <= 30s
   const sampleAgeMs = serverNowMs - clientTimeMs;
   const isFresh = sampleAgeMs >= 0 && sampleAgeMs <= staleThresholdMs;
-  const isLocationStale = !isFresh;
 
   if (!isFresh) {
     return {

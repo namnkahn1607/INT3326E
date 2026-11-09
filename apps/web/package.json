@@ -4,11 +4,15 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "predev": "npm run build --workspace=@parcelflow/types",
     "dev": "vite",
+    "prebuild": "npm run build --workspace=@parcelflow/types",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "pretest": "npm run build --workspace=@parcelflow/types",
     "test": "vitest run",
+    "pretest:integration": "npm run build --workspace=@parcelflow/types",
     "test:integration": "npm run build --workspace=@parcelflow/api && tsc -p tsconfig.integration.json && vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {

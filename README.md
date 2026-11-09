@@ -76,14 +76,23 @@ thử trực tiếp trên Cloud Console và phân biệt bằng chứng local v�
 
 ### Worker trên Cloud Run
 
-Worker có package/lockfile và Dockerfile riêng trong `apps/worker`. Từ gốc repo,
-build image với `docker build -t parcelflow-worker apps/worker`, hoặc deploy source:
+Worker có package/lockfile và Dockerfile riêng trong `apps/worker`. Helper ETA dùng
+chung từ `packages/types`, nên context build của API và Worker là gốc repo:
+
+```bash
+docker build -f apps/worker/Dockerfile -t parcelflow-worker .
+docker build -f apps/api/Dockerfile -t parcelflow-api .
+```
+
+Sau khi đẩy image Worker lên registry của project, đặt `WORKER_IMAGE` bằng URL
+image đó rồi cập nhật dịch vụ. Không dùng `--source=apps/worker` vì thư mục này
+không chứa package dùng chung.
 
 ```bash
 gcloud run deploy worker-service \
   --project=int3326e \
   --region=asia-southeast1 \
-  --source=apps/worker \
+  --image="$WORKER_IMAGE" \
   --port=8080 \
   --command="" \
   --args="" \

@@ -1,4 +1,4 @@
-import {
+import type {
   Coordinates,
   ShipmentStatus,
   EtaDetails,
@@ -6,7 +6,7 @@ import {
   ShipmentTrackingResponse,
 } from '@parcelflow/types';
 
-export {
+export type {
   Coordinates,
   ShipmentStatus,
   EtaDetails,
