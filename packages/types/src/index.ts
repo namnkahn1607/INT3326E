@@ -34,3 +34,7 @@ export interface ShipmentEntity {
   createdAt: string
   updatedAt: string
 }
+
+export * from './eta'
+export * from './gps'
+
