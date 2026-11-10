@@ -11,7 +11,8 @@ RUN npm run build
 
 FROM node:22-bookworm-slim AS runtime
 ENV NODE_ENV=production
-WORKDIR /app
+WORKDIR /app/apps/api
+COPY packages/types/package.json /app/packages/types/
 COPY apps/api/package.json apps/api/package-lock.json ./
 RUN npm ci --omit=dev --workspaces=false && npm cache clean --force
 COPY --from=build /app/apps/api/dist ./dist
