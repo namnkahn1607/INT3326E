@@ -37,6 +37,60 @@ async function click(text: string) { await act(async () => button(text).click())
 async function ready() { await mount(); await click(shipmentFixture.trackingNumber); await click(d1.name) }
 
 describe('Admin assignment integration — mocked endpoints', () => {
+  it('expands the chosen order inline without replacing drivers, and collapses on a second click', async () => {
+    await mount()
+    const orders = node.querySelector('.assignment-orders')!
+    const drivers = node.querySelector('.assignment-drivers')!
+    expect(orders?.textContent).toContain(detail.trackingNumber)
+    expect(drivers?.textContent).toContain(d1.name)
+    expect(node.querySelector('.admin-assignment-editor')).toBeNull()
+    expect(button(d1.name).disabled).toBe(true)
+    await click(detail.trackingNumber)
+    const editor = node.querySelector('.admin-assignment-editor')!
+    expect(editor.closest('.assignment-order-item.selected')).not.toBeNull()
+    expect(editor.closest('button')).toBeNull()
+    expect(node.querySelector('.assignment-split-layout > .admin-assignment-editor')).toBeNull()
+    expect(button(detail.trackingNumber).getAttribute('aria-expanded')).toBe('true')
+    expect(button(detail.trackingNumber).getAttribute('aria-controls')).toBe(editor.id)
+    expect(node.querySelector('.assignment-drivers')?.contains(editor)).toBe(false)
+    expect(node.querySelector('.assignment-drivers')?.textContent).toContain(d1.name)
+    expect(editor.textContent).toContain(detail.trackingNumber)
+    expect(getDrivers).toHaveBeenCalledTimes(1)
+    expect(node.querySelector('.ui-result-count')).toBeNull()
+    await click(detail.trackingNumber)
+    expect(node.querySelector('.admin-assignment-editor')).toBeNull()
+    expect(button(detail.trackingNumber).getAttribute('aria-expanded')).toBe('false')
+    expect(getDrivers).toHaveBeenCalledTimes(1)
+  })
+  it('keeps the confirmed result when the assigned order leaves the current filter', async () => {
+    vi.mocked(getShipments).mockResolvedValueOnce(page([detail])).mockResolvedValue(page([]))
+    await ready(); await click('Xem lại phân công'); await click('Xác nhận phân công')
+    expect(node.querySelector('.assignment-order-item.selected')?.textContent).toContain('Máy chủ đã xác nhận')
+    expect(node.querySelector('.assignment-orders .admin-shipment-detail')?.textContent).toContain(d1.id)
+    expect(getShipmentById).toHaveBeenCalledTimes(1)
+    expect(assignShipment).toHaveBeenCalledTimes(1)
+    await click('Thu gọn chi tiết')
+    expect(node.querySelector('.admin-assignment-editor')).toBeNull()
+  })
+  it('opens a deep-linked order inside the list even if it is not in the current page', async () => {
+    vi.mocked(getShipments).mockResolvedValue(page([]))
+    await mount('/admin/assignment?shipmentId=' + detail.id)
+    expect(node.querySelector('.assignment-orders .assignment-order-item .admin-shipment-detail')?.textContent).toContain(detail.trackingNumber)
+    expect(node.querySelector('.assignment-drivers')?.textContent).toContain(d1.name)
+  })
+  it('keeps the Driver page when choosing another shipment', async () => {
+    const second: ShipmentDetail = { ...detail, id: 'sh_01ARZ3NDEKTSV4RRFFQ69G5FAW', trackingNumber: 'PF20261024BCD234' }
+    vi.mocked(getShipments).mockResolvedValue(page([detail, second]))
+    vi.mocked(getDrivers).mockResolvedValueOnce(page([d1], 'driver-next')).mockResolvedValue(page([d2]))
+    vi.mocked(getShipmentById).mockResolvedValueOnce(detail).mockResolvedValue(second)
+    await mount()
+    const pager = () => node.querySelector('[aria-label="Phân trang tài xế"]')!
+    await act(async () => [...pager().querySelectorAll<HTMLButtonElement>('button')].find(item => item.textContent === 'Trang sau')!.click())
+    await click(detail.trackingNumber); await click(second.trackingNumber)
+    expect(pager().textContent).toContain('Trang 2')
+    expect(node.querySelector('.assignment-drivers')?.textContent).toContain(d2.name)
+    expect(getDrivers).toHaveBeenCalledTimes(2)
+  })
   it('reads Detail, permits a driver with multiple orders, and requires separate confirmation', async () => {
     await ready()
     expect(getShipmentById).toHaveBeenCalledWith(shipmentFixture.id, expect.any(AbortSignal))
@@ -56,6 +110,7 @@ describe('Admin assignment integration — mocked endpoints', () => {
     await act(async () => { button('Xác nhận phân công').click(); button('Xác nhận phân công').click() })
     expect(assignShipment).toHaveBeenCalledTimes(1)
     expect(button('Đang phân công').disabled).toBe(true)
+    expect(button('Thu gọn chi tiết').disabled).toBe(true)
     await act(async () => finish({ ...shipmentFixture, status: 'ASSIGNED', driverId: d1.id }))
   })
   it('allows explicit reassignment but explains the current-driver no-op', async () => {
