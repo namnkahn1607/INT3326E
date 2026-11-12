@@ -15,7 +15,8 @@ export function parseSmokeArgs(args = process.argv.slice(2)) {
     args,
     options: {
       project: { type: 'string', default: process.env.GCP_PROJECT_ID || 'int3326e' },
-      topic: { type: 'string', default: process.env.PUBSUB_TOPIC || 'gps-events' },
+      topic: { type: 'string', default: process.env.PUBSUB_TOPIC_GPS_EVENTS || process.env.PUBSUB_TOPIC || 'gps-events' },
+
       driver: { type: 'string', default: 'drv_smoke_hanoi' },
       count: { type: 'string', default: '5' },
       interval: { type: 'string', default: '1000' },

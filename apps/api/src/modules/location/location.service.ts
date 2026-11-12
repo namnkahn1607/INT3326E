@@ -18,7 +18,8 @@ export class LocationService {
 
   constructor() {
     const projectId = process.env.GCP_PROJECT_ID || process.env.PUBSUB_PROJECT_ID || 'int3326e';
-    const topicName = process.env.PUBSUB_TOPIC || process.env.PUBSUB_TOPIC_GPS_EVENTS || 'gps-events';
+    const topicName = process.env.PUBSUB_TOPIC_GPS_EVENTS || 'gps-events';
+
 
     this.pubSubClient = new PubSub({ projectId });
     this.topic = this.pubSubClient.topic(topicName);
