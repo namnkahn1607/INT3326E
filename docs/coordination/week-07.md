@@ -13,8 +13,8 @@ Mục lục: [Điều phối theo tuần](README.md)
 | TV1 | Nguyễn Lê Nam Khánh (nhóm trưởng) | API cập nhật trạng thái pickup/delivery, endpoint lịch sử giao hàng |
 | TV2 | Nguyễn Thị Lê Na | Worker consume topic GPS, upsert `current_locations` (chưa cần dedupe/ordering) |
 | TV3 | Lê Đình Anh Tuấn | UI cập nhật trạng thái cho Admin, UI lịch sử giao hàng cho Customer |
-| TV4 | Nguyễn Minh Anh | Driver app gửi GPS thật (geolocation trình duyệt hoặc simulator có nhãn) |
-| TV5 | Trần Đại Quang | Deploy Worker, subscription trỏ về Worker |
+| TV4 | Trần Đại Quang | Driver app gửi GPS thật (geolocation trình duyệt hoặc simulator có nhãn) |
+| TV5 | Nguyễn Minh Anh | Deploy Worker, subscription trỏ về Worker |
 | TV6 | Đỗ Đức Đạt | QA luồng end-to-end create → assign → pickup → deliver |
 
 ## Thực tế từng người
@@ -30,12 +30,12 @@ Mục lục: [Điều phối theo tuần](README.md)
 **TV3 (`Dinh Tuan`)**
 - 12/11: hoàn thiện lịch sử đơn của Customer và khu làm việc của Admin, tài liệu bàn giao frontend tuần 7 và kết quả kiểm tích hợp.
 
-**Phần Driver của TV4 (Trần Đại Quang, TV5, làm thay; tài khoản GitHub `AkaLissandra` là của Quang)**
+**TV4 (`AkaLissandra`, Trần Đại Quang)**
 - 08/11: GPS từ trình duyệt và simulator có nhãn; danh sách đơn được gán, UI nhận hàng và giao hàng cho Driver.
 
 **TV5**
-- Nguyễn Minh Anh (`minhanhltnc`) sửa Dockerfile (11/11), đã merge vào `develop` (`730a84c`).
-- Deploy: API đã lên bản mới trên Cloud Run. Web Hosting vẫn là bản 11/10. Worker, Pub/Sub và bảng GPS trên Cloud SQL chưa xác nhận.
+- `minhanhltnc` sửa Dockerfile (11/11), đã merge vào `develop` (`730a84c`).
+- Deploy (báo ngày 14/11): SHA `1ff4880` (bằng `bbdfe83` cộng tài liệu), API `backend-service-00033-2w5`, Worker `worker-service-00014-l9b`, Pub/Sub dạng pull (`gps-events` → `gps-events-sub`), đã chạy `002-create-gps-locations.sql`, web Hosting đã lên bản mới.
 
 **TV6 (`datdooo`)**
 - 05/11–07/11: chuẩn hóa tài liệu, `GET /v1/notifications` (API10), sửa Admin đọc cột GPS camelCase, ghi log lỗi không phải HTTP.
@@ -47,10 +47,10 @@ Mục lục: [Điều phối theo tuần](README.md)
 
 | Hạng mục | Local (PostgreSQL thật) | Cloud |
 | --- | --- | --- |
-| Tạo đơn → gán → nhận → giao | Đạt | Chưa chạy (web chưa deploy) |
+| Tạo đơn → gán → nhận → giao | Đạt | Đã deploy 14/11, chưa chạy luồng bằng tài khoản thật |
 | Lịch sử trạng thái, thông báo | Đạt | Chưa chạy |
 | Phân quyền | Đạt | API trả 401 đúng khi không có token |
-| GPS ghi vào SQL qua Worker | Đạt (Worker trên PostgreSQL thật) | Chưa xác nhận |
+| GPS ghi vào SQL qua Worker | Đạt (Worker trên PostgreSQL thật) | Bảng GPS đã tạo; chưa đối chiếu một `eventId` tới SQL |
 
 ## Chốt tuần
 

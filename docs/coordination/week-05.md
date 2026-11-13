@@ -13,8 +13,8 @@ Mục lục: [Điều phối theo tuần](README.md)
 | TV1 | Nguyễn Lê Nam Khánh (nhóm trưởng) | Thiết kế schema Shipment, API tạo đơn thật |
 | TV2 | Nguyễn Thị Lê Na | Thiết kế schema `current_locations` / `location_history`, thống nhất convention với TV1 |
 | TV3 | Lê Đình Anh Tuấn | Đăng nhập Customer (Firebase Auth), form tạo đơn nối API thật, xem danh sách đơn của mình |
-| TV4 | Nguyễn Minh Anh | Tiếp tục test pipeline Pub/Sub; chốt event schema GPS cùng TV2 |
-| TV5 | Trần Đại Quang | Kết nối Cloud SQL từ Cloud Run, cấu hình secrets |
+| TV4 | Trần Đại Quang | Tiếp tục test pipeline Pub/Sub; chốt event schema GPS cùng TV2 |
+| TV5 | Nguyễn Minh Anh | Kết nối Cloud SQL từ Cloud Run, cấu hình secrets |
 | TV6 | Đỗ Đức Đạt | Firebase Auth đầy đủ (custom claims 3 role), auth guard |
 
 ## Thực tế từng người
@@ -33,7 +33,7 @@ Mục lục: [Điều phối theo tuần](README.md)
 - 24/10: client cho danh bạ tài xế và API gán tài xế, có contract test; UI gán tài xế cho Admin.
 - 25/10: API tạo đơn có transaction, proxy geocoding VIETMAP có xác thực, rút gọn form tạo đơn, chặn response geocoding sai định dạng, xử lý hủy request.
 
-**Phần Driver của TV4 (Trần Đại Quang, TV5, làm thay; tài khoản GitHub `AkaLissandra` là của Quang)**
+**TV4 (`AkaLissandra`, Trần Đại Quang)**
 - 16/10: chuẩn hóa hợp đồng telemetry GPS, kiểm việc gửi qua Pub/Sub.
 - 21/10: chỉnh GPS emitter theo hợp đồng telemetry mới.
 

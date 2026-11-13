@@ -13,8 +13,8 @@ Mục lục: [Điều phối theo tuần](README.md)
 | TV1 | Nguyễn Lê Nam Khánh (nhóm trưởng) | Scaffold NestJS, phác thảo module Shipment (chưa có logic), góp ý API contract draft |
 | TV2 | Nguyễn Thị Lê Na | Scaffold GPS Worker (chỉ health check), phối hợp tạo Pub/Sub topic và subscription |
 | TV3 | Lê Đình Anh Tuấn | Scaffold React + Vite, routing cơ bản theo role (stub), deploy thử lên Firebase Hosting |
-| TV4 | Nguyễn Minh Anh | Pair với TV2 thử publish/consume "hello world" qua Pub/Sub; phác thảo component GPS emitter |
-| TV5 | Trần Đại Quang | Tạo GCP project, 2 service Cloud Run (backend, worker rỗng), Cloud SQL, Pub/Sub topic/subscription, đặt budget alert |
+| TV4 | Trần Đại Quang | Pair với TV2 thử publish/consume "hello world" qua Pub/Sub; phác thảo component GPS emitter |
+| TV5 | Nguyễn Minh Anh | Tạo GCP project, 2 service Cloud Run (backend, worker rỗng), Cloud SQL, Pub/Sub topic/subscription, đặt budget alert |
 | TV6 | Đỗ Đức Đạt | Scaffold Auth (Firebase Auth), phác thảo module Admin |
 
 ## Thực tế từng người
@@ -35,7 +35,7 @@ Commit tính theo tài khoản GitHub, ngày theo commit. Nhiều việc làm s�
 - 06/10–07/10: thiết kế lại UI Customer, dashboard Admin có bản đồ tài xế, gộp thư mục admin và dispatcher.
 - 10/10: sửa role Admin trên frontend, đồng bộ lockfile và cấu hình TypeScript, dọn `.gitignore`.
 
-**Phần Driver của TV4 (Trần Đại Quang, TV5, làm thay; tài khoản GitHub `AkaLissandra` là của Quang)**
+**TV4 (`AkaLissandra`, Trần Đại Quang)**
 - 08/10–09/10: component GPS emitter cho Driver (bản tuần đầu).
 - Bằng chứng Pub/Sub hello world (publish, pull, topic, subscription) nằm trong `docs/evidence/week-1/`.
 

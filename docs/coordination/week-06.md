@@ -13,8 +13,8 @@ Mục lục: [Điều phối theo tuần](README.md)
 | TV1 | Nguyễn Lê Nam Khánh (nhóm trưởng) | API gán tài xế, khóa transaction chống gán trùng |
 | TV2 | Nguyễn Thị Lê Na | `POST /v1/locations` (chỉ publish, chưa ghi DB) |
 | TV3 | Lê Đình Anh Tuấn | UI Dispatcher (xem đơn chưa gán, gán tài xế), khung UI Admin |
-| TV4 | Nguyễn Minh Anh | UI Driver đăng nhập/dashboard; gửi thử GPS (chỉ log) |
-| TV5 | Trần Đại Quang | Kiểm message GPS thấy trong Pub/Sub console; chỉnh IAM cho service account của Worker |
+| TV4 | Trần Đại Quang | UI Driver đăng nhập/dashboard; gửi thử GPS (chỉ log) |
+| TV5 | Nguyễn Minh Anh | Kiểm message GPS thấy trong Pub/Sub console; chỉnh IAM cho service account của Worker |
 | TV6 | Đỗ Đức Đạt | Backend Admin (danh sách driver/customer), phác thảo QA test plan |
 
 ## Thực tế từng người
@@ -34,7 +34,7 @@ Mục lục: [Điều phối theo tuần](README.md)
 - 30/10: lịch sử vòng đời đơn và báo giao thất bại cho Admin; polling tracking, bản đồ tài xế có phân trang; thiết kế lại UI Customer và Admin (dark dashboard), nút chuyển sáng tối.
 - 02/11: hỗ trợ enum trạng thái khác nhau khi đọc đơn; kiểm luồng web tuần 6 trên Nest và SQL.
 
-**Phần Driver của TV4 (Trần Đại Quang, TV5, làm thay; tài khoản GitHub `AkaLissandra` là của Quang)**
+**TV4 (`AkaLissandra`, Trần Đại Quang)**
 - 24/10: dashboard Driver, gửi GPS qua API.
 - 01/11: bắt buộc timeout request khi làm mới token.
 - 02/11: kiểm thử trên trình duyệt với bản `develop` đã tích hợp, kèm bằng chứng và tài liệu bàn giao GPS.
