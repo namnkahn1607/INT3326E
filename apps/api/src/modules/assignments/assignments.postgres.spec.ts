@@ -128,6 +128,18 @@ for (const mode of ['pglite', 'pglite-enums', 'postgres'] as const) {
     const get = (path: string, actor: Actor = 'admin') => fetch(base + path, { headers: headers(actor) });
     const assign = (s: string, driverId = id(3), actor: Actor = 'admin', body: unknown = { driverId }, suffix = '') =>
       fetch(`${base}/shipments/${s}/assign${suffix}`, { method: 'POST', headers: headers(actor), body: JSON.stringify(body) });
+    const pickup = (s: string, actor: Actor = 'driver1', body?: unknown, suffix = '') =>
+      fetch(`${base}/shipments/${s}/pickup${suffix}`, {
+        method: 'POST',
+        headers: body === undefined ? { Authorization: `Bearer ${actor}` } : headers(actor),
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      });
+    const deliver = (s: string, actor: Actor = 'driver1', body?: unknown, suffix = '') =>
+      fetch(`${base}/shipments/${s}/deliver${suffix}`, {
+        method: 'POST',
+        headers: body === undefined ? { Authorization: `Bearer ${actor}` } : headers(actor),
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      });
     const create = async (actor: 'customer' | 'other' = 'customer', extra: object = {}) => {
       const response = await fetch(`${base}/shipments`, { method: 'POST',
         headers: { ...headers(actor), 'Idempotency-Key': randomUUID() }, body: JSON.stringify({ ...payload, ...extra }) });
@@ -302,19 +314,200 @@ for (const mode of ['pglite', 'pglite-enums', 'postgres'] as const) {
       const s = await create();
       expect((await get('/shipments/not-an-id')).status).toBe(400);
       expect((await assign('not-an-id')).status).toBe(400);
+      expect((await pickup('not-an-id')).status).toBe(400);
+      expect((await deliver('not-an-id')).status).toBe(400);
       expect((await get(`/shipments/${s.id}?role=ADMIN`)).status).toBe(400);
       expect((await assign(s.id, id(3), 'admin', { driverId: id(3) }, '?retry=1')).status).toBe(400);
-      expect((await fetch(`${base}/shipments/${s.id}/pickup`, { method: 'POST', headers: headers('driver1') })).status).toBe(404);
+      expect((await pickup(s.id, 'driver1', undefined, '?retry=1')).status).toBe(400);
+      expect((await deliver(s.id, 'driver1', undefined, '?retry=1')).status).toBe(400);
+      expect((await fetch(`${base}/shipments/${s.id}/fail`, { method: 'POST', headers: headers('admin') })).status).toBe(404);
     });
 
-    it('frontend hiện có đọc được response thật của API danh sách, chi tiết và phân công', async () => {
-      const { getShipments, getShipmentById, assignShipment } = await import(resolve(process.cwd(), '../web/src/api/endpoints/shipments.ts'));
+    it('TC03.1 & TC06.1: lấy hàng và giao hàng thành công ghi đúng lịch sử, thông báo cùng giao dịch', async () => {
+      const s = await create();
+      await assign(s.id, id(3), 'admin');
+      await assign(s.id, id(4), 'admin2');
+
+      const pickedResponse = await pickup(s.id, 'driver2');
+      expect(pickedResponse.status).toBe(200);
+      expect(pickedResponse.headers.get('cache-control')).toBe('no-store');
+      const pickedBody = await pickedResponse.json();
+      expect(pickedBody).toMatchObject({
+        ...s, driverId: id(4), status: 'PICKED_UP', proofOfDeliveryNotes: null, updatedAt: expect.any(String),
+      });
+      expect(Object.keys(pickedBody).sort()).toEqual(Object.keys(s).sort());
+
+      const deliveredResponse = await deliver(s.id, 'driver2', { proofOfDeliveryNotes: '  Đã giao cho lễ tân 🚚  ' });
+      expect(deliveredResponse.status).toBe(200);
+      expect(deliveredResponse.headers.get('cache-control')).toBe('no-store');
+      const deliveredBody = await deliveredResponse.json();
+      expect(deliveredBody).toMatchObject({
+        ...s, driverId: id(4), status: 'DELIVERED', proofOfDeliveryNotes: 'Đã giao cho lễ tân 🚚', updatedAt: expect.any(String),
+      });
+      expect(Object.keys(deliveredBody).sort()).toEqual(Object.keys(s).sort());
+
+      const detail = await (await get(`/shipments/${s.id}`, 'customer')).json();
+      expect(detail.status).toBe('DELIVERED');
+      expect(detail.proofOfDeliveryNotes).toBe('Đã giao cho lễ tân 🚚');
+      expect(detail.statusHistory.map((e: { action: string }) => e.action)).toEqual([
+        'CREATED', 'ASSIGNED', 'REASSIGNED', 'PICKED_UP', 'DELIVERED',
+      ]);
+      expect(detail.statusHistory[3]).toMatchObject({
+        shipmentId: s.id, action: 'PICKED_UP', fromStatus: 'ASSIGNED', toStatus: 'PICKED_UP',
+        actorUserId: id(4), actorRole: 'DRIVER', previousDriverId: id(4), newDriverId: id(4), reason: null,
+        occurredAt: pickedBody.updatedAt,
+      });
+      expect(detail.statusHistory[4]).toMatchObject({
+        shipmentId: s.id, action: 'DELIVERED', fromStatus: 'PICKED_UP', toStatus: 'DELIVERED',
+        actorUserId: id(4), actorRole: 'DRIVER', previousDriverId: id(4), newDriverId: id(4), reason: null,
+        occurredAt: deliveredBody.updatedAt,
+      });
+      expect(await effects()).toEqual({ events: 4, notifications: 4 });
+      const notifRows = (await query<{ kind: string; body: string }>(
+        `SELECT kind, body FROM notifications WHERE kind IN ('PICKED_UP','DELIVERED') ORDER BY "createdAt", id`)).rows;
+      expect(notifRows.map(r => r.kind)).toEqual(['PICKED_UP', 'DELIVERED']);
+      for (const row of notifRows) expect(row.body).not.toContain(payload.recipientPhone);
+    });
+
+    it('TC03.2: gọi lặp pickup và deliver là no-op, giữ nguyên ghi chú và thời gian đầu tiên', async () => {
+      const s = await create();
+      await assign(s.id);
+      const firstPickup = await (await pickup(s.id, 'driver1', {})).json();
+      const secondPickup = await pickup(s.id, 'driver1');
+      expect(secondPickup.status).toBe(200);
+      expect(await secondPickup.json()).toEqual(firstPickup);
+      expect(await effects()).toEqual({ events: 2, notifications: 2 });
+
+      const firstDeliver = await (await deliver(s.id, 'driver1', { proofOfDeliveryNotes: 'Ghi chú gốc' })).json();
+      const secondDeliver = await deliver(s.id, 'driver1', { proofOfDeliveryNotes: 'Ghi chú mới không được ghi đè' });
+      expect(secondDeliver.status).toBe(200);
+      expect(await secondDeliver.json()).toEqual(firstDeliver);
+      expect(await effects()).toEqual({ events: 3, notifications: 3 });
+
+      const emptyDeliver = await create();
+      await assign(emptyDeliver.id);
+      await pickup(emptyDeliver.id);
+      const deliveredWithoutNotes = await (await deliver(emptyDeliver.id, 'driver1', { proofOfDeliveryNotes: '   ' })).json();
+      expect(deliveredWithoutNotes.proofOfDeliveryNotes).toBeNull();
+    });
+
+    it('TC03.3: chặn sai xác thực, sai role, tài xế khác, đơn không tồn tại và sai bước chuyển trạng thái', async () => {
+      const s = await create();
+      for (const path of [`/shipments/${s.id}/pickup`, `/shipments/${s.id}/deliver`]) {
+        expect((await fetch(base + path, { method: 'POST' })).status).toBe(401);
+      }
+      for (const actor of ['customer', 'admin'] as const) {
+        expect((await pickup(s.id, actor)).status).toBe(403);
+        expect((await deliver(s.id, actor)).status).toBe(403);
+      }
+      expect((await pickup(shipmentId(999), 'driver1')).status).toBe(404);
+      expect((await deliver(shipmentId(999), 'driver1')).status).toBe(404);
+      // Đơn CREATED chưa có tài xế: tài xế gọi vào nhận 403 trước khi xét trạng thái.
+      expect((await pickup(s.id, 'driver1')).status).toBe(403);
+      expect((await deliver(s.id, 'driver1')).status).toBe(403);
+
+      await assign(s.id, id(3));
+      expect((await pickup(s.id, 'driver2')).status).toBe(403);
+      expect((await deliver(s.id, 'driver2')).status).toBe(403);
+      // Đơn đang ASSIGNED nhưng tài xế hiện hành bấm deliver ngay -> 409 INVALID_STATE_TRANSITION.
+      const earlyDeliver = await deliver(s.id, 'driver1');
+      expect(earlyDeliver.status).toBe(409);
+      expect((await earlyDeliver.json()).code).toBe('INVALID_STATE_TRANSITION');
+
+      await pickup(s.id, 'driver1');
+      // Tài xế khác gọi vào đơn đã PICKED_UP vẫn nhận 403, không nhận 200 No-op.
+      expect((await pickup(s.id, 'driver2')).status).toBe(403);
+      expect((await deliver(s.id, 'driver2')).status).toBe(403);
+
+      await deliver(s.id, 'driver1');
+      // Sau khi DELIVERED, tài xế hiện hành gọi lại pickup -> 409; tài xế khác gọi deliver -> 403.
+      expect((await pickup(s.id, 'driver1')).status).toBe(409);
+      expect((await deliver(s.id, 'driver2')).status).toBe(403);
+    });
+
+    it.each([
+      ['pickup', { extra: 1 }],
+      ['pickup', []],
+      ['pickup', 'text'],
+      ['deliver', []],
+      ['deliver', { unknown: 'x' }],
+      ['deliver', { proofOfDeliveryNotes: 123 }],
+      ['deliver', { proofOfDeliveryNotes: '🚚'.repeat(256) }],
+    ] as const)('từ chối body không hợp lệ cho %s: %j', async (action, badBody) => {
+      const s = await create();
+      await assign(s.id);
+      const response = action === 'pickup' ? await pickup(s.id, 'driver1', badBody) : await deliver(s.id, 'driver1', badBody);
+      expect(response.status).toBe(400);
+      expect(await effects()).toEqual({ events: 1, notifications: 1 });
+    });
+
+    it.each(['INSERT INTO shipment_status_events', 'INSERT INTO notifications', 'UPDATE shipments'])(
+      'hoàn tác pickup và deliver khi %s lỗi, không lộ SQL và cho phép thử lại', async stage => {
+        const s = await create();
+        await assign(s.id);
+        failWrite = stage;
+        const failedPickup = await pickup(s.id);
+        expect(failedPickup.status).toBe(503);
+        expect(JSON.stringify(await failedPickup.json())).not.toMatch(/credentials|INSERT|UPDATE|SELECT/);
+        expect((await query('SELECT status FROM shipments WHERE id=$1', [s.id])).rows[0]).toEqual({ status: 'ASSIGNED' });
+        expect(await effects()).toEqual({ events: 1, notifications: 1 });
+
+        failWrite = null;
+        expect((await pickup(s.id)).status).toBe(200);
+        failWrite = stage;
+        const failedDeliver = await deliver(s.id, 'driver1', { proofOfDeliveryNotes: 'Ghi chú' });
+        expect(failedDeliver.status).toBe(503);
+        expect((await query('SELECT status, "proofOfDeliveryNotes" FROM shipments WHERE id=$1', [s.id])).rows[0])
+          .toEqual({ status: 'PICKED_UP', proofOfDeliveryNotes: null });
+        expect(await effects()).toEqual({ events: 2, notifications: 2 });
+
+        failWrite = null;
+        expect((await deliver(s.id, 'driver1', { proofOfDeliveryNotes: 'Ghi chú' })).status).toBe(200);
+      });
+
+    it('TC02.5: cạnh tranh giữa phân công lại và lấy hàng tuân thủ khóa dòng', async () => {
+      const s1 = await create();
+      await assign(s1.id, id(3));
+      let reached1!: () => void; let release1!: () => void;
+      const arrived1 = new Promise<void>(r => { reached1 = r; });
+      blockWrite = { reached: reached1, gate: new Promise<void>(r => { release1 = r; }) };
+      const firstPickup = pickup(s1.id, 'driver1');
+      await arrived1;
+      const secondAssign = assign(s1.id, id(4), 'admin2');
+      release1();
+      const [r1, r2] = await Promise.all([firstPickup, secondAssign]);
+      expect([r1.status, r2.status]).toEqual([200, 409]);
+      expect((await (await get(`/shipments/${s1.id}`)).json())).toMatchObject({ status: 'PICKED_UP', driverId: id(3) });
+
+      const s2 = await create();
+      await assign(s2.id, id(3));
+      let reached2!: () => void; let release2!: () => void;
+      const arrived2 = new Promise<void>(r => { reached2 = r; });
+      blockWrite = { reached: reached2, gate: new Promise<void>(r => { release2 = r; }) };
+      const firstAssign = assign(s2.id, id(4), 'admin2');
+      await arrived2;
+      const secondPickup = pickup(s2.id, 'driver1');
+      release2();
+      const [r3, r4] = await Promise.all([firstAssign, secondPickup]);
+      expect([r3.status, r4.status]).toEqual([200, 403]);
+      expect((await (await get(`/shipments/${s2.id}`)).json())).toMatchObject({ status: 'ASSIGNED', driverId: id(4) });
+    });
+
+    it('frontend hiện có đọc được response thật của API danh sách, chi tiết, phân công, nhận và giao hàng', async () => {
+      const {
+        getShipments, getShipmentById, assignShipment, pickupShipment, deliverShipment,
+      } = await import(resolve(process.cwd(), '../web/src/api/endpoints/shipments.ts'));
       const { setTokenReader } = await import(resolve(process.cwd(), '../web/src/features/auth/session.ts'));
-      const s = await create(); vi.stubEnv('VITE_API_URL', base); setTokenReader(async () => 'admin');
+      const s = await create(); vi.stubEnv('VITE_API_URL', base);
       try {
+        setTokenReader(async () => 'admin');
         expect((await getShipments()).data[0].id).toBe(s.id);
         expect((await assignShipment(s.id, id(3))).status).toBe('ASSIGNED');
-        expect((await getShipmentById(s.id)).statusHistory).toHaveLength(2);
+        setTokenReader(async () => 'driver1');
+        expect((await pickupShipment(s.id)).status).toBe('PICKED_UP');
+        expect((await deliverShipment(s.id, '  Giao tận tay  ')).proofOfDeliveryNotes).toBe('Giao tận tay');
+        setTokenReader(async () => 'customer');
+        expect((await getShipmentById(s.id)).statusHistory).toHaveLength(4);
       } finally { setTokenReader(null); vi.unstubAllEnvs(); }
     });
 

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink } from 'react-router'
+import type { ReactNode } from 'react'
 import { SessionControls } from '../../features/auth/SessionControls'
 import { useAuth } from '../../features/auth/useAuth'
 import { Icon } from './Icon'
@@ -11,11 +12,12 @@ interface DashboardLink {
   end?: boolean
 }
 
-export function DashboardNavigation({ home, workspace, items, navClass }: {
+export function DashboardNavigation({ home, workspace, items, navClass, accountActions }: {
   home: string
   workspace: string
   items: DashboardLink[]
   navClass?: string
+  accountActions?: ReactNode
 }) {
   const { user } = useAuth()
   const drawer = useRef<HTMLDialogElement>(null)
@@ -66,6 +68,7 @@ export function DashboardNavigation({ home, workspace, items, navClass }: {
     <div className="dashboard-account">
       <div className="dashboard-account-label"><span className="dashboard-account-avatar" aria-hidden="true">{(user?.displayName ?? 'PF').slice(0, 2).toUpperCase()}</span>
         <div><strong>{user?.displayName ?? 'Tài khoản'}</strong><span>{workspace}</span></div></div>
+      {accountActions && <div className="dashboard-account-actions">{accountActions}</div>}
       <SessionControls />
     </div>
   </>
@@ -77,6 +80,7 @@ export function DashboardNavigation({ home, workspace, items, navClass }: {
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
       </button>{collapsed && <button ref={reopenButton} type="button" className="dashboard-reopen dashboard-icon-button" aria-label="Mở thanh bên"
         title="Mở thanh bên" aria-controls="dashboard-sidebar" aria-expanded={false} onClick={toggleSidebar}><Icon name="sidebar" /></button>}
+      {collapsed && accountActions && <div className="dashboard-toolbar-actions">{accountActions}</div>}
     </header>
     <dialog id="dashboard-drawer" ref={drawer} className="dashboard-drawer" aria-label={'Điều hướng ' + workspace.toLowerCase()}
       onCancel={event => { event.preventDefault(); close() }} onClose={() => setOpen(false)}

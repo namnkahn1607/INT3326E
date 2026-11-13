@@ -30,6 +30,7 @@ const AdminLiveMapPage = lazy(() => import('./features/admin/AdminLiveMapPage').
 
 // Feature Driver
 import { DriverPlaceholderPage } from './features/driver'
+import { DriverShipmentDetailPage } from './features/driver/DriverShipmentDetailPage'
 
 export default function App() {
   return (
@@ -63,6 +64,7 @@ export default function App() {
       {/* Khung tối thiểu Cổng Tài xế (Driver) - Thành viên 4 phụ trách */}
       <Route path="/driver" element={<ProtectedRoute role="DRIVER"><DriverLayout /></ProtectedRoute>}>
         <Route index element={<DriverPlaceholderPage />} />
+        <Route path="shipments/:id" element={<DriverShipmentDetailPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
 

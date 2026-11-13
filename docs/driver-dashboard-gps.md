@@ -10,7 +10,7 @@ Trạng thái ngày 02/11/2026: phần Driver đạt kiểm chứng local sau t�
 `develop` tại `75e9664`, gồm kiểm tra trình duyệt W607. Nghiệm thu cloud W605 còn mở và
 được bàn giao cho phần API/triển khai ở mục cuối.
 
-## Hành vi
+## Hành vi tại mốc tuần 6
 
 - Login/role gate và đăng xuất tái sử dụng phần Auth có sẵn. `/driver` chỉ dành
   cho DRIVER; danh tính hiển thị từ phiên, không dùng `demo-driver-1`.
@@ -227,3 +227,78 @@ Test HTTP local kiểm chứng quyền/mapping, publish-confirmed 202, lỗi 503
 `backend-contract-review.json` giữ nguyên như bằng chứng lịch sử của source cũ.
 W605 vẫn mở đến khi có lượt Driver → API → Pub/Sub Cloud thật.
 Xem [chi tiết tích hợp và kiểm thử](na-gps-merge.md).
+
+## TV4 tuần 7 — nguồn vị trí, 08/11/2026
+
+Tiếp tục trên `feature/driver-dashboard-gps`, đã fast-forward `origin/develop`
+tại `c0f8c8b`. Người dùng cho phép quy trình spec/review/code/test tương đương
+vì môi trường thiếu skill Spec Kit. [Spec](driver-gps-week7/spec.md),
+[plan](driver-gps-week7/plan.md), [checklist yêu cầu](driver-gps-week7/checklist.md)
+và [tasks](driver-gps-week7/tasks.md) truy vết phần TV4 trong sheet tuần 7.
+
+Hành vi hiện tại:
+
+- Chọn `Mô phỏng` (mặc định) hoặc `Vị trí trình duyệt`. Không lấy/gửi vị trí
+  khi mở trang hoặc chỉ đổi nguồn. Simulator di chuyển theo tuyến mẫu có nhãn.
+- Start: mỗi 8 giây tạo mẫu simulator hoặc gọi Geolocation; browser chỉ gửi khi
+  nhận được vị trí. `clientTimestamp` giữ thời điểm đo của thiết bị, chuẩn UTC ms.
+  Vị trí trình duyệt cần HTTPS/localhost và quyền định vị.
+- Lỗi quyền, không có vị trí, không hỗ trợ, dữ liệu không hợp lệ hoặc chờ quá
+  7 giây đều báo rõ rồi dừng. Không tự chuyển nguồn hoặc gửi lại; người dùng
+  xử lý quyền rồi Start lại, hoặc tự chọn simulator.
+- Stop để đổi nguồn; xóa preview nguồn cũ và tiếp tục seq. Callback định vị về
+  muộn sau Stop/rời trang/đổi phiên không gửi dữ liệu. HTTP đã gửi trước Stop
+  vẫn có thể hoàn tất. Adapter/Auth/202 và giới hạn một HTTP request giữ như cũ.
+
+| Kiểm chứng bản chưa commit trên base `c0f8c8b` | Kết quả | Mức bằng chứng |
+| --- | --- | --- |
+| Toàn bộ frontend | 462/462 test, 34 file, exit 0 | jsdom/mock, gồm 24 test mới so với baseline 438 |
+| `npm run lint:web` | Exit 0 | ESLint |
+| `npm run build:web` | Exit 0 | TypeScript + Vite |
+| Harness Microsoft Edge 157.0.4341.42 | 26/26 kịch bản, exit 0 | Browser local, Auth/API mock; Geolocation native với vị trí/quyền giả lập |
+| 320/390/1440 px, keyboard, hai nguồn và lỗi quyền | Đạt, không tràn ngang | Browser local, đã xem ảnh |
+| `git diff --check` | Exit 0 | Diff code/docs; không thay lockfile/dependency |
+
+Review/converge phát hiện interval cần dừng ngay khi định vị lỗi, trước effect
+cleanup: task W708 và test hồi quy đã bổ sung. Test từng tái hiện ba lần gọi thay
+vì một; bản sửa xóa interval ngay và bộ test ở trên đã đạt. Checklist yêu cầu
+được review riêng trước code; dấu đạt không phải bằng chứng implementation.
+
+[Báo cáo browser](evidence/driver-gps-week7/browser-review.json) lưu base SHA,
+trạng thái chưa commit, SHA-256 của source/harness đã test, 26 kịch bản và không
+có runtime error hoặc HTTP request ngoài origin thử. Ảnh:
+[màn 320 px](evidence/driver-gps-week7/layout-320.png),
+[vị trí trình duyệt](evidence/driver-gps-week7/browser-position.png),
+[từ chối quyền](evidence/driver-gps-week7/browser-permission-denied.png).
+Các tọa độ này do harness giả lập; không phải GPS thiết bị thật của người dùng.
+Harness có cảnh báo `MODULE_TYPELESS_PACKAGE_JSON` đã có từ shared GPS type,
+vẫn exit 0; không sửa cấu hình package ngoài phạm vi để che cảnh báo.
+
+Chạy lại từ gốc repo với Node >=22.12 và dependency đã cài:
+
+```powershell
+npm run test --workspace=@parcelflow/web
+npm run lint:web
+npm run build:web
+# Nếu Playwright không nằm trong node_modules của repo, đặt đường dẫn package có sẵn:
+$env:DRIVER_REVIEW_PLAYWRIGHT = 'C:\Users\_____\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\node_modules\playwright'
+node --experimental-strip-types apps/web/scripts/verify-driver-dashboard.mjs
+git diff --check
+```
+
+Nghiệm thu thật W707 còn mở. Checkout chỉ có `.env.example` cho web/API; chưa
+có phiên Driver thật và dữ liệu đối chiếu revision, Pub/Sub, Worker, Cloud SQL
+cho lượt này. TV5 cung cấp cấu hình web/API và revision; TV6 cấp tài khoản Driver
+có role/linkage; TV2/5 chuẩn bị kênh quan sát thử riêng rồi đối chiếu `eventId`
+từ Start → API → Pub/Sub → Worker → SQL. Kiểm tra Stop, quyền và rời trang trên
+bản triển khai đó. Không pull/ACK subscription nghiệp vụ để chụp bằng chứng.
+HTTP 202 và kiểm thử local không đóng checkpoint Cloud hoặc cả tuần 7 của nhóm.
+Chưa commit/push/deploy trong nhiệm vụ này.
+
+## Bổ sung danh sách đơn và nhận/giao — 08/11/2026
+
+Yêu cầu mới của người dùng cho phép triển khai phần frontend lifecycle TV4.
+Dashboard hiện tải danh sách đơn qua API, có lọc/cursor và link chi tiết Driver;
+chi tiết có xác nhận lấy/giao theo contract OpenAPI, không còn placeholder đơn.
+Xem [bàn giao nhận/giao](driver-shipments-handoff.md) để biết kết quả kiểm thử và
+các API backend còn chờ. Phần này không đóng GPS Cloud W707.

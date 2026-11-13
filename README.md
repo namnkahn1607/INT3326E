@@ -76,14 +76,23 @@ thử trực tiếp trên Cloud Console và phân biệt bằng chứng local v�
 
 ### Worker trên Cloud Run
 
-Worker có package/lockfile và Dockerfile riêng trong `apps/worker`. Từ gốc repo,
-build image với `docker build -t parcelflow-worker apps/worker`, hoặc deploy source:
+Worker có package/lockfile và Dockerfile riêng trong `apps/worker`. Helper ETA dùng
+chung từ `packages/types`, nên context build của API và Worker là gốc repo:
+
+```bash
+docker build -f apps/worker/Dockerfile -t parcelflow-worker .
+docker build -f apps/api/Dockerfile -t parcelflow-api .
+```
+
+Sau khi đẩy image Worker lên registry của project, đặt `WORKER_IMAGE` bằng URL
+image đó rồi cập nhật dịch vụ. Không dùng `--source=apps/worker` vì thư mục này
+không chứa package dùng chung.
 
 ```bash
 gcloud run deploy worker-service \
   --project=int3326e \
   --region=asia-southeast1 \
-  --source=apps/worker \
+  --image="$WORKER_IMAGE" \
   --port=8080 \
   --command="" \
   --args="" \
@@ -242,7 +251,7 @@ Design assumptions: at any moment there are **~300–500 active shipments**, and
 
 ## Week 1 API scaffold
 
-The API boots with Shipment, Auth and Admin modules and exposes public `GET /healthz`, Firebase profile endpoints, and Admin-only read endpoints `GET /v1/drivers` (API11) and `GET /v1/admin/customers`. The lists validate business identity and read PostgreSQL; deployment requires the matching schema. See [Admin directory](docs/tv6-admin-directory.md) and the draft [QA test plan](docs/qa-test-plan.md). Shipment Create, role-scoped List/Detail and ADMIN Assign/reassign are implemented locally; GPS ingest (`POST /v1/locations`) is integrated locally; see [Na GPS merge](docs/na-gps-merge.md) for validation and Cloud acceptance still pending. See [TV1 week 6](docs/tv1-assignment-week6.md) for behavior, SQL tests and Cloud acceptance. [Run and container instructions](docs/api-scaffold.md) preserve the week 1 setup; [contract decisions](docs/api-contract.md) and `docs/openapi.json` distinguish the implemented reads from future operations. Cancellation remains an unapproved proposal outside the five-state baseline. Week 1 deployment evidence is tracked in issue #9.
+The API boots with Shipment, Auth and Admin modules and exposes public `GET /healthz`, Firebase profile endpoints, and Admin-only read endpoints `GET /v1/drivers` (API11) and `GET /v1/admin/customers`. The lists validate business identity and read PostgreSQL; deployment requires the matching schema. See [Admin directory](docs/admin-directory.md) and the draft [QA test plan](docs/qa-test-plan.md). Shipment Create, role-scoped List/Detail and ADMIN Assign/reassign are implemented locally; GPS ingest (`POST /v1/locations`) is integrated locally; see [Na GPS merge](docs/na-gps-merge.md) for validation and Cloud acceptance still pending. See [TV1 week 6](docs/tv1-assignment-week6.md) for behavior, SQL tests and Cloud acceptance. [Run and container instructions](docs/api-scaffold.md) preserve the week 1 setup; [contract decisions](docs/api-contract.md) and `docs/openapi.json` distinguish the implemented reads from future operations. Cancellation remains an unapproved proposal outside the five-state baseline. Week 1 deployment evidence is tracked in issue #9.
 
 ## Frontend integration and Hosting
 
@@ -272,7 +281,7 @@ Firebase CLI must be authenticated with access to `int3326e`. `firebase.json`
 publishes `dist` and rewrites SPA routes to `index.html`, including direct access
 to `/admin`. Hosting: https://int3326e.web.app.
 
-See the [TV6 frontend handoff to TV5](docs/tv6-deploy-handoff.md) for production
+See the [bàn giao cấu hình frontend cho TV5](docs/frontend-config-handoff.md) for production
 environment variables, backend prerequisites and verification limits.
 
 Keep the API's standalone package and lockfile as documented in

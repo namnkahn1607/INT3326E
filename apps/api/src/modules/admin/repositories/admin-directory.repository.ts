@@ -1,8 +1,8 @@
 import { Inject, Injectable, ServiceUnavailableException } from '@nestjs/common';
 import type { Pool } from 'pg';
-import { UserRole } from '../auth/enums/user-role.enum';
-import { USER_DATABASE } from '../users/user-database.provider';
-import type { AdminListQuery } from './dto/admin-list-query';
+import { UserRole } from '../../auth/enums/user-role.enum';
+import { USER_DATABASE } from '../../users/user-database.provider';
+import type { AdminListQuery } from '../dto/admin-list-query';
 
 export interface DirectoryRow {
   id: string;

@@ -30,7 +30,7 @@ describe('Admin paged GPS map', () => {
     const missing = { ...driver('usr_01ARZ3NDEKTSV4RRFFQ69G5FAZ', 'Driver C'), activeShipmentCount: 0,
       currentLocation: null, lastLocationUpdatedAt: null, locationClientTimestamp: null, isLocationStale: null }
     api.drivers.mockResolvedValue(page([fresh, old, missing])); await mount()
-    expect(node.textContent).toContain('3 tài xế đã tải'); expect(node.querySelectorAll('[data-pin]')).toHaveLength(2)
+    expect(node.textContent).not.toContain('tài xế đã tải'); expect(node.querySelectorAll('[data-pin]')).toHaveLength(2)
     expect(node.textContent).not.toContain('Đang hoạt động'); expect(node.textContent).not.toContain('29V1')
     await act(async () => button('GPS cũ').click())
     expect(node.querySelectorAll('.driver-map-card')).toHaveLength(1)

@@ -27,7 +27,9 @@ describe.skipIf(!connectionString)('Admin directory PostgreSQL integration (mock
       throw new Error('Use a disposable loopback database named parcelflow_admin_test');
     }
     pool = new Pool({ connectionString, max: 1, connectionTimeoutMillis: 5000, statement_timeout: 5000 });
-    await pool.query(`CREATE SCHEMA "${schema}"; SET search_path TO "${schema}"`);
+    // Pool may open a new connection after an error, so set search_path on every connection.
+    pool.on('connect', (client) => { void client.query(`SET search_path TO "${schema}"`); });
+    await pool.query(`CREATE SCHEMA "${schema}"`);
     // Test fixture only: this does not replace TV1/TV2 migrations or initialize the application DB.
     await pool.query(`
       CREATE TABLE users (

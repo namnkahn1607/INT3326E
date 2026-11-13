@@ -27,6 +27,23 @@ or shared Cloud SQL database. TV1/TV6 must inspect the existing schema/data and 
 an in-place migration/provisioning plan before integration; TV5 coordinates rollout.
 See [Create quickstart](../../specs/002-create-shipment/quickstart.md).
 
+## GPS tables (DATA04/05)
+
+`sql/002-create-gps-locations.sql` creates `location_history` and
+`current_locations` with the camelCase columns the Worker writes and the API
+reads. Run it after `001-create-shipment.sql` (it references `users`). Like 001,
+it fails on existing table names instead of altering them.
+
+Worker check against a real database (skipped when the variable is unset):
+
+```sh
+WORKER_TEST_DATABASE_URL=postgres://postgres@127.0.0.1:5432/parcelflow_worker_test npm test
+```
+
+It applies 001 and 002 to a temporary schema, then checks first-write-wins,
+no rollback of `current_locations` to an older sample, history-only samples and
+transaction rollback.
+
 ## GPS branch integrated on 02/11/2026
 
 Na's Prisma draft now includes GPS history/current-location metadata and the
