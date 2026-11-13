@@ -8,7 +8,7 @@
 | Môi trường đã kiểm | Local, mock/HTTP và SQL qua PGlite |
 | Chưa kiểm | Cloud SQL, race đa kết nối (ADM12), smoke trên revision đã deploy |
 
-Contract API và điều kiện SQL nằm ở [Admin directory](../admin-directory.md). Kế hoạch ca kiểm thử ở [QA test plan](../qa-test-plan.md).
+Contract API và điều kiện SQL nằm ở [Admin directory](../features/admin-directory.md). Kế hoạch ca kiểm thử ở [QA test plan](../qa/test-plan.md).
 
 ## Kết quả kiểm tra
 

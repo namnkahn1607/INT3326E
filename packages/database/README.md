@@ -25,7 +25,7 @@ API tests apply this file only to a disposable schema in PostgreSQL WASM or an
 explicit loopback test DB. Never apply the fresh baseline directly to a populated
 or shared Cloud SQL database. TV1/TV6 must inspect the existing schema/data and own
 an in-place migration/provisioning plan before integration; TV5 coordinates rollout.
-See [Create quickstart](../../specs/002-create-shipment/quickstart.md).
+Quickstart cũ trong `specs/` chỉ có ở máy cá nhân (thư mục bị `.gitignore`), xem [Create Shipment](../../docs/features/create-shipment.md).
 
 ## GPS tables (DATA04/05)
 
@@ -51,4 +51,4 @@ first-write-wins key. Its snake_case mappings are not an approved replacement
 for the camelCase SQL baseline used by the running Shipment/Auth handlers.
 No migration or Prisma generation runs during this merge. Reconcile the actual
 GPS tables and grants before enabling the SQL Worker; see
-[merge handoff](../../docs/na-gps-merge.md).
+[merge handoff](../../docs/history/gps-branch-merge.md).

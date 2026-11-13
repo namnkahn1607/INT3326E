@@ -12,7 +12,7 @@ QA luồng end-to-end create → assign → pickup → deliver.
 
 | Mã | Bước | Đầu vào / phụ thuộc | Đầu ra | Tiêu chí | Tình trạng |
 | --- | --- | --- | --- | --- | --- |
-| W7-TV6-01 | Chuẩn bị tài khoản Customer, Admin, Driver đúng role và đơn test | Auth tuần 5, `set-role` | Fixture trong [qa-test-plan.md](../qa-test-plan.md); không đưa mật khẩu hay token vào Git | AC10 | Fixture mock đã có trong test; tài khoản thật trên Firebase chưa có |
+| W7-TV6-01 | Chuẩn bị tài khoản Customer, Admin, Driver đúng role và đơn test | Auth tuần 5, `set-role` | Fixture trong [qa-test-plan.md](../qa/test-plan.md); không đưa mật khẩu hay token vào Git | AC10 | Fixture mock đã có trong test; tài khoản thật trên Firebase chưa có |
 | W7-TV6-02a | Create: tạo đơn, kiểm shipment, history, notification trong SQL | W7-TV6-01 | Bảng kết quả TC01.x | AC01 | Đã chạy local (PASS), chưa chạy Cloud |
 | W7-TV6-02b | Assign và reassign trước pickup | W7-TV6-02a | Kết quả TC02.1–02.4 | AC02 | Đã chạy local (PASS), chưa chạy Cloud |
 | W7-TV6-02c | Pickup và deliver | API pickup/deliver của TV1 (có trên `develop` từ 08/11) | Kết quả TC03.1–03.4 | AC03 | Đã chạy local 11/11 (PASS), riêng TC03.4 chỉ chạy phần Deliver đồng thời vì chưa có Fail |
@@ -80,7 +80,7 @@ Môi trường: PostgreSQL thật trên máy (loopback, cụm tạm đã xóa sa
 | Smoke Cloud không đăng nhập (07/11/2026 03:25 UTC) | Không có token | Không có | không áp dụng | Không ghi gì | `GET /v1/auth/me`, `/v1/admin/me`, `/v1/drivers`, `/v1/admin/customers`, `/v1/shipments` và `POST /v1/shipments`, `/v1/shipments/:id/assign`, `/v1/locations` đều 401 `UNAUTHENTICATED` dạng `application/problem+json` | `GET /healthz/` 200; `GET /healthz` 404; `POST …/pickup` 404 (chưa có route); CORS cho `https://int3326e.web.app`, cho `Authorization` và `Idempotency-Key` | Cloud Run `backend-service`, chưa biết SHA | PASS (chỉ chứng minh route có mặt và chặn đúng khi thiếu token) |
 | Ca có đăng nhập trên Cloud | Tài khoản demo ba role |  |  |  |  | Chưa có tài khoản demo từ TV5 | Cloud | NOT RUN |
 
-Smoke Cloud chỉ gửi GET, OPTIONS và POST không token, không tạo hay sửa dữ liệu. URL lấy từ [frontend-config-handoff.md](../frontend-config-handoff.md). So với thăm dò 18/10 (revision `backend-service-00012-m54`, mọi route Auth 404), revision hiện tại đã có Auth, Admin, Shipments, Locations. Chưa xác nhận được SHA nguồn của revision.
+Smoke Cloud chỉ gửi GET, OPTIONS và POST không token, không tạo hay sửa dữ liệu. URL lấy từ [frontend-config-handoff.md](../features/frontend-config-handoff.md). So với thăm dò 18/10 (revision `backend-service-00012-m54`, mọi route Auth 404), revision hiện tại đã có Auth, Admin, Shipments, Locations. Chưa xác nhận được SHA nguồn của revision.
 
 Mã đơn và ID người dùng:
 - ID `usr_…01` đến `usr_…06` là ID fixture của bộ test assignments (`id(n)`, 26 ký tự số): 01 Customer chủ đơn, 02 Customer khác, 03 và 04 Driver, 05 và 06 Admin. Bộ test Create dùng ID ULID cố định `usr_01ARZ3NDEKTSV4RRFFQ69G5FAV` (Customer), `…FAW` (Driver), `…FAX` (Customer khác).
