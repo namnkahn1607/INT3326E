@@ -35,7 +35,7 @@ Commit tính theo tài khoản GitHub, ngày theo commit. Nhiều việc làm s�
 - 06/10–07/10: thiết kế lại UI Customer, dashboard Admin có bản đồ tài xế, gộp thư mục admin và dispatcher.
 - 10/10: sửa role Admin trên frontend, đồng bộ lockfile và cấu hình TypeScript, dọn `.gitignore`.
 
-**Phần Driver của TV4 (commit tài khoản `AkaLissandra` của Trần Đại Quang, ghi nhận cho Quang)**
+**Phần Driver của TV4 (Trần Đại Quang, TV5, làm thay; tài khoản GitHub `AkaLissandra` là của Quang)**
 - 08/10–09/10: component GPS emitter cho Driver (bản tuần đầu).
 - Bằng chứng Pub/Sub hello world (publish, pull, topic, subscription) nằm trong `docs/evidence/week-1/`.
 

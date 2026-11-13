@@ -30,7 +30,7 @@ Mục lục: [Điều phối theo tuần](README.md)
 **TV3 (`Dinh Tuan`)**
 - 12/11: hoàn thiện lịch sử đơn của Customer và khu làm việc của Admin, tài liệu bàn giao frontend tuần 7 và kết quả kiểm tích hợp.
 
-**Phần Driver của TV4 (commit tài khoản `AkaLissandra` của Trần Đại Quang, ghi nhận cho Quang)**
+**Phần Driver của TV4 (Trần Đại Quang, TV5, làm thay; tài khoản GitHub `AkaLissandra` là của Quang)**
 - 08/11: GPS từ trình duyệt và simulator có nhãn; danh sách đơn được gán, UI nhận hàng và giao hàng cho Driver.
 
 **TV5**

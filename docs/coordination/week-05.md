@@ -33,7 +33,7 @@ Mục lục: [Điều phối theo tuần](README.md)
 - 24/10: client cho danh bạ tài xế và API gán tài xế, có contract test; UI gán tài xế cho Admin.
 - 25/10: API tạo đơn có transaction, proxy geocoding VIETMAP có xác thực, rút gọn form tạo đơn, chặn response geocoding sai định dạng, xử lý hủy request.
 
-**Phần Driver của TV4 (commit tài khoản `AkaLissandra` của Trần Đại Quang, ghi nhận cho Quang)**
+**Phần Driver của TV4 (Trần Đại Quang, TV5, làm thay; tài khoản GitHub `AkaLissandra` là của Quang)**
 - 16/10: chuẩn hóa hợp đồng telemetry GPS, kiểm việc gửi qua Pub/Sub.
 - 21/10: chỉnh GPS emitter theo hợp đồng telemetry mới.
 

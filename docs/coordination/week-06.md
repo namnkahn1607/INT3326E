@@ -34,7 +34,7 @@ Mục lục: [Điều phối theo tuần](README.md)
 - 30/10: lịch sử vòng đời đơn và báo giao thất bại cho Admin; polling tracking, bản đồ tài xế có phân trang; thiết kế lại UI Customer và Admin (dark dashboard), nút chuyển sáng tối.
 - 02/11: hỗ trợ enum trạng thái khác nhau khi đọc đơn; kiểm luồng web tuần 6 trên Nest và SQL.
 
-**Phần Driver của TV4 (commit tài khoản `AkaLissandra` của Trần Đại Quang, ghi nhận cho Quang)**
+**Phần Driver của TV4 (Trần Đại Quang, TV5, làm thay; tài khoản GitHub `AkaLissandra` là của Quang)**
 - 24/10: dashboard Driver, gửi GPS qua API.
 - 01/11: bắt buộc timeout request khi làm mới token.
 - 02/11: kiểm thử trên trình duyệt với bản `develop` đã tích hợp, kèm bằng chứng và tài liệu bàn giao GPS.
