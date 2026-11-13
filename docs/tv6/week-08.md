@@ -29,7 +29,7 @@ Trạng thái sheet: FALSE. Checkpoint nhóm: Customer thấy vị trí tài x�
 
 Môi trường: PostgreSQL thật trên máy (loopback, cụm tạm đã xóa sau khi chạy), schema dựng từ `001-create-shipment.sql` và `002-create-gps-locations.sql`, source `develop` tại `bbdfe83`. Message đi đúng đường Worker: JSON → `GpsSubscriber` → `GpsProcessorService` → `GpsWriterRepository` → PostgreSQL. Không phải Cloud, không qua Pub/Sub thật.
 
-Test: `apps/worker/src/qa/week8-gps-duplicate-order.postgres.spec.ts`, chạy khi có `WORKER_TEST_DATABASE_URL`. Kết quả: 3/3 PASS. Chạy kèm test Worker có sẵn `gps-writer.postgres.spec.ts`: 5/5 PASS.
+Test: `apps/worker/src/qa/gps-duplicate-order.postgres.spec.ts`, chạy khi có `WORKER_TEST_DATABASE_URL`. Kết quả: 3/3 PASS. Chạy kèm test Worker có sẵn `gps-writer.postgres.spec.ts`: 5/5 PASS.
 
 Manifest gửi theo thứ tự (t0 = 2026-11-14T03:00:00.123Z, r là `receivedAt`):
 

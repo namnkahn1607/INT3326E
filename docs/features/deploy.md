@@ -41,7 +41,7 @@ Tên cũ `PUBSUB_TOPIC` và `PUBSUB_SUBSCRIPTION` không còn được đọc. K
 
 ### Health
 
-`/healthz` trên Cloud Run bị Google chặn và trả 404 của Google; kiểm bằng `/healthz/`. Health chỉ xác nhận tiến trình HTTP đang chạy, không chứng minh pipeline GPS hoạt động.
+`/healthz` trên Cloud Run bị Google chặn và trả 404 của Google; kiểm bằng `/health` (API và Worker đều có). Health chỉ xác nhận tiến trình HTTP đang chạy, không chứng minh pipeline GPS hoạt động.
 
 ## Cloud SQL
 

@@ -11,7 +11,7 @@ Monorepo npm workspaces:
 | `apps/worker` | GPS Worker: nhận Pub/Sub, ghi `location_history` và `current_locations` |
 | `apps/web` | React + Vite cho Customer, Admin, Driver; deploy Firebase Hosting |
 | `packages/types` | Kiểu và hợp đồng dùng chung (GPS, ETA) |
-| `packages/database` | SQL tạo bảng (`sql/001`, `sql/002`); Prisma chỉ là bản nháp |
+| `packages/database` | SQL tạo bảng (`sql/001`, `sql/002`) |
 | `infra/` | Pub/Sub, Firebase |
 
 Đặc tả gốc là PF SPEC 01 v1.4 (ngoài repo). Đọc [nguồn yêu cầu](docs/contracts/spec-baseline.md) để biết phiên bản và thứ tự ưu tiên.
@@ -34,7 +34,7 @@ Test trên PostgreSQL thật chỉ chạy khi có biến môi trường trỏ t�
 
 ## Ràng buộc cứng
 
-- Cột SQL dùng camelCase có ngoặc kép (`"driverId"`, `"clientTimestamp"`) theo DATA01–DATA07. Không theo tên snake_case của Prisma.
+- Cột SQL dùng camelCase có ngoặc kép (`"driverId"`, `"clientTimestamp"`) theo DATA01–DATA07.
 - Worker chỉ ACK message sau khi transaction commit. GPS: mẫu đầu tiên thắng theo (`driverId`, `clientTimestamp`), `current_locations` không lùi về mẫu cũ.
 - Mọi API (trừ health) qua `FirebaseAuthGuard` và `RolesGuard`; 3 role `CUSTOMER`, `DRIVER`, `ADMIN`.
 - Không commit `.env`, key, token hay mật khẩu. Biến mẫu nằm trong `.env.example`.

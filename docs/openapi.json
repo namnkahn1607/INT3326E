@@ -1262,6 +1262,57 @@
           }
         }
       }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "operationId": "getHealthAlias",
+        "summary": "Public API liveness check (alias của /healthz)",
+        "description": "Giống /healthz. Dùng đường dẫn này trên Cloud Run vì Google chặn /healthz trước khi tới ứng dụng.",
+        "servers": [
+          {
+            "url": "/"
+          }
+        ],
+        "security": [],
+        "x-implementation-status": "implemented",
+        "responses": {
+          "200": {
+            "description": "API process is running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "status",
+                    "service"
+                  ],
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ok"
+                      ]
+                    },
+                    "service": {
+                      "type": "string",
+                      "enum": [
+                        "api"
+                      ]
+                    }
+                  }
+                },
+                "example": {
+                  "status": "ok",
+                  "service": "api"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
