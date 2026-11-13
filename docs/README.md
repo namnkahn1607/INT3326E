@@ -19,6 +19,7 @@ tại một thời điểm, không thay thế đặc tả hoặc nghiệm thu m�
 | [Tracking Customer/Admin](live-tracking.md) | Polling, GPS mới/cũ/thiếu và bản đồ tài xế theo trang |
 | [Tạo đơn](create-shipment.md) | Phạm vi API01, chống trùng và transaction |
 | [Admin directory](admin-directory.md) | Danh sách tài xế/khách hàng và điều kiện SQL |
+| [Điều phối nhóm theo tuần](coordination/README.md) | Việc của 6 thành viên, thứ tự, hạn và PR chốt từng tuần |
 | [Chia việc tuần 4–13](tv6/week-task-breakdown.md) | Đầu việc W<tuần>-TV<người>-<số>, phụ thuộc và tiêu chí |
 
 ## Chạy, kiểm tra và bàn giao
