@@ -83,4 +83,49 @@ describe('Shipment tracking UI using server snapshots', () => {
     expect(signal.aborted).toBe(true)
     expect(node.querySelector('[data-testid="map"]')).toBeNull()
   })
+  it('keeps the same map and delivery pins during initial loading, a failed poll and recovery', async () => {
+    let finish!: (value: ReturnType<typeof trackingFixture>) => void
+    api.load.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+      .mockRejectedValueOnce(new ApiError(503, 'SERVICE_UNAVAILABLE')).mockResolvedValue(trackingFixture())
+    const points = trackingFixture()
+    await act(async () => root.render(<ShipmentTracking id={points.shipmentId} status="PICKED_UP"
+      pickupLocation={points.pickupLocation} dropoffLocation={points.dropoffLocation} />))
+    const map = node.querySelector('[data-testid="map"]')
+    expect(map).not.toBeNull()
+    expect(map!.querySelectorAll('[data-pin]')).toHaveLength(2)
+    await act(async () => finish(points))
+    expect(node.querySelector('[data-testid="map"]')).toBe(map)
+    expect(map!.querySelectorAll('[data-pin]')).toHaveLength(3)
+    await act(async () => vi.advanceTimersByTimeAsync(5000))
+    expect(node.querySelector('[data-testid="map"]')).toBe(map)
+    expect(map!.querySelectorAll('[data-pin]')).toHaveLength(2)
+    expect(node.querySelector('[role="alert"]')?.textContent).toContain('Chưa tải được vị trí')
+    await act(async () => vi.advanceTimersByTimeAsync(5000))
+    expect(node.querySelector('[data-testid="map"]')).toBe(map)
+    expect(map!.querySelectorAll('[data-pin]')).toHaveLength(3)
+  })
+  it('keeps the map but removes the driver during manual refresh', async () => {
+    let finish!: (value: ReturnType<typeof trackingFixture>) => void
+    const points = trackingFixture()
+    api.load.mockResolvedValueOnce(points).mockImplementation(() => new Promise(resolve => { finish = resolve }))
+    await act(async () => root.render(<Panel id={points.shipmentId}
+      pickupLocation={points.pickupLocation} dropoffLocation={points.dropoffLocation} />))
+    const map = node.querySelector('[data-testid="map"]')
+    await act(async () => node.querySelector<HTMLButtonElement>('button')!.click())
+    expect(node.querySelector('[data-testid="map"]')).toBe(map)
+    expect(map!.querySelectorAll('[data-pin]')).toHaveLength(2)
+    expect(node.querySelector<HTMLButtonElement>('button')!.disabled).toBe(true)
+    await act(async () => finish(points))
+    expect(map!.querySelectorAll('[data-pin]')).toHaveLength(3)
+  })
+  it.each([401, 403, 404, 409, 0])('hides even the delivery map after a permanent tracking error (%s)', async status => {
+    const points = trackingFixture()
+    api.load.mockResolvedValueOnce(points).mockRejectedValue(new ApiError(status,
+      status === 0 ? 'INVALID_RESPONSE' : status === 409 ? 'USER_NOT_PROVISIONED' : 'HTTP_ERROR'))
+    await act(async () => root.render(<Panel id={points.shipmentId}
+      pickupLocation={points.pickupLocation} dropoffLocation={points.dropoffLocation} />))
+    await act(async () => vi.advanceTimersByTimeAsync(20_000))
+    expect(node.querySelector('[data-testid="map"]')).toBeNull()
+    expect(api.load).toHaveBeenCalledTimes(2)
+  })
 })
