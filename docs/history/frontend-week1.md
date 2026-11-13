@@ -1,11 +1,11 @@
 # Kết quả tái nghiệm thu tuần 1 — TV3 và phối hợp frontend
 
-> B?o c?o l?ch s? theo ng?y v? source ghi b?n d??i. K?t qu? mock/local kh?ng x?c nh?n revision Cloud hi?n t?i; c?c script browser ri?ng kh?ng ???c ph?t h?nh c?ng t?i li?u.
+> Báo cáo lịch sử theo ngày và source ghi bên dưới. Kết quả mock/local không xác nhận revision Cloud hiện tại; các script browser riêng không được phát hành cùng tài liệu.
 
 **Ngày kiểm tra**: 2026-10-18, Asia/Saigon.
 **Nguồn yêu cầu**: [PF SPEC 01, nội dung v1.3 ngày 11/10/2026](https://docs.google.com/document/d/1S9gY8a08d8-9Rd4bhTOeT_IAJUrYtFnZtDKjKKEpuq8/edit),
 đặc biệt VII.2; [chỉ dẫn nguồn](../contracts/spec-baseline.md).
-**Scope**: Công việc TV3 tuần 1, emitter mẫu phối hợp TV4 và đối chiếu checkpoint chung chỉ đọc.
+**Phạm vi**: Công việc TV3 tuần 1, emitter mẫu phối hợp TV4 và đối chiếu checkpoint chung chỉ đọc.
 
 ## 1. Kết luận
 
@@ -25,7 +25,7 @@ Không kết luận toàn bộ sản phẩm đã hoàn thành hoặc nghiệp v�
 | --- | --- |
 | Workspace được test | `feature/frontend`, HEAD `360a24bdfbaa7286cd49f6f7736b7c90daef29ef` |
 | Trạng thái khi bắt đầu | Git sạch, không staged/unstaged changes |
-| Runtime kiểm tra | Node 24.21.0; TS 6.0.3 root/FE, TS 5.7.3 API |
+| Runtime kiểm tra | Node 24.21.0; TS 6.0.3 gốc repo/FE, TS 5.7.3 API |
 | Source S4 của đặc tả/checkpoint | `da5e7cd`, khác local; không tự chuyển nhánh/merge |
 | Remote-tracking develop đã có trong máy | `d38c598`, local develop cũ hơn 14 commit; đây không phải live fetch lần này |
 | Hosting | `https://int3326e.web.app` |
@@ -39,7 +39,7 @@ Không sửa Google Doc, repo remote hoặc resource cloud trong lượt nghiệ
 
 ## 3. Ma trận yêu cầu audit
 
-| Mã | Nguồn | Actual/evidence | Kết luận |
+| Mã | Nguồn | Thực tế/bằng chứng | Kết luận |
 | --- | --- | --- | --- |
 | FR-001 | PF SPEC 01 I/VII.2 | Source/version/ưu tiên được ghi ở docs/contracts/spec-baseline.md; không dùng báo cáo AI làm yêu cầu | PASS |
 | FR-002 | VII.2, VI.UI01–03 | Một `apps/web`, App.tsx có ba cổng; context/shared/Prisma giữ ba role, Admin gồm điều phối | PASS |
@@ -56,16 +56,16 @@ SC-005 có danh sách phụ thuộc nhưng chưa thực thi tuần 2.
 
 ## 4. Kiểm tra đã thực thi lại ngày 18/10
 
-| Lệnh / phép thử | Actual | Kết quả |
+| Lệnh / phép thử | Thực tế | Kết quả |
 | --- | --- | --- |
-| Root `npm run lint:web` | ESLint hoàn tất không lỗi | PASS |
-| Root `npm run build:web` | TypeScript + Vite 8.3.2, 158 modules; JS 467.66 kB, CSS 61.28 kB | PASS |
-| Root `npm run typecheck` | Worker/config và production build config typecheck | PASS |
-| Root `npm run build` | Nest build Worker | PASS |
-| Root `npm test` | Worker 1 test/1 file | PASS |
-| Root `npm run test:e2e` | Worker 1 test/1 file | PASS |
+| Gốc repo `npm run lint:web` | ESLint hoàn tất không lỗi | PASS |
+| Gốc repo `npm run build:web` | TypeScript + Vite 8.3.2, 158 module; JS 467.66 kB, CSS 61.28 kB | PASS |
+| Gốc repo `npm run typecheck` | Worker/config và production build config typecheck | PASS |
+| Gốc repo `npm run build` | Nest build Worker | PASS |
+| Gốc repo `npm test` | Worker 1 test/1 file | PASS |
+| Gốc repo `npm run test:e2e` | Worker 1 test/1 file | PASS |
 | `apps/api`: `npm run typecheck` | Source + test typecheck với compiler package | PASS |
-| `apps/api`: `npm test` | 63 tests/8 files, test Auth dùng mock | PASS |
+| `apps/api`: `npm test` | 63 test/8 file, test Auth dùng mock | PASS |
 | `apps/api`: `npm run build` | TypeScript build riêng API | PASS |
 | `node specs/week1-reacceptance/verify-browser.mjs` | HTTP/hash/browser/emitter matrix bên dưới | PASS sau sửa mô phỏng focus/Enter của test harness |
 
@@ -73,7 +73,7 @@ Tổng regression API/Worker: **65 test đạt**. Không chạy lại clean inst
 cài sạch đã được ghi ở #10; source không đổi dependency/lockfile. Lệnh tái hiện theo
 [quickstart.md](../features/frontend-guide.md), không giả là mọi phiên bản trên develop mới đều đã được test.
 
-### Browser/Hosting
+### Trình duyệt/Hosting
 
 - GET `/customer`, `/admin`, `/driver`, `/customer/create`, `/admin/assignment`,
   `/admin/accounts`, `/admin/live-map`: HTTP 200; index trùng local build.
@@ -86,7 +86,7 @@ cài sạch đã được ghi ở #10; source không đổi dependency/lockfile.
 - Kiểm tra bàn phím ban đầu của harness thiếu focus/text cho Enter; đã chỉnh harness,
   chạy lại toàn bộ matrix đạt. Không thay code ứng dụng để làm test qua.
 
-### Local liveness
+### Kiểm tra tiến trình trên máy
 
 | URL | HTTP/body thực tế |
 | --- | --- |
@@ -144,7 +144,7 @@ Lần audit không tự merge hoặc nghiệm thu implementation trên SHA mới
 | --- | --- | --- |
 | Reuse Auth/route/API client đã có trên develop | TV3 + TV6/TV4 | SHA tích hợp mới, kiểm chứng lại tests, Firebase config và demo account/claim/linkage; không tự cấp role |
 | API01/02/03 + SC01–03 | TV1 + TV3 | Handler/cloud URL thực, `trackingNumber/customerId/dropoff*`, ULID, envelope/pagination và mapper |
-| Create/retry | TV1 + TV3 + TV6 | UUID v4 Idempotency-Key, cùng ý định giữ key, lỗi 400/409/503, snapshot replay 201, loading/error/tracking number; TC01.1/01.4/01.6 |
+| Tạo đơn/thử lại | TV1 + TV3 + TV6 | UUID v4 Idempotency-Key, cùng ý định giữ key, lỗi 400/409/503, snapshot replay 201, loading/error/tracking number; TC01.1/01.4/01.6 |
 | Địa chỉ/tọa độ | TV3 + TV1 | API01 validation; nhập/chọn tọa độ đúng UI01, không provider geocoding mới; ghi nhận khác biệt issue #3/Constitution cũ nếu cần amendment riêng |
 | SQL/schema/seed | TV1 + TV5 + TV6 | Mapping/migration prefixed ULID và user linkage; seed/account thật ngoài repo; không chạy migration trong audit |
 | CORS/Hosting→API | TV5 + TV6 + TV3 | Cấu hình đã có cần kiểm chứng origin/header/method theo VI.15.1, Idempotency-Key preflight, không cho mock test thay bằng chứng cloud |

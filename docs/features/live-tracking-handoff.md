@@ -1,5 +1,7 @@
 # Bàn giao frontend tracking — tuần 5
 
+Ghi chú 14/11/2026: tài liệu này phản ánh trạng thái ngày 30/10. Từ đó Worker đã ghi SQL và API08 đã có; API09 (tracking) vẫn chưa có. Hiện trạng xem [danh sách tính năng](../features.md).
+
 Ngày kiểm tra: 30/10/2026. Code frontend đang local, chưa commit/push/deploy.
 Nguồn yêu cầu: [PF SPEC 01 v1.3](../contracts/spec-baseline.md), VII.6 và [tracking](live-tracking.md).
 Đã fetch origin; kiểm tra remote refs, đặc biệt develop `9ee7c10`, Driver `ca63f3a`,
@@ -19,23 +21,23 @@ Worker riêng `0d8ff4b`. Source ref không xác nhận revision đang chạy tr�
 | Kiểm tra | Bằng chứng và giới hạn |
 | --- | --- |
 | `npm run test --workspace=@parcelflow/web` | 435/435, 34 file; local/mock |
-| `npm run lint:web` | Exit0 |
-| `npm run build:web` | TypeScript/build exit0; main491.61kB, tracking panel5.73kB, map2.48kB; không cảnh báo >500kB |
-| Browser Edge local | 9 view Customer/Admin Detail và fleet ở390/768/1440; Leaflet thật, Auth/API mock riêng; 0 runtime exceptions |
+| `npm run lint:web` | Mã thoát 0 |
+| `npm run build:web` | TypeScript/build mã thoát 0; phần chính491.61kB, panel theo dõi5.73kB, bản đồ2.48kB; không cảnh báo >500kB |
+| Trình duyệt Edge local | 9 view Customer/Admin Detail và fleet ở390/768/1440; Leaflet thật, Auth/API mock riêng; 0 runtime exceptions |
 | Browser tình huống | GPS mới/cũ/thiếu/reassign,503/403, terminal dừng polling, pager giữ cursor, route cleanup, sáng/tối và reduced motion đạt |
-| Driver/client GPS | 43/43 trong GpsEmitter, DriverPlaceholderPage, locations tests; API được mock |
-| GPS contract/PubSub/health | 74/74: packages/types/src/gps.spec.ts, infra/pubsub/gps-smoke.spec.ts, Worker health; broker dùng SDK mock |
-| Admin directory | 31/31 tại API admin-directory.spec.ts; Nest HTTP local, Firebase/SQL mock |
+| Tài xế/client GPS | 43/43 trong GpsEmitter, DriverPlaceholderPage, locations tests; API được mock |
+| Hợp đồng GPS/PubSub/health | 74/74: packages/types/src/gps.spec.ts, infra/pubsub/gps-smoke.spec.ts, Worker health; broker dùng SDK mock |
+| Danh mục Admin | 31/31 tại API admin-directory.spec.ts; Nest HTTP local, Firebase/SQL mock |
 
 Tile là dịch vụ hiện có; kết quả không cam kết tốc độ/sẵn sàng tile bên ngoài.
 Không gọi GPS POST thật, không publish Pub/Sub/ghi DB hoặc đổi Cloud IAM.
 Các phép kiểm tra mock không chứng minh GPS đã lưu SQL hoặc Cloud end-to-end đạt.
 
-## Readiness backend và Driver
+## Mức sẵn sàng backend và Driver
 
 | Thành phần | Kết quả đối chiếu source |
 | --- | --- |
-| Driver Start/Stop | Có mẫu đầu sau8s, timer8s; Stop/unmount dừng mẫu mới. Payload đúng lat/lng/clientTimestamp/seq, không tự gửi driverId/role |
+| Tài xế bắt đầu/dừng | Có mẫu đầu sau8s, timer8s; Stop/unmount dừng mẫu mới. Payload đúng lat/lng/clientTimestamp/seq, không tự gửi driverId/role |
 | Tọa độ Driver | Mẫu cố định21.028511,105.804817; chưa chứng minh marker di chuyển hoặc geolocation thiết bị |
 | Driver gửi API | Client gọi authenticated POST `/v1/locations`, chờ202/accepted schema; một request đang chạy, timeout7s; pending thì bỏ mẫu |
 | API08/API09 | Không có handler thực thi trên các remote refs đã kiểm tra; location controller/module/service/repository và tracking DTO trống, AppModule chưa import LocationModule |

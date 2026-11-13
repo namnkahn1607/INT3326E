@@ -1,174 +1,102 @@
-# ParcelFlow - Directory Structure Guide
+# Kiến trúc ParcelFlow
 
-This document defines the directory layout and conventions for **ParcelFlow**. All team members should follow this standard to maintain consistency and enable smooth parallel development.
+Tài liệu này mô tả cấu trúc code đang có trên `develop` và quy ước khi thêm code mới. Trạng thái từng tính năng xem ở [docs/features.md](docs/features.md).
 
-## Repository Layout
+## Tổng thể
 
-To accommodate the **Frontend (React)**, **Backend API (NestJS)**, and **GPS Worker (Cloud Run Consumer)** sharing common contracts and schemas, the project is structured as a workspace:
+```mermaid
+flowchart TD
+    C["Customer (React)"] -- "REST, polling tracking" --> B
+    D["Driver (React)"] -- "REST" --> B
+    A["Admin (React)"] -- "REST" --> B
 
-```
-parcelflow/
-├── apps/
-│   ├── api/                      # Main NestJS REST API (Cloud Run)
-│   ├── worker/                   # Standalone GPS Pub/Sub consumer (Cloud Run)
-│   └── web/                      # React + Vite + TypeScript frontend
-│
-├── packages/                     # Shared packages across apps
-│   ├── database/                 # Prisma/TypeORM schema, migrations & seed scripts
-│   ├── types/                    # Shared DTOs, interfaces & event schemas
-│   └── config/                   # Shared ESLint, Prettier, TypeScript configs
-│
-├── infra/                        # Infrastructure and local development setup
-│   ├── docker-compose.yml        # Local PostgreSQL & Pub/Sub emulator
-│   └── pubsub/                   # Topic and subscription bootstrap scripts
-│
-├── .env.example
-├── README.md
-├── ARCHITECTURE.md
-└── package.json
+    B["API NestJS<br/>Cloud Run: backend-service"]
+    B -- "POST /v1/locations<br/>chỉ publish, trả 202" --> P["Pub/Sub: gps-events"]
+    B -- "Đơn, gán, trạng thái, thông báo" --> DB[("Cloud SQL<br/>PostgreSQL")]
+
+    P -- "pull: gps-events-sub" --> W["GPS Worker<br/>Cloud Run: worker-service"]
+    W -- "location_history + current_locations<br/>một transaction, ACK sau commit" --> DB
+    W -- "message lỗi" --> DLQ["Dead-letter subscription"]
 ```
 
----
+- **Đường ghi GPS tách khỏi DB:** API chỉ publish lên Pub/Sub và trả 202 sau khi broker xác nhận, không chờ ghi DB.
+- **Worker** ghi lịch sử và vị trí hiện tại trong cùng một transaction. Mẫu đầu tiên thắng theo (`"driverId"`, `"clientTimestamp"`); `current_locations` chỉ tiến, không lùi về mẫu cũ hơn.
+- **Đọc vị trí:** client polling API, API đọc `current_locations`.
+- Auth bằng Firebase; API nối Firebase UID với bảng `users` để lấy role và quyền.
 
-## 3. Backend Layout (`apps/api`)
-
-Follows a **Feature Module** pattern. Each feature module contains its own **Controller, Service, Repository, DTOs, and Entities**.
-
-```
-apps/api/src/
-├── main.ts                       # Application entry point (port, global pipes, Swagger)
-├── app.module.ts                 # Root module importing all feature modules
-│
-├── common/                       # Shared cross-cutting concerns
-│   ├── decorators/               # @CurrentUser(), @Roles()
-│   ├── filters/                  # HttpExceptionFilter, AllExceptionsFilter
-│   ├── guards/                   # FirebaseAuthGuard, RolesGuard
-│   ├── interceptors/             # TransformInterceptor, LoggingInterceptor
-│   └── pubsub/                   # PubSubPublisherService (Google Cloud Pub/Sub wrapper)
-│
-├── config/                       # Environment config & validation
-│   ├── app.config.ts
-│   └── env.validation.ts
-│
-└── modules/                      # Business Feature Modules
-    ├── auth/                     # Firebase Auth token verification & user context
-    │   ├── guards/
-    │   ├── auth.service.ts
-    │   └── auth.module.ts
-    │
-    ├── users/                    # User accounts & role management
-    │   ├── users.controller.ts
-    │   ├── users.service.ts
-    │   ├── users.repository.ts
-    │   ├── dto/
-    │   │   ├── create-user.dto.ts
-    │   │   └── user-response.dto.ts
-    │   ├── entities/
-    │   │   └── user.entity.ts
-    │   └── users.module.ts
-    │
-    ├── shipments/                # Core shipment lifecycle
-    │   ├── shipments.controller.ts
-    │   ├── shipments.service.ts
-    │   ├── shipments.repository.ts
-    │   ├── dto/
-    │   │   ├── create-shipment.dto.ts
-    │   │   ├── update-shipment-status.dto.ts
-    │   │   └── shipment-response.dto.ts
-    │   ├── entities/
-    │   │   └── shipment.entity.ts
-    │   └── shipments.module.ts
-    │
-    ├── admin/                    # Admin scaffold; dispatching permissions
-    │   ├── admin.module.ts
-    │   ├── controllers/admin.controller.ts
-    │   └── services/admin.service.ts
-    │
-    ├── assignments/              # Shipment assignment to drivers
-    │   ├── assignments.controller.ts
-    │   ├── assignments.service.ts
-    │   ├── assignments.repository.ts
-    │   ├── dto/
-    │   │   └── assign-driver.dto.ts
-    │   └── assignments.module.ts
-    │
-    ├── location/                 # GPS Write-path & Polling Read-path
-    │   ├── location.controller.ts  # Draft POST /v1/locations (publishes event), GET /v1/shipments/:id/tracking
-    │   ├── location.service.ts     # Pub/Sub publisher + location query coordination
-    │   ├── location.repository.ts  # Reads from current_location & location_history
-    │   ├── dto/
-    │   │   ├── ingest-location.dto.ts
-    │   │   └── tracking-response.dto.ts
-    │   └── location.module.ts
-    │
-    ├── eta/                      # ETA calculation service
-    │   ├── eta.controller.ts     # GET /shipments/:id/eta
-    │   ├── eta.service.ts        # Haversine distance & estimation logic
-    │   └── eta.module.ts
-    │
-    └── notifications/            # Customer notifications
-        ├── notifications.controller.ts
-        ├── notifications.service.ts
-        └── notifications.module.ts
-```
-
-### Module Component Responsibilities
-
-| Layer | Responsibility | What it Should NOT Do |
-|---|---|---|
-| **Controller** | Handle HTTP requests, route definitions, parameter validation (`ValidationPipe`), and status codes. | Do not execute business logic or write database queries directly. |
-| **Service** | Core business logic, orchestration across repositories, publishing domain events (Pub/Sub). | Do not manipulate raw HTTP request/response objects. |
-| **Repository** | Database queries, transactions, raw SQL queries for performance-critical paths. | Do not contain business workflow rules. |
-| **DTO (`dto/`)** | Request and response schema validation using `class-validator` / `class-transformer` or `Zod`. | Do not hold database-specific annotations. |
-| **Entity (`entities/`)**| Database schema mapping (Prisma model or TypeORM entity). | Do not expose raw entities directly to API responses (use response DTOs). |
-
----
-
-## 4. GPS Worker Layout (`apps/worker`)
-
-The GPS Worker is an independent service running on **Google Cloud Run**, pulling messages from the `gps-events` subscription.
+## Monorepo
 
 ```
-apps/worker/src/
-├── main.ts                       # Worker bootstrap script
-├── worker.module.ts              # NestJS worker module (or lightweight Node service)
-│
-├── consumer/
-│   ├── gps.subscriber.ts         # Pub/Sub subscriber listener & ACK/NACK handler
-│   └── gps-processor.service.ts  # Processing & idempotency logic
-│
-└── storage/
-    └── gps-writer.repository.ts  # Database upserts
+apps/
+  api/          NestJS API, Dockerfile và lockfile riêng
+  worker/       GPS Worker, Dockerfile và lockfile riêng
+  web/          React + Vite, deploy Firebase Hosting
+packages/
+  types/        kiểu dùng chung: hợp đồng GPS, hàm ETA
+  database/     SQL tạo bảng (sql/001, sql/002); prisma/ chỉ là bản nháp
+infra/
+  pubsub/       script tạo topic/subscription, smoke test, DLQ replay
+  firebase/     cấu hình Firebase
+docs/           tài liệu, xem docs/README.md
 ```
 
-## 5. Frontend Layout (`apps/web`)
-
-The React frontend uses Vite, Tailwind CSS, and Leaflet + OpenStreetMap.
+## API (`apps/api/src`)
 
 ```
-apps/web/src/
-├── main.tsx
-├── App.tsx
-├── api/                          # Axios / Fetch client with Firebase token interceptor
-│   ├── client.ts
-│   └── endpoints/
-│       ├── shipments.ts
-│       ├── tracking.ts
-│       └── assignments.ts
-├── assets/
-├── components/                   # Reusable UI components (buttons, modals, tables)
-│   ├── ui/
-│   └── map/                      # Leaflet map container & marker components
-├── features/                     # Feature-specific pages & logic
-│   ├── auth/                     # Login / register / Firebase auth state
-│   ├── customer/                 # Shipment tracking & history view
-│   ├── driver/                   # Driver active order & GPS submission sender
-│   └── admin/               # Order dispatching & driver assignment view
-├── hooks/                        # Custom hooks (e.g., usePollingTracking, useDriverLocation)
-├── types/                        # Frontend TypeScript types
-└── utils/
+main.ts, app.module.ts
+config/             cấu hình app, CORS, kiểm tra biến môi trường
+common/             ApiExceptionFilter, ProblemDetails, log lỗi dependency
+health/             GET /healthz
+tools/set-role.ts   script gán role claim Firebase
+modules/
+  auth/             Firebase token, guard xác thực và phân quyền, decorator @Roles/@Public
+  users/            nối Firebase UID với bảng users, BusinessUserGuard
+  shipments/        tạo đơn, danh sách, chi tiết, lấy hàng, giao hàng
+  assignments/      gán và gán lại tài xế (khóa dòng)
+  location/         POST /v1/locations (publish), đọc current_locations
+  notifications/    GET /v1/notifications
+  admin/            danh sách tài xế và khách hàng cho Admin
+  geocoding/        proxy VIETMAP cho form địa chỉ
 ```
 
-## Week 1 implementation status
+Mỗi module theo một khuôn:
 
-`AppModule` registers the Shipment scaffold plus TV6 Auth/Admin. Only public `GET /healthz` is implemented. Business handlers, database repositories, GPS processing, DTO validation and shared error formatting remain later-week work. The API uses the existing NestJS 11 Express adapter and a standalone package/lockfile; adapter/workspace reconciliation remains issue #10. Three roles are `CUSTOMER`, `DRIVER`, `ADMIN`, with Admin responsible for dispatch operations and `/admin` retained in TV3. Contract choices and proposals are documented in `docs/contracts/api-contract.md`.
+| Lớp | Làm gì | Không làm gì |
+| --- | --- | --- |
+| Controller | Route, đọc tham số, mã trạng thái | Không chứa nghiệp vụ, không truy vấn DB |
+| Service | Nghiệp vụ, điều phối repository, publish sự kiện | Không đụng request/response HTTP |
+| Repository | SQL qua `pg`, transaction | Không chứa luật nghiệp vụ |
+| `dto/` | Parse và kiểm tra request, định dạng response | Không mang chi tiết DB |
+
+SQL viết tay qua `pg` (không dùng Prisma lúc chạy). Tên cột camelCase có ngoặc kép, ví dụ `"driverId"`. Lỗi trả dạng ProblemDetails: 401 chưa xác thực, 403 sai quyền, 409 sai trạng thái hoặc user chưa liên kết, 503 dependency lỗi.
+
+## Worker (`apps/worker/src`)
+
+```
+main.ts, worker.module.ts
+health/                         GET /healthz
+consumer/gps.subscriber.ts      nhận message, ACK sau khi ghi xong, NACK khi lỗi tạm thời
+consumer/gps-processor.service.ts  kiểm tra payload theo EVT01, chuẩn hóa thời gian
+consumer/dlq-replay.service.ts  phát lại message từ DLQ
+storage/gps-writer.repository.ts   ghi PostgreSQL khi có DATABASE_URL, không có thì ghi bộ nhớ
+```
+
+## Web (`apps/web/src`)
+
+```
+api/            client gắn Firebase token, endpoints/ theo tài nguyên
+features/       auth, customer, driver, admin: trang và logic theo vai trò
+layouts/        khung trang cho từng vai trò
+components/     ui/, map/ (Leaflet), shipment/ (tracking, trạng thái)
+hooks/          polling tracking, vị trí tài xế
+types/, utils/
+```
+
+Một app cho cả ba vai trò; route `/customer`, `/driver`, `/admin`. Polling chỉ một request chạy tại một thời điểm và dừng khi rời trang.
+
+## Quy ước khi thêm code
+
+- Endpoint mới: thêm vào module đúng nghiệp vụ, cập nhật `docs/openapi.json` và [API contract](docs/contracts/api-contract.md).
+- Bảng hoặc cột mới: thêm file SQL đánh số tiếp trong `packages/database/sql/`, không sửa file đã chạy trên Cloud.
+- Sự kiện GPS: theo [hợp đồng GPS](docs/contracts/gps-event-contract.md) và kiểu trong `packages/types`.
+- Test chạm DB chạy trên PostgreSQL thật hoặc PGlite, đặt tên `*.postgres.spec.ts`.

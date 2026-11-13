@@ -1,19 +1,19 @@
 # React + TypeScript + Vite
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Mẫu này cung cấp cấu hình tối thiểu để chạy React trên Vite với HMR và một số quy tắc ESLint.
 
-Currently, two official plugins are available:
+Hiện có hai plugin chính thức:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) dùng [Oxc](https://oxc.rs)
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) dùng [SWC](https://swc.rs/)
 
 ## React Compiler
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Mẫu này chưa bật React Compiler vì nó ảnh hưởng đến hiệu năng khi phát triển và build. Để thêm, xem [tài liệu này](https://react.dev/learn/react-compiler/installation).
 
-## Expanding the ESLint configuration
+## Mở rộng cấu hình ESLint
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Nếu đang phát triển ứng dụng dùng cho production, bạn nên cập nhật cấu hình để bật các quy tắc lint có kiểm tra kiểu:
 
 ```js
 export default defineConfig([
@@ -44,7 +44,7 @@ export default defineConfig([
 
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+Bạn cũng có thể cài [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) và [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) để có các quy tắc lint riêng cho React:
 
 ```js
 // eslint.config.js

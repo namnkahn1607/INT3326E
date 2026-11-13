@@ -1,70 +1,70 @@
-# Create Shipment — verification and handoff
+# Tạo đơn hàng — kiểm chứng và bàn giao
 
-> B?o c?o l?ch s? theo ng?y v? source ghi b?n d??i. K?t qu? mock/local kh?ng x?c nh?n revision Cloud hi?n t?i; c?c script browser ri?ng kh?ng ???c ph?t h?nh c?ng t?i li?u.
+> Báo cáo lịch sử theo ngày và source ghi bên dưới. Kết quả mock/local không xác nhận revision Cloud hiện tại; các script browser riêng không được phát hành cùng tài liệu.
 
-Initial checkpoint: 2026-10-24. Test implementation based on `915e5ed` (already includes develop integration at `a2c245f`). At that checkpoint the implementation was uncommitted, with no push, merge to develop, shared migration, seed, IAM or deploy performed. Source: PF SPEC 01 **content v1.3**, read via Drive on this date; the file name still says v1.2. This report records evidence, not additional requirements.
+Mốc kiểm tra ban đầu: 2026-10-24. Bản triển khai để test dựa trên `915e5ed` (đã tích hợp develop tại `a2c245f`). Ở mốc đó, phần triển khai chưa commit; chưa push, merge vào develop, chạy migration dùng chung, seed, thay đổi IAM hay deploy. Nguồn: PF SPEC 01 **nội dung v1.3**, đọc qua Drive vào ngày này; tên file vẫn ghi v1.2. Báo cáo này ghi nhận bằng chứng, không bổ sung yêu cầu.
 
-## Follow-up checkpoint — 2026-10-25
+## Mốc kiểm tra bổ sung — 2026-10-25
 
-Subsequent user requests updated the Customer form/address dialogs and lightweight
-CARTO/OSM raster basemap, independently of the original backend-only checkpoint.
-The user approved temporary direct VIETMAP calls with a browser-visible demo key;
-see `docs/contracts/api-contract.md` for the explicit security exception and later proxy path.
-No real key values are committed. Existing Auth and AGENTS.md remain unchanged.
+Các yêu cầu tiếp theo của người dùng đã cập nhật form/hộp thoại địa chỉ của Customer và
+bản đồ nền raster nhẹ CARTO/OSM, độc lập với mốc ban đầu chỉ có backend.
+Người dùng cho phép tạm gọi VIETMAP trực tiếp bằng key demo hiển thị trên trình duyệt;
+xem `docs/contracts/api-contract.md` để biết ngoại lệ bảo mật đã được chấp thuận và hướng dùng proxy sau này.
+Không commit giá trị key thật. Auth hiện có và AGENTS.md giữ nguyên.
 
-Before split commits: API typecheck/build passed; API tests **259 passed, 43 skipped**
-(native PostgreSQL and Firebase emulator not configured for this run). Frontend
-lint/build passed and **293 tests passed**. Real browser Search/Place/Reverse calls
-to VIETMAP and CARTO raster rendering passed; UI race/responsive tests mocked
-Firebase and the administrative directory, without creating real shipments.
-The older native-PostgreSQL results below remain historical evidence, not a claim
-that a shared database, deployed shipment route or real Firebase-to-DB Create works.
+Trước khi tách commit: typecheck/build API đạt; test API **259 đạt, 43 bỏ qua**
+(chưa cấu hình PostgreSQL native và Firebase emulator cho lượt chạy này). Frontend
+lint/build đạt và **293 test đạt**. Các lời gọi Search/Place/Reverse thật từ trình duyệt
+đến VIETMAP và việc hiển thị raster CARTO đạt; test tranh chấp và bố cục thích ứng của UI dùng mock
+Firebase và danh mục hành chính, không tạo đơn hàng thật.
+Kết quả PostgreSQL native cũ bên dưới vẫn là bằng chứng lịch sử, không khẳng định
+database dùng chung, route đơn hàng đã deploy hay luồng tạo đơn từ Firebase thật đến DB đã hoạt động.
 
-## Delivered
+## Phần đã bàn giao
 
-- Existing Shipment module now exposes CUSTOMER-only POST `/v1/shipments` using current Firebase/business guards and TV6 pg pool. No auth implementation or frontend code changed.
-- Strict normalization/field validation; unknown body/query fields rejected; UUIDv4 key; SHA256 canonical payload; required SC02 keys including nulls and explicit storage mapping.
-- Native DB row lock across connections serializes same actor/operation/key. Replay returns original201 snapshot before future-deadline checks; conflict409; default86400s TTL is configurable, expired keys renew safely while locked.
-- Same-client transaction writes shipment CREATED, history, minimal Customer notification and idempotency snapshot. No partial commit or automatic create retry on unknown commit outcome. Unique tracking collision retries bounded5.
-- Fresh-schema SQL baseline only; Prisma and GPS files remain historical/unmodified, with reconciliation instructions in database README. No automatic startup DDL.
-- OpenAPI and current Create contract synchronized, historical draft sections retained. Only dev dependency added: pinned PGlite0.5.11, eight lockfile lines; production dependencies unchanged.
+- Module Shipment hiện có đã cung cấp POST `/v1/shipments` chỉ cho CUSTOMER, dùng các guard Firebase/nghiệp vụ hiện tại và pool pg của TV6. Không đổi phần triển khai auth hay mã frontend.
+- Chuẩn hóa/kiểm tra trường nghiêm ngặt; từ chối trường lạ trong body/query; key UUIDv4; payload chuẩn hóa băm SHA256; đủ các key bắt buộc của SC02, gồm cả null và ánh xạ lưu trữ rõ ràng.
+- Khóa dòng DB native giữa các kết nối xử lý tuần tự cùng chủ thể/thao tác/key. Gửi lại trả snapshot 201 gốc trước khi kiểm tra deadline tương lai; xung đột trả 409; TTL mặc định 86400s có thể cấu hình, key hết hạn được gia hạn an toàn khi đang giữ khóa.
+- Transaction trên cùng client ghi đơn CREATED, lịch sử, thông báo Customer tối thiểu và snapshot idempotency. Không commit một phần hay tự thử tạo lại khi chưa rõ kết quả commit. Số lần thử lại khi trùng mã theo dõi duy nhất giới hạn ở 5.
+- Chỉ có mốc SQL cho schema mới; các file Prisma và GPS giữ nguyên như tài liệu lịch sử, hướng dẫn đối chiếu nằm trong README database. Không có DDL tự chạy khi khởi động.
+- OpenAPI và hợp đồng tạo đơn hiện tại đã đồng bộ, giữ các phần nháp lịch sử. Chỉ thêm dependency phát triển: ghim PGlite0.5.11, tám dòng lockfile; dependency production không đổi.
 
-## Verification evidence
+## Bằng chứng kiểm chứng
 
-Commands executed from `apps/api` after clean install:
+Các lệnh đã chạy từ `apps/api` sau khi cài sạch:
 
-| Check | Observed result |
+| Kiểm tra | Kết quả quan sát |
 | --- | --- |
-| `npm ci --workspaces=false --ignore-scripts --no-audit --no-fund` | Exit0, 328 packages; existing transitive deprecation warnings, no upgrade attempted |
-| `npm run typecheck` | Exit0, runtime and test TypeScript configs |
-| `npm test` with isolated SHIPMENT_TEST_DATABASE_URL | **266 passed, 15 skipped, 20 files**, exit0 |
-| `npm run build` | Exit0 |
-| Shipment SQL suite alone, both engines | **55 passed, 1 skipped**; 27 PGlite +28 native; only native-lock case intentionally skipped on PGlite |
-| Existing frontend Create client → real local Nest HTTP → SQL | Create and replay accepted without API adapter changes; token reader and Firebase mocked |
-| `git diff --check` | Exit0, no whitespace defects; LF→CRLF informational Git warnings |
+| `npm ci --workspaces=false --ignore-scripts --no-audit --no-fund` | Mã thoát 0, 328 package; có sẵn cảnh báo dependency gián tiếp bị ngừng khuyến nghị, không thử nâng phiên bản |
+| `npm run typecheck` | Mã thoát 0, cấu hình TypeScript cho runtime và test |
+| `npm test` với SHIPMENT_TEST_DATABASE_URL cô lập | **266 đạt, 15 bỏ qua, 20 file**, mã thoát 0 |
+| `npm run build` | Mã thoát 0 |
+| Riêng bộ test SQL Shipment, cả hai engine | **55 đạt, 1 bỏ qua**; 27 PGlite +28 native; chỉ ca khóa native được chủ động bỏ qua trên PGlite |
+| Client tạo đơn frontend hiện có → HTTP Nest local thật → SQL | Tạo và gửi lại được chấp nhận mà không đổi adapter API; phần đọc token và Firebase dùng mock |
+| `git diff --check` | Mã thoát 0, không lỗi khoảng trắng; cảnh báo thông tin LF→CRLF của Git |
 
-The full API15 skips: seven existing Firebase emulator cases (emulator not running), seven existing Admin native PostgreSQL cases (separate TV6 database URL not configured), one lock-observation case intentionally not run on PGlite. Native Create28 cases **did run**, not skipped. No claim that Firebase/Cloud SQL worked follows from these tests.
+Toàn bộ API có 15 ca bỏ qua: bảy ca Firebase emulator hiện có (emulator không chạy), bảy ca Admin PostgreSQL native hiện có (chưa cấu hình URL database riêng của TV6), một ca quan sát khóa chủ động không chạy trên PGlite. 28 ca tạo đơn native **đã chạy**, không bị bỏ qua. Các test này không khẳng định Firebase/Cloud SQL đã hoạt động.
 
-Native engine: `@embedded-postgres/windows-x64@18.4.0-beta.17`, binary reports PostgreSQL18.4. Downloaded to task-owned OS temp, not project dependencies; initialized a new cluster bound only `127.0.0.1:55439`, database `parcelflow_shipments_test`. Suite creates/drops only its random schema, uses a six-connection pool. A barrier holds transaction1 while transaction2 waits; `pg_stat_activity.wait_event_type='Lock'` and at least two pool connections observed before release. After release both requests201/same snapshot and exactly one four-row set. Temporary PostgreSQL was stopped with pg_ctl after verifying the owned PID/path. No other DB/service was stopped or altered.
+Engine native: `@embedded-postgres/windows-x64@18.4.0-beta.17`, binary báo PostgreSQL18.4. Được tải vào thư mục tạm của hệ điều hành dành riêng cho tác vụ, không thêm vào dependency dự án; khởi tạo cluster mới chỉ lắng nghe tại `127.0.0.1:55439`, database `parcelflow_shipments_test`. Bộ test chỉ tạo/xóa schema ngẫu nhiên của nó, dùng pool sáu kết nối. Một điểm chặn giữ transaction 1 trong khi transaction 2 chờ; đã quan sát `pg_stat_activity.wait_event_type='Lock'` và ít nhất hai kết nối pool trước khi nhả. Sau khi nhả, cả hai request trả 201/cùng snapshot và đúng một bộ gồm bốn dòng. PostgreSQL tạm được dừng bằng pg_ctl sau khi xác minh PID/đường dẫn thuộc tác vụ. Không dừng hay sửa DB/dịch vụ nào khác.
 
-Frontend checks from `apps/web`: `npm test` **223 passed/20 files**, `npm run lint` exit0, `npm run build` exit0. Existing JS chunk640.74kB warning>500kB persists; no unrelated splitting/UX changes attempted. No interactive browser/Firebase session exercised in this backend task.
+Kiểm tra frontend từ `apps/web`: `npm test` **223 đạt/20 file**, `npm run lint` mã thoát 0, `npm run build` mã thoát 0. Cảnh báo chunk JS 640.74kB>500kB có sẵn vẫn còn; không thử tách chunk/đổi UX ngoài phạm vi. Không chạy phiên trình duyệt/Firebase tương tác trong tác vụ backend này.
 
-## Traceability to authoritative acceptance
+## Truy vết đến tiêu chí nghiệm thu chính thức
 
-| Source | Evidence and boundary |
+| Nguồn | Bằng chứng và giới hạn |
 | --- | --- |
-| TC01.1 | HTTP201 exact SC02 and OpenAPI required-key comparison; SQL checks shipment/event/notification/key, trusted actor, mapping, explicit nullable values, optional field persistence |
-| TC01.2 | Six simultaneous samekey requests, deep-equal snapshots and exactly one set; native row-lock wait observed, different payload competition one201/one409 |
-| TC01.3 | Changed normalized payload409 IDEMPOTENCY_KEY_CONFLICT, no writes; reordered keys/trim/null/offset equivalent replay201 |
-| TC01.4 |27 DTO/key normalization cases, HTTP key/field/query/deadline cases and identity denial; zero committed rows |
-| TC01.5 | Event/notification/snapshot failure injection and an actual notification CHECK violation; four writes rollback, samekey retry recovers; unknown COMMIT response case stores one set and retries snapshot |
-| TC01.6 API01 portion | Fixture changes persisted state to ASSIGNED; repository clock advances past original deadline but within TTL; replay remains CREATED201, a new key with now-past deadline400. SQL proves current state still ASSIGNED. **GET Detail portion not claimed: API03 remains absent and outside Create scope.** |
+| TC01.1 | HTTP201 đúng SC02 và đối chiếu key bắt buộc trong OpenAPI; SQL kiểm tra đơn/sự kiện/thông báo/key, chủ thể đáng tin cậy, ánh xạ, giá trị nullable tường minh, lưu trường tùy chọn |
+| TC01.2 | Sáu request đồng thời cùng key, snapshot bằng nhau khi so sánh sâu và đúng một bộ dữ liệu; quan sát được chờ khóa dòng native, hai payload khác nhau cạnh tranh trả một 201/một 409 |
+| TC01.3 | Payload chuẩn hóa thay đổi trả 409 IDEMPOTENCY_KEY_CONFLICT, không ghi dữ liệu; gửi lại tương đương sau đổi thứ tự key/trim/null/offset trả 201 |
+| TC01.4 |27 ca chuẩn hóa DTO/key, các ca HTTP về key/trường/query/deadline và từ chối danh tính; không có dòng nào được commit |
+| TC01.5 | Giả lập lỗi sự kiện/thông báo/snapshot và một vi phạm CHECK thông báo thật; bốn lần ghi rollback, thử lại cùng key phục hồi; ca chưa rõ phản hồi COMMIT lưu một bộ dữ liệu và thử lại trả snapshot |
+| TC01.6 phần API01 | Fixture đổi trạng thái đã lưu thành ASSIGNED; đồng hồ repository tiến qua deadline gốc nhưng vẫn trong TTL; gửi lại vẫn trả CREATED201, key mới với deadline đã qua trả 400. SQL chứng minh trạng thái hiện tại vẫn là ASSIGNED. **Không khẳng định phần GET chi tiết: API03 vẫn chưa có và nằm ngoài phạm vi tạo đơn.** |
 
-## Still open outside this test-branch implementation
+## Phần còn mở ngoài bản triển khai trên nhánh test này
 
-1. **TV1 + TV6** inspect the actual shared users/shipments schema and data, reconcile Prisma/draft and own a non-destructive in-place migration/provisioning plan. Do not apply the empty-schema baseline to an existing shared database. Existing UUID business IDs are incompatible with usr_ULID and must not be silently relabeled.
-2. **TV5/backend owner** review, deploy the branch only when requested, configure the current runtime DATABASE_URL/Firebase/CORS and TTL; test actual Customer UID linkage and writes on the approved environment. Deploy Hosting alone cannot expose this backend code.
-3. **TV1** implements API02/03 and API04 separately; they are still skeletons. The form can POST to the configured local implementation after correct DB/Auth setup, but navigating to order details/list can still fail until read APIs exist.
-4. **TV3 + TV1 + TV6** perform real Firebase/browser/Cloud SQL end-to-end Create/retry and TC01.6 Detail acceptance after integration; NF03 p95<500ms must be measured under agreed workload, not inferred from unit/HTTP test runtime.
+1. **TV1 + TV6** kiểm tra schema và dữ liệu users/shipments dùng chung thực tế, đối chiếu Prisma/bản nháp và phụ trách kế hoạch migration/cấp phát tại chỗ không phá hủy dữ liệu. Không áp dụng mốc dành cho schema rỗng lên database dùng chung hiện có. ID nghiệp vụ UUID hiện tại không tương thích với usr_ULID và không được âm thầm đổi nhãn.
+2. **TV5/người phụ trách backend** review, chỉ deploy nhánh khi được yêu cầu, cấu hình DATABASE_URL/Firebase/CORS và TTL cho runtime hiện tại; test liên kết UID Customer và việc ghi thật trên môi trường được duyệt. Chỉ deploy Hosting không thể đưa mã backend này ra sử dụng.
+3. **TV1** triển khai API02/03 và API04 riêng; chúng vẫn là khung rỗng. Form có thể POST đến bản triển khai local đã cấu hình sau khi thiết lập đúng DB/Auth, nhưng điều hướng đến chi tiết/danh sách đơn vẫn có thể lỗi cho đến khi có API đọc.
+4. **TV3 + TV1 + TV6** thực hiện luồng tạo đơn/thử lại đầu-cuối với Firebase/trình duyệt/Cloud SQL thật và nghiệm thu phần chi tiết TC01.6 sau tích hợp; NF03 p95<500ms phải được đo theo tải đã thống nhất, không suy ra từ thời gian chạy test đơn vị/HTTP.
 
-Rerun instructions: [quickstart.md](create-shipment.md). Native DB helper is not a production service or permanent new project dependency; supply your own isolated loopback DB URL when rerunning native tests.
+Hướng dẫn chạy lại: [quickstart.md](create-shipment.md). Công cụ hỗ trợ DB native không phải dịch vụ production hay dependency mới lâu dài của dự án; tự cung cấp URL DB loopback cô lập khi chạy lại test native.

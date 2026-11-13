@@ -8,7 +8,7 @@ Tài liệu này là bản chỉ dẫn/truy vết, không phải nguồn yêu c�
 - [PF SPEC 01 — Google Docs](https://docs.google.com/document/d/1S9gY8a08d8-9Rd4bhTOeT_IAJUrYtFnZtDKjKKEpuq8/edit).
 - Phiên bản **nội dung 1.3**, ngày 11/10/2026; tên file vẫn là `ParcelFlow_v1.2`.
 - I: quản lý nguồn/quyết định; II: BRD; III: FRD/AC; IV: NFR;
-  V: System Design; VI: App Design/API/event/data/UI; VII: kế hoạch 10 tuần.
+  V: Thiết kế hệ thống; VI: Thiết kế ứng dụng/API/event/data/UI; VII: kế hoạch 10 tuần.
 - Tab kế hoạch: [VII](https://docs.google.com/document/d/1S9gY8a08d8-9Rd4bhTOeT_IAJUrYtFnZtDKjKKEpuq8/edit?tab=t.po4rmhqkefw).
   **VII.2 bảo toàn tuần 1; VII.3 mới triển khai tuần 2**. Kế hoạch không tạo nghiệp vụ ngoài I–VI.
 - Source S4 trong tài liệu là `da5e7cdae3618dcfc4d200a9470f728d09338df5`;
@@ -31,11 +31,11 @@ Tài liệu này là bản chỉ dẫn/truy vết, không phải nguồn yêu c�
 
 | Chủ đề | Định nghĩa ở nguồn | Đầu mối phối hợp |
 | --- | --- | --- |
-| Wire mapping | D01, API00, SC01–08: trackingNumber/customerId/dropoff*, prefixed ULID, data/pagination | TV1 + TV3/4 |
-| Create | API01: Idempotency-Key UUID v4, replay snapshot 201 trong window 24h; cùng key/payload không nhân đôi | TV1 + TV3 + TV6 |
-| Auth | D09/AUTH01: custom claim role + business user linkage; không tự cấp role, USER_NOT_PROVISIONED 409 | TV6 + client + TV5 |
-| Errors | D07/VI.3: ProblemDetails theo HTTP status/code, không parse message làm logic | TV1/6 + client |
-| GPS | POST /v1/locations, broker-confirmed 202; timestamp UTC ms, first-write-wins; ACK sau commit | TV1/2/4/5 |
+| Ánh xạ dữ liệu truyền | D01, API00, SC01–08: trackingNumber/customerId/dropoff*, ULID có tiền tố, data/pagination | TV1 + TV3/4 |
+| Tạo đơn | API01: Idempotency-Key UUID v4, replay snapshot 201 trong window 24h; cùng key/payload không nhân đôi | TV1 + TV3 + TV6 |
+| Xác thực | D09/AUTH01: custom claim role + liên kết người dùng nghiệp vụ; không tự cấp role, USER_NOT_PROVISIONED 409 | TV6 + client + TV5 |
+| Lỗi | D07/VI.3: ProblemDetails theo HTTP status/code, không parse message làm logic | TV1/6 + client |
+| GPS | POST /v1/locations, 202 sau khi broker xác nhận; timestamp UTC ms, giữ bản ghi đầu tiên; ACK sau commit | TV1/2/4/5 |
 | Địa chỉ/tọa độ | UI01: nhập địa chỉ và chọn/nhập tọa độ; không tự thêm geocoding provider | TV3 + TV1 |
 | Admin | UI03: điều phối/tra cứu theo trang; Accounts giữ scaffold, không CRUD/cấp quyền/KPI toàn cục mới | TV3 + TV6 |
 | Cloud | Resource hiện có; runtime pull, CORS và cấu hình đo phân biệt thiết kế/quan sát | TV5 + TV2/6 |

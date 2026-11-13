@@ -50,11 +50,11 @@ Trong đó:
 - `email`: email của người dùng.
 - `role`: quyền hiện tại của người dùng trong ParcelFlow.
 
-## 3. Role
+## 3. Vai trò
 
 Quyết định ngày 09/10/2026: giữ Admin và gộp chức năng điều phối vào role này; không có role Dispatcher riêng. Hệ thống có ba role:
 
-| Role | Mô tả |
+| Vai trò | Mô tả |
 | --- | --- |
 | `CUSTOMER` | Tạo và theo dõi đơn giao hàng của mình |
 | `DRIVER` | Nhận nhiệm vụ giao hàng và cập nhật trạng thái |
@@ -222,7 +222,7 @@ export interface AuthenticatedUser {
 
 ### `AdminModule`
 
-Scaffold gồm `admin.module.ts`, `controllers/admin.controller.ts` và `services/admin.service.ts`. Module import `AuthModule` để nhận các guard qua dependency injection. Guard tuần 2 được áp dụng toàn cục; controller khai báo `@Roles(UserRole.ADMIN)`; các handler sau này trong controller dùng quyền Admin mặc định. Bản Admin directory ngày 23/10/2026 thêm `GET /v1/drivers` và `GET /v1/admin/customers`, đều dùng `BusinessUserGuard` cho liên kết SQL; `/admin/me` vẫn độc lập SQL. Contract và phụ thuộc ở [Admin directory](../features/admin-directory.md), kịch bản nghiệm thu ở [QA test plan](../qa/test-plan.md).
+Scaffold gồm `admin.module.ts`, `controllers/admin.controller.ts` và `services/admin.service.ts`. Module import `AuthModule` để nhận các guard qua dependency injection. Guard tuần 2 được áp dụng toàn cục; controller khai báo `@Roles(UserRole.ADMIN)`; các handler sau này trong controller dùng quyền Admin mặc định. Bản Admin directory ngày 23/10/2026 thêm `GET /v1/drivers` và `GET /v1/admin/customers`, đều dùng `BusinessUserGuard` cho liên kết SQL; `/admin/me` vẫn độc lập SQL. Contract và phụ thuộc ở [Danh mục Admin](../features/admin-directory.md), kịch bản nghiệm thu ở [Kế hoạch test QA](../qa/test-plan.md).
 
 Tuần 1 chưa cung cấp endpoint hoặc logic quản trị/điều phối. Tuần 2 bổ sung GET /v1/admin/me chỉ để xác minh danh tính/quyền Admin; không triển khai nghiệp vụ phân công hoặc cấp quyền qua HTTP. TV1 đăng ký `AdminModule` vào `AppModule` khi tích hợp bootstrap. Không tạo tài khoản Admin, cấp custom claim hoặc mở quyền từ frontend trong scaffold này.
 
@@ -238,7 +238,7 @@ Phạm vi Admin bám theo các màn hình hiện có của TV3; Admin là ngư�
 
 Các route trên là màn hình frontend, không phải endpoint REST mới. Contract Shipment, Assignment và Tracking sẽ được thống nhất với TV1/TV3 khi tích hợp. Trang `/admin/accounts` hiện là bảng dữ liệu mẫu của TV3; chức năng cấp quyền hoặc quản lý tài khoản thật chưa thuộc scaffold TV6 tuần 1.
 
-## 7. Test case
+## 7. Ca test
 
 ### Test xác thực
 
@@ -274,7 +274,7 @@ npm run build
 npm run test:auth
 ```
 
-Các kiểm tra không cần credentials hoặc Firebase project thật. TV1 đã bổ sung bootstrap và đăng ký Auth/Admin trong AppModule; xem [API scaffold](../features/api-scaffold.md) để chạy backend và kiểm tra public `GET /healthz`.
+Các kiểm tra không cần credentials hoặc Firebase project thật. TV1 đã bổ sung bootstrap và đăng ký Auth/Admin trong AppModule; xem [Khung API](../features/api-scaffold.md) để chạy backend và kiểm tra public `GET /healthz`.
 
 Ví dụ:
 
@@ -291,10 +291,10 @@ const tokenVerifier = {
 Việc này cho phép kiểm thử Auth và RBAC mà chưa cần:
 
 - Firebase project thật.
-- Firebase credentials.
+- Thông tin xác thực Firebase.
 - Cloud SQL.
 - Prisma.
-- GCP deployment.
+- Deploy GCP.
 
 ## 8. Yêu cầu bảo mật
 
@@ -328,7 +328,7 @@ API đã có firebase-admin, bootstrap và AuthModule. Tuần 2 dùng guard toà
 
 Bản tích hợp tuần 2 trong [bàn giao](../tv6/auth-rbac-handoff.md) bổ sung frontend Firebase Web SDK; phạm vi tuần 1 được giữ làm hồ sơ lịch sử.
 
-## 11. Firebase configuration và giới hạn tích hợp
+## 11. Cấu hình Firebase và giới hạn tích hợp
 
 - Cloud Run: dùng service account của runtime và ADC; TV5 xác nhận quyền và Firebase project. Không đưa JSON service account key vào repo.
 - Local: cung cấp ADC hoặc `GOOGLE_APPLICATION_CREDENTIALS` trỏ tới file credentials bên ngoài repo. Provider đọc biến môi trường đã có; bootstrap TV1 chịu trách nhiệm nạp `.env`.

@@ -1,4 +1,6 @@
-# API contract
+# Hợp đồng API
+
+Tài liệu gồm quyết định hợp đồng qua nhiều mốc; đoạn ghi "ở mốc …" là lịch sử. Trạng thái triển khai hiện tại xem [danh sách tính năng](../features.md).
 
 ## TV1 tuần 7 — Tài xế lấy hàng, giao hàng và lịch sử trạng thái
 
@@ -46,161 +48,161 @@ Xem [hướng dẫn TV1 tuần 6](../history/assignment-api-week6.md) để ch�
 Chưa thay schema production, IAM hoặc triển khai lên Cloud. Các mục có ngày
 bên dưới giữ kết quả tại thời điểm bàn giao trước đó.
 
-## VIETMAP geocoding integration — 2026-10-25
+## Tích hợp mã hóa địa lý VIETMAP — 2026-10-25
 
-User-approved replacement for Photon. The active frontend demo calls VIETMAP
-Autocomplete/Place/Reverse v4 directly, without the ParcelFlow geocoding proxy.
-It uses `VITE_VIETMAP_API_KEY` from ignored local configuration. This exposes the
-Services key in the browser by explicit temporary user decision, an exception to
-constitution IV's no-secret-in-FE rule. Restrict/rotate the demo key and move calls
-back to the proxy before production. Never commit key values or log provider URLs.
-Firebase tokens and private driver instructions/contacts are not sent to VIETMAP.
-No shipment, auth, database or GPS business changes; nothing automatically deployed.
+Phương án thay Photon đã được người dùng duyệt. Bản demo frontend đang dùng gọi VIETMAP
+Autocomplete/Place/Reverse v4 trực tiếp, không qua proxy mã hóa địa lý của ParcelFlow.
+Bản demo dùng `VITE_VIETMAP_API_KEY` từ cấu hình local đã được bỏ qua trong Git. Cách này làm lộ
+key Services trên trình duyệt theo quyết định tạm thời rõ ràng của người dùng, là ngoại lệ với
+quy tắc không đưa bí mật vào FE ở mục IV của constitution. Hạn chế quyền/đổi key demo và chuyển các lời gọi
+về proxy trước khi dùng cho production. Không commit giá trị key hay ghi URL nhà cung cấp vào log.
+Token Firebase và chỉ dẫn/thông tin liên hệ riêng cho tài xế không được gửi đến VIETMAP.
+Không đổi nghiệp vụ đơn hàng, auth, database hay GPS; không tự động deploy gì.
 
-Customer/Admin retain Leaflet with lightweight raster tiles, using CARTO Voyager
-when `VITE_CARTO_API_KEY` is configured, otherwise OSM. CARTO and OSM attribution
-remain visible. No Tilemap key or WebGL SDK is needed. Address lookup is independent
-of tile loading. Frontend cache lasts five minutes (30 entries), requests are
-cancellable with a 12-second timeout and a shared 1.2-second rate window.
+Customer/Admin giữ Leaflet với các ô bản đồ raster nhẹ, dùng CARTO Voyager
+khi đã cấu hình `VITE_CARTO_API_KEY`, nếu không thì dùng OSM. Ghi nguồn CARTO và OSM
+vẫn hiển thị. Không cần key Tilemap hay WebGL SDK. Tra cứu địa chỉ độc lập
+với tải ô bản đồ. Cache frontend giữ năm phút (30 mục), request
+có thể hủy, timeout 12 giây và cửa sổ giới hạn tần suất chung 1.2 giây.
 
-The existing proxy below remains implemented for later use, not the current frontend
-path. It keeps `VIETMAP_API_KEY` on the server and uses the existing Firebase guard
-for all three roles without SQL linkage. The frontend demo does not require local
-Firebase Admin credentials or a new Cloud deployment for address lookup.
+Proxy hiện có bên dưới vẫn được giữ để dùng sau, không nằm trên luồng frontend
+hiện tại. Proxy giữ `VIETMAP_API_KEY` trên server và dùng Firebase guard hiện có
+cho cả ba role, không cần liên kết SQL. Bản demo frontend không cần thông tin xác thực
+Firebase Admin local hay một lần deploy Cloud mới để tra cứu địa chỉ.
 
-Read-only `POST` endpoints under `/v1/geocoding` use bodies to keep public address
-queries/coordinates out of request URLs. Unknown body/query fields are rejected.
+Các endpoint `POST` chỉ đọc dưới `/v1/geocoding` dùng body để tránh đưa truy vấn
+địa chỉ công khai/tọa độ vào URL request. Từ chối trường lạ trong body/query.
 
-| Endpoint | Body | HTTP 200 |
+| Endpoint | Nội dung body | HTTP 200 |
 | --- | --- | --- |
-| `/search` | `{ query: string }` (3–255 chars) | Up to five suggestions with `reference`, `label`, `id`, `address`; coordinates optional |
-| `/place` | `{ reference: string }` (1–2048 chars) | One resolved match with `point: { lat, lng }` |
+| `/search` | `{ query: string }` (3–255 ký tự) | Tối đa năm gợi ý có `reference`, `label`, `id`, `address`; tọa độ tùy chọn |
+| `/place` | `{ reference: string }` (1–2048 ký tự) | Một kết quả đã xác định với `point: { lat, lng }` |
 | `/reverse` | `{ lat: number, lng: number }` | `{ result: match \| null }` |
 
-`address` contains `street`, `area`, `regions: string[]`. Search calls VIETMAP
-Autocomplete v4 with Hanoi focus and `display_type=2`; only selected references
-call Place v4, inheriting old-format regions. Reverse v4 also uses
-`display_type=2`. Hanoi results only. Vendor IDs are not directory codes: frontend
-matches returned names to its existing legacy province/district/ward directory.
-Unmatched levels stay empty rather than guessing. Driver instructions and contacts
-are not included in provider requests; Firebase tokens go only to ParcelFlow.
+`address` chứa `street`, `area`, `regions: string[]`. Search gọi VIETMAP
+Autocomplete v4 ưu tiên Hà Nội và dùng `display_type=2`; chỉ những tham chiếu đã chọn
+mới gọi Place v4, kế thừa vùng theo định dạng cũ. Reverse v4 cũng dùng
+`display_type=2`. Chỉ nhận kết quả ở Hà Nội. ID của nhà cung cấp không phải mã danh mục: frontend
+đối chiếu tên trả về với danh mục tỉnh/huyện/xã cũ hiện có.
+Cấp nào không khớp thì để trống, không đoán. Chỉ dẫn và thông tin liên hệ cho tài xế
+không có trong request đến nhà cung cấp; token Firebase chỉ gửi đến ParcelFlow.
 
-Errors: 400 validation, 401 auth, 429 local limit, 503 `GEOCODING_UNAVAILABLE`
-(missing/invalid key, provider quota/error, timeout). No raw provider diagnostics.
-Limits per API instance: 30 requests/account/minute, 300 total/minute, four active
-upstream calls; five-minute cache capped at 300 entries, eight-second upstream
-timeout, no automatic provider retries. These are not distributed/cloud-wide
-budget controls. Responses use `Cache-Control: no-store`. No automatic key
-rotation, billing changes, migration or cloud deployment.
+Lỗi: 400 kiểm tra dữ liệu, 401 xác thực, 429 giới hạn local, 503 `GEOCODING_UNAVAILABLE`
+(thiếu/key không hợp lệ, hạn mức/lỗi nhà cung cấp, timeout). Không trả thông tin chẩn đoán thô từ nhà cung cấp.
+Giới hạn mỗi instance API: 30 request/tài khoản/phút, tổng 300/phút, bốn lời gọi
+đến nhà cung cấp đang chạy; cache năm phút tối đa 300 mục, timeout gọi nhà cung cấp
+tám giây, không tự thử lại với nhà cung cấp. Đây không phải cơ chế kiểm soát ngân sách
+phân tán/toàn Cloud. Phản hồi dùng `Cache-Control: no-store`. Không tự đổi
+key, thay đổi thanh toán, migration hay deploy Cloud.
 
-## Create implementation on test branch — 2026-10-24
+## Triển khai tạo đơn trên nhánh test — 2026-10-24
 
-`POST /v1/shipments` now implements PF SPEC 01 v1.3 FR01/API01/SC02 in
-`apps/api/src/modules/shipments`. Only CUSTOMER with Firebase verification and
-provisioned `usr_ULID` business identity can create; actor fields never come from body.
-Unknown fields/query/type coercion are rejected. JSON keeps `dropoff*`,
-`trackingNumber`, `customerId`; storage maps to `delivery*`, `trackingCode`, `senderId`.
-Request optional notes/packageDescription/weight/deadline normalize missing/null;
-text is trimmed, timestamp timezone/calendar validated then truncated to UTC ms.
+`POST /v1/shipments` hiện triển khai PF SPEC 01 v1.3 FR01/API01/SC02 trong
+`apps/api/src/modules/shipments`. Chỉ CUSTOMER đã xác thực Firebase và
+được cấp danh tính nghiệp vụ `usr_ULID` mới được tạo; các trường chủ thể không bao giờ lấy từ body.
+Từ chối trường/query lạ và ép kiểu. JSON giữ `dropoff*`,
+`trackingNumber`, `customerId`; lưu trữ ánh xạ sang `delivery*`, `trackingCode`, `senderId`.
+Các trường tùy chọn notes/packageDescription/weight/deadline trong request được chuẩn hóa khi thiếu/null;
+văn bản được trim, timestamp được kiểm tra múi giờ/ngày hợp lệ rồi cắt về UTC ms.
 
-`Idempotency-Key` is a single UUID v4, scoped to actor + CREATE_SHIPMENT + key.
-Default replay window **24h**, configured by `SHIPMENT_IDEMPOTENCY_TTL_SECONDS`
-(integer1..31536000, default86400). Stable normalized payload SHA256 is compared
-under a PostgreSQL row lock. Samekey/hash returns original201 body, even if shipment
-state/deadline has changed; different payload→409 IDEMPOTENCY_KEY_CONFLICT.
-Expiry is processed under that lock; beyond the window a new create is possible.
-Invalid/missing key→400 IDEMPOTENCY_KEY_MISSING. New requests alone validate future deadline.
+`Idempotency-Key` là một UUID v4 duy nhất, có phạm vi chủ thể + CREATE_SHIPMENT + key.
+Cửa sổ gửi lại mặc định **24h**, cấu hình bằng `SHIPMENT_IDEMPOTENCY_TTL_SECONDS`
+(số nguyên 1..31536000, mặc định 86400). SHA256 ổn định của payload chuẩn hóa được so sánh
+khi giữ khóa dòng PostgreSQL. Cùng key/hash trả body 201 gốc, kể cả khi
+trạng thái/deadline đơn đã đổi; payload khác→409 IDEMPOTENCY_KEY_CONFLICT.
+Hết hạn được xử lý dưới khóa đó; ngoài cửa sổ có thể tạo đơn mới.
+Key không hợp lệ/thiếu→400 IDEMPOTENCY_KEY_MISSING. Chỉ request mới kiểm tra deadline tương lai.
 
-One transaction/client commits shipment CREATED, CREATED event, Customer notification
-and immutable201 snapshot. All writes rollback on failure; DB errors→503, no raw SQL
-or credentials. Tracking is PFYYYYMMDD+6 Crockford Base32 (UTC date, no hyphens),
-unique with at most five generation attempts. No retries around unknown commit outcome;
-client retains its key. All SC02 keys are explicit, including nullable fields.
+Một transaction/client commit đơn CREATED, sự kiện CREATED, thông báo Customer
+và snapshot 201 bất biến. Mọi lần ghi rollback khi lỗi; lỗi DB→503, không lộ SQL thô
+hay thông tin xác thực. Mã theo dõi là PFYYYYMMDD+6 Crockford Base32 (ngày UTC, không dấu gạch nối),
+duy nhất với tối đa năm lần sinh. Không thử lại khi chưa rõ kết quả commit;
+client giữ key của mình. Mọi key SC02 đều tường minh, gồm cả trường nullable.
 
-This is **test-branch implementation, not a deployed Cloud SQL acceptance**.
-Baseline SQL requires an empty schema; see [DB safety](../../packages/database/README.md)
-and [Create shipment handoff](../features/create-shipment-handoff.md).
-At the 24/10 checkpoint, List/Detail, Assign and GPS were not implemented.
-List/Detail/Assign are now available locally as described above; GPS ingest is integrated locally as described above. Historical draft statements below are retained, not current
-Create requirements. No migration, seed, IAM, deploy or auth changes run automatically.
+Đây là **bản triển khai trên nhánh test, chưa phải nghiệm thu Cloud SQL đã deploy**.
+Mốc SQL nền tảng yêu cầu schema rỗng; xem [an toàn DB](../../packages/database/README.md)
+và [bàn giao tạo đơn hàng](../features/create-shipment-handoff.md).
+Ở mốc 24/10, danh sách/chi tiết, phân công và GPS chưa được triển khai.
+Danh sách/chi tiết/phân công hiện đã có trên máy như mô tả ở trên; phần tiếp nhận GPS đã tích hợp local như mô tả ở trên. Các nhận định nháp lịch sử bên dưới được giữ lại, không phải yêu cầu
+tạo đơn hiện tại. Không tự chạy migration, seed, thay đổi IAM, deploy hay auth.
 
-Current Admin read endpoints: `GET /v1/drivers` (API11/SC06) and
-`GET /v1/admin/customers` (read-only TV6 scope requested on 23/10/2026).
-Both require ADMIN and a provisioned business user. See
-[Admin directory](../features/admin-directory.md) for pagination, database dependencies,
-privacy and integration details; see [QA test plan](../qa/test-plan.md) for acceptance.
-Historical week 1/2 draft statements below do not describe these new handlers.
+Các endpoint đọc hiện tại của Admin: `GET /v1/drivers` (API11/SC06) và
+`GET /v1/admin/customers` (phạm vi chỉ đọc của TV6 được yêu cầu ngày 23/10/2026).
+Cả hai yêu cầu ADMIN và người dùng nghiệp vụ đã được cấp. Xem
+[danh mục Admin](../features/admin-directory.md) để biết phân trang, phụ thuộc database,
+quyền riêng tư và chi tiết tích hợp; xem [kế hoạch test QA](../qa/test-plan.md) để nghiệm thu.
+Các nhận định nháp lịch sử tuần 1/2 bên dưới không mô tả các handler mới này.
 
-GPS request/event fields follow PF SPEC 01 v1.3, VI.API00/API08/EVT01. The current
-contract is [GPS event contract](gps-event-contract.md); independent review by
-the GPS pipeline owner remains pending. The endpoint remains unimplemented.
-The remaining week 1 decisions and proposals below are preserved.
+Các trường request/event GPS theo PF SPEC 01 v1.3, VI.API00/API08/EVT01. Hợp đồng
+hiện tại là [hợp đồng sự kiện GPS](gps-event-contract.md); vẫn chờ người phụ trách
+pipeline GPS review độc lập. `POST /v1/locations` đã triển khai từ tuần 6.
+Các quyết định và đề xuất tuần 1 còn lại bên dưới được giữ nguyên.
 
-## Scope and sources
+## Phạm vi và nguồn
 
-`docs/openapi.json` is TV1's contract draft for later implementation.
-Week 1 runs only `GET /healthz`; the other operations are marked `draft`.
-The scope follows the README's single shipment flow and the team's
-09/10/2026 decision to retain Admin for dispatch operations.
+`docs/openapi.json` là bản nháp hợp đồng của TV1 để triển khai sau.
+Tuần 1 chỉ chạy `GET /healthz`; các thao tác khác được đánh dấu `draft`.
+Phạm vi bám theo luồng đơn hàng đơn lẻ trong README và quyết định của nhóm
+ngày 09/10/2026 giữ Admin để điều phối.
 
-| Concern | Week 1 baseline / draft |
+| Chủ đề | Mốc nền tảng / bản nháp tuần 1 |
 | --- | --- |
-| Roles | `CUSTOMER`, `DRIVER`, `ADMIN`; Admin dispatches and monitors operations |
-| Shipment states | `CREATED → ASSIGNED → PICKED_UP → DELIVERED / DELIVERY_FAILED` |
-| Business prefix | `/v1`; public liveness remains `/healthz` |
-| GPS endpoint draft | `POST /v1/locations`, `202 Accepted`, as in TV1's current OpenAPI |
-| Addresses | REST draft uses `dropoffAddress/dropoffLocation`; TV3's UI/shared draft uses `deliveryAddress/deliveryLocation` |
-| List response | REST draft returns `data` and `pagination { limit, hasMore, nextCursor }` |
-| Identifiers | REST draft uses prefixed IDs and `trackingNumber`; TV3's draft uses UUIDs and `trackingCode` |
+| Role | `CUSTOMER`, `DRIVER`, `ADMIN`; Admin điều phối và giám sát vận hành |
+| Trạng thái đơn hàng | `CREATED → ASSIGNED → PICKED_UP → DELIVERED / DELIVERY_FAILED` |
+| Tiền tố nghiệp vụ | `/v1`; kiểm tra tiến trình công khai vẫn là `/healthz` |
+| Bản nháp endpoint GPS | `POST /v1/locations`, `202 Accepted`, theo OpenAPI hiện tại của TV1 |
+| Địa chỉ | Bản nháp REST dùng `dropoffAddress/dropoffLocation`; bản nháp UI/dùng chung của TV3 dùng `deliveryAddress/deliveryLocation` |
+| Phản hồi danh sách | Bản nháp REST trả `data` và `pagination { limit, hasMore, nextCursor }` |
+| Định danh | Bản nháp REST dùng ID có tiền tố và `trackingNumber`; bản nháp TV3 dùng UUID và `trackingCode` |
 
-The REST draft is the reference for API implementation review, not a completed
-integration agreement. TV3/TV4 must confirm it before connecting the UI or GPS
-emitter. UI/storage names do not need to match JSON names verbatim: an explicit
-mapping is required when implementation begins. No adapters, migrations or
-runtime handlers are added in week 1.
+Bản nháp REST là tài liệu tham khảo để review triển khai API, chưa phải thỏa thuận
+tích hợp hoàn chỉnh. TV3/TV4 phải xác nhận trước khi nối UI hay bộ phát
+GPS. Tên trong UI/lưu trữ không cần khớp từng chữ với tên JSON: phải có ánh xạ
+rõ ràng khi bắt đầu triển khai. Tuần 1 không thêm adapter, migration hay
+handler runtime.
 
-## Proposals preserved for team review
+## Các đề xuất giữ lại để nhóm review
 
-- `CANCELLED` and `POST /shipments/{id}/cancel` extend the five-state baseline.
-  The original cancellation operation and request schema are preserved under
-  `x-proposals.cancellation` in OpenAPI and are not active draft operations.
-  Do not introduce that state into the shared or database enum before approval.
-- GPS requests require `lat`, `lng`, `clientTimestamp`; `sessionId` (UUID) and
-  `seq` are optional diagnostics. The API derives `driverId`
-  from authenticated identity and adds `eventId`, `receivedAt`. Sequence is
-  diagnostic; freshness uses `clientTimestamp`, and history dedupe uses
-  `(driverId, clientTimestamp)`. No runtime endpoint or DB behavior is implied.
-- Issue #2 proposes direct database writes instead of Pub/Sub. It still requires
-  a group decision before GPS business implementation; it does not remove the
-  week 1 Pub/Sub Hello World checkpoint.
-- Role storage, error conversion to ProblemDetails, database-field/identifier
-  mapping and geocoding (#3) remain integration decisions for later weeks.
-  Auth's existing Nest error responses remain unchanged in this scaffold.
+- `CANCELLED` và `POST /shipments/{id}/cancel` mở rộng mốc nền tảng năm trạng thái.
+  Thao tác hủy và schema request ban đầu được giữ dưới
+  `x-proposals.cancellation` trong OpenAPI, không phải thao tác nháp đang áp dụng.
+  Không thêm trạng thái đó vào enum dùng chung hay database trước khi được duyệt.
+- Request GPS bắt buộc có `lat`, `lng`, `clientTimestamp`; `sessionId` (UUID) và
+  `seq` là dữ liệu chẩn đoán tùy chọn. API lấy `driverId`
+  từ danh tính đã xác thực và thêm `eventId`, `receivedAt`. Số thứ tự dùng
+  để chẩn đoán; độ mới dùng `clientTimestamp`, còn khử trùng lịch sử dùng
+  `(driverId, clientTimestamp)`. Nội dung này không hàm ý endpoint runtime hay hành vi DB đã có.
+- Issue #2 đề xuất ghi database trực tiếp thay cho Pub/Sub. Vẫn cần
+  quyết định của nhóm trước khi triển khai nghiệp vụ GPS; đề xuất không bỏ
+  mốc Pub/Sub Hello World tuần 1.
+- Lưu role, chuyển lỗi sang ProblemDetails, ánh xạ trường/định danh database
+  và mã hóa địa lý (#3) vẫn là các quyết định tích hợp cho những tuần sau.
+  Phản hồi lỗi Nest hiện có của Auth giữ nguyên trong khung này.
 
-## Roles and frontend
+## Role và frontend
 
-OpenAPI role names, the Auth enum, shared `UserRole` and Prisma `Role` all
-contain only `CUSTOMER`, `DRIVER`, `ADMIN`. `failedByRole` uses the Admin
-name in place of the old Dispatcher name; action authorization remains draft.
-The frontend retains `Admin*` and `/admin`; this PR does not change TV3's UI.
+Tên role trong OpenAPI, enum Auth, `UserRole` dùng chung và `Role` Prisma đều
+chỉ có `CUSTOMER`, `DRIVER`, `ADMIN`. `failedByRole` dùng tên Admin
+thay cho tên Dispatcher cũ; phân quyền thao tác vẫn là bản nháp.
+Frontend giữ `Admin*` và `/admin`; PR này không đổi UI của TV3.
 
-The Prisma schema and shared type index retain TV3's existing five-state
-domain draft; only the obsolete role is removed. Their other fields are
-draft designs, not a generated database. GPS types and validation now follow
-the week 2 event contract; the storage schema still needs later alignment.
+Schema Prisma và file index kiểu dùng chung giữ bản nháp miền nghiệp vụ
+năm trạng thái hiện có của TV3; chỉ loại role cũ. Các trường khác là
+thiết kế nháp, chưa phải database đã sinh. Kiểu và kiểm tra dữ liệu GPS hiện theo
+hợp đồng sự kiện tuần 2; schema lưu trữ vẫn cần đồng bộ sau.
 
-## Review before later implementation
+## Review trước khi triển khai các phần sau
 
-TV1 owns the API contract and data/shared draft; TV3/TV4 review client fields,
-pagination and telemetry; TV6 reviews Auth/RBAC; TV5 confirms actual resource
-names. Record any approved changes in OpenAPI and this document in the same PR.
-Health tests and the TV6 Auth/Admin tests can be run now without Firebase calls.
+TV1 phụ trách hợp đồng API và bản nháp dữ liệu/dùng chung; TV3/TV4 review các trường client,
+phân trang và dữ liệu đo; TV6 review Auth/RBAC; TV5 xác nhận tên tài nguyên
+thực tế. Ghi mọi thay đổi được duyệt vào OpenAPI và tài liệu này trong cùng PR.
+Test health và các test Auth/Admin của TV6 có thể chạy ngay mà không gọi Firebase.
 
 ## TV6 Auth tuần 2 — 17/10/2026
 
 Bổ sung API đã triển khai `GET /v1/auth/me` (ba role) và `GET /v1/admin/me` (ADMIN). Mọi handler mặc định được guard bảo vệ; health public. API nghiệp vụ còn lại vẫn là draft. Custom claims Firebase là nguồn role, có kiểm tra revocation/account hiện tại; không có role Dispatcher riêng hoặc public API cấp quyền. Xem [bàn giao Auth và RBAC](../tv6/auth-rbac-handoff.md) cho claims CLI, cấu hình frontend/runtime, kiểm thử và trạng thái cloud chưa nghiệm thu.
 
 
-### Follow-up review Auth tuần 2
+### Review bổ sung Auth tuần 2
 
-API hiện trả ProblemDetails cho lỗi qua ApiExceptionFilter; không còn dùng lỗi Nest mặc định ở runtime AppModule. 401/403 giữ ý nghĩa xác thực/quyền; Firebase/SQL tạm lỗi hoặc chưa cấu hình trả 503. BusinessUserGuard trên vùng Shipment dùng UsersService để nối Firebase UID với user nghiệp vụ; thiếu/lệch linkage trả 409 USER_NOT_PROVISIONED. /auth/me và /admin/me không bắt buộc user SQL. OpenAPI đã ghi nhận các lỗi này, business handlers vẫn chưa triển khai. CORS cho Idempotency-Key. Xem docs/contracts/auth-rbac.md mục 12.6 về mapping schema, seed và cloud acceptance còn mở.
+API hiện trả ProblemDetails cho lỗi qua ApiExceptionFilter; không còn dùng lỗi Nest mặc định ở runtime AppModule. 401/403 giữ ý nghĩa xác thực/quyền; Firebase/SQL tạm lỗi hoặc chưa cấu hình trả 503. BusinessUserGuard trên vùng Shipment dùng UsersService để nối Firebase UID với user nghiệp vụ; thiếu/lệch linkage trả 409 USER_NOT_PROVISIONED. /auth/me và /admin/me không bắt buộc user SQL. OpenAPI đã ghi nhận các lỗi này. CORS cho Idempotency-Key. Xem docs/contracts/auth-rbac.md mục 12.6 về mapping schema, seed và cloud acceptance còn mở.
