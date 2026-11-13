@@ -10,7 +10,7 @@ Mục lục: [Điều phối theo tuần](README.md)
 
 | TV | Người | Việc |
 | --- | --- | --- |
-| TV1 | Nguyễn Thị Lê Nam Khánh | Thiết kế schema Shipment, API tạo đơn thật |
+| TV1 | Nguyễn Lê Nam Khánh (nhóm trưởng) | Thiết kế schema Shipment, API tạo đơn thật |
 | TV2 | Nguyễn Thị Lê Na | Thiết kế schema `current_locations` / `location_history`, thống nhất convention với TV1 |
 | TV3 | Lê Đình Anh Tuấn | Đăng nhập Customer (Firebase Auth), form tạo đơn nối API thật, xem danh sách đơn của mình |
 | TV4 | Nguyễn Minh Anh | Tiếp tục test pipeline Pub/Sub; chốt event schema GPS cùng TV2 |

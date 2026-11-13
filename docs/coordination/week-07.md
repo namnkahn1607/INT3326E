@@ -10,7 +10,7 @@ Mục lục: [Điều phối theo tuần](README.md)
 
 | TV | Người | Việc |
 | --- | --- | --- |
-| TV1 | Nguyễn Thị Lê Nam Khánh | API cập nhật trạng thái pickup/delivery, endpoint lịch sử giao hàng |
+| TV1 | Nguyễn Lê Nam Khánh (nhóm trưởng) | API cập nhật trạng thái pickup/delivery, endpoint lịch sử giao hàng |
 | TV2 | Nguyễn Thị Lê Na | Worker consume topic GPS, upsert `current_locations` (chưa cần dedupe/ordering) |
 | TV3 | Lê Đình Anh Tuấn | UI cập nhật trạng thái cho Admin, UI lịch sử giao hàng cho Customer |
 | TV4 | Nguyễn Minh Anh | Driver app gửi GPS thật (geolocation trình duyệt hoặc simulator có nhãn) |

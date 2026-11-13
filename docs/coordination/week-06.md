@@ -10,7 +10,7 @@ Mục lục: [Điều phối theo tuần](README.md)
 
 | TV | Người | Việc |
 | --- | --- | --- |
-| TV1 | Nguyễn Thị Lê Nam Khánh | API gán tài xế, khóa transaction chống gán trùng |
+| TV1 | Nguyễn Lê Nam Khánh (nhóm trưởng) | API gán tài xế, khóa transaction chống gán trùng |
 | TV2 | Nguyễn Thị Lê Na | `POST /v1/locations` (chỉ publish, chưa ghi DB) |
 | TV3 | Lê Đình Anh Tuấn | UI Dispatcher (xem đơn chưa gán, gán tài xế), khung UI Admin |
 | TV4 | Nguyễn Minh Anh | UI Driver đăng nhập/dashboard; gửi thử GPS (chỉ log) |

@@ -10,7 +10,7 @@ Mục lục: [Điều phối theo tuần](README.md)
 
 | TV | Người | Việc |
 | --- | --- | --- |
-| TV1 | Nguyễn Thị Lê Nam Khánh | Scaffold NestJS, phác thảo module Shipment (chưa có logic), góp ý API contract draft |
+| TV1 | Nguyễn Lê Nam Khánh (nhóm trưởng) | Scaffold NestJS, phác thảo module Shipment (chưa có logic), góp ý API contract draft |
 | TV2 | Nguyễn Thị Lê Na | Scaffold GPS Worker (chỉ health check), phối hợp tạo Pub/Sub topic và subscription |
 | TV3 | Lê Đình Anh Tuấn | Scaffold React + Vite, routing cơ bản theo role (stub), deploy thử lên Firebase Hosting |
 | TV4 | Nguyễn Minh Anh | Pair với TV2 thử publish/consume "hello world" qua Pub/Sub; phác thảo component GPS emitter |
