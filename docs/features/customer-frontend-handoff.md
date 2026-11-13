@@ -1,6 +1,6 @@
 # Bàn giao frontend Customer tuần 2 — 2026-10-18
 
-> B?o c?o l?ch s? theo ng?y v? source ghi b?n d??i. K?t qu? mock/local kh?ng x?c nh?n revision Cloud hi?n t?i; c?c script browser ri?ng kh?ng ???c ph?t h?nh c?ng t?i li?u.
+> Báo cáo lịch sử theo ngày và source ghi bên dưới. Kết quả mock/local không xác nhận revision Cloud hiện tại; các script browser riêng không được phát hành cùng tài liệu.
 
 Branch `nh?nh tri?n khai Customer`, base `d38c598`; implementation hiện trong
 working tree, chưa commit/push/deploy. Hồ sơ này không thay nguồn yêu cầu chính thức.

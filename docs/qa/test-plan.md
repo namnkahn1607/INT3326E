@@ -1,4 +1,4 @@
-# ParcelFlow — QA test plan (draft)
+# ParcelFlow — Kế hoạch test QA (bản nháp)
 
 TV6 chủ trì. Ngày soạn: 23/10/2026. Baseline đọc:
 `develop@52b4cf25dcbadd64fe8796b8f806c27df857f409` và PF SPEC 01 v1.3,
@@ -22,7 +22,7 @@ với đặc tả v1.4.
 
 ## Dữ liệu và điều kiện chạy
 
-| Fixture | Mục đích |
+| Dữ liệu test | Mục đích |
 | --- | --- |
 | A: Admin; C1/C2: Customer; D1/D2/D3: Driver | Firebase claim và users.role khớp; ID nội bộ khác UID |
 | A-missing / A-mismatch | Token Admin hợp lệ nhưng row thiếu/role lệch → 409 |
@@ -41,25 +41,25 @@ kết nối; TV1/TV2 xác nhận DATA01/02/04 đã được áp dụng.
 
 ## Ma trận Admin directory
 
-| ID | Thao tác / tiền điều kiện | Expected result | Tầng kiểm tra |
+| ID | Thao tác / tiền điều kiện | Kết quả mong đợi | Tầng kiểm tra |
 | --- | --- | --- | --- |
-| ADM01 | Không token hoặc token sai/hết hạn gọi hai danh sách | 401 UNAUTHENTICATED; không đọc SQL khi Auth fail | HTTP mock + cloud |
-| ADM02 | CUSTOMER/DRIVER gọi hai danh sách | 403 FORBIDDEN_RESOURCE; không đọc danh sách | HTTP mock + cloud |
-| ADM03 | ADMIN thiếu/lệch users linkage | 409 USER_NOT_PROVISIONED; không tự tạo user/đổi claim | HTTP mock + SQL test + cloud |
-| ADM04 | ADMIN hợp lệ đọc hai danh sách | 200; drivers chỉ DRIVER, customers chỉ CUSTOMER; no-store | HTTP mock + SQL test + cloud |
-| ADM05 | Danh sách không có dữ liệu | data=[]; hasMore=false, nextCursor=null; không 404 | HTTP mock + SQL test |
-| ADM06 | limit thiếu/1/100; 0/101/số thập phân/query lặp | Default 20; hợp lệ giới hạn trang; còn lại 400 | Unit + HTTP |
-| ADM07 | Cursor qua nhiều trang, tie createdAt/id và microsecond | Thứ tự giảm dần; không lặp/bỏ sót trong fixture ổn định; lookahead không lộ | Unit + SQL test |
-| ADM08 | Cursor hỏng/sai version/scope/ID/thời gian; role/uid field lạ | 400 VALIDATION_ERROR; cursor không đổi quyền/scope | Unit + HTTP |
-| ADM09 | Một driver có nhiều đơn với đủ năm state | Count chỉ ASSIGNED/PICKED_UP; mỗi driver một row; không N+1 | SQL test |
-| ADM10 | Không active hoặc missing current | Tọa độ, hai timestamp và stale cùng null | HTTP mock + SQL test + cloud |
-| ADM11 | Fresh/stale/future; 0,0; clientTimestamp khác receivedAt | Stale theo client time; receivedAt là lastLocationUpdatedAt; ISO UTC ms | HTTP mock + SQL test |
+| ADM01 | Không token hoặc token sai/hết hạn gọi hai danh sách | 401 UNAUTHENTICATED; không đọc SQL khi Auth fail | HTTP mock + môi trường Cloud |
+| ADM02 | CUSTOMER/DRIVER gọi hai danh sách | 403 FORBIDDEN_RESOURCE; không đọc danh sách | HTTP mock + môi trường Cloud |
+| ADM03 | ADMIN thiếu/lệch users linkage | 409 USER_NOT_PROVISIONED; không tự tạo user/đổi claim | HTTP mock + test SQL + môi trường Cloud |
+| ADM04 | ADMIN hợp lệ đọc hai danh sách | 200; drivers chỉ DRIVER, customers chỉ CUSTOMER; no-store | HTTP mock + test SQL + môi trường Cloud |
+| ADM05 | Danh sách không có dữ liệu | data=[]; hasMore=false, nextCursor=null; không 404 | HTTP mock + test SQL |
+| ADM06 | limit thiếu/1/100; 0/101/số thập phân/query lặp | Mặc định 20; hợp lệ giới hạn trang; còn lại 400 | Test đơn vị + HTTP |
+| ADM07 | Cursor qua nhiều trang, tie createdAt/id và microsecond | Thứ tự giảm dần; không lặp/bỏ sót trong fixture ổn định; lookahead không lộ | Test đơn vị + test SQL |
+| ADM08 | Cursor hỏng/sai version/scope/ID/thời gian; role/uid field lạ | 400 VALIDATION_ERROR; cursor không đổi quyền/scope | Test đơn vị + HTTP |
+| ADM09 | Một driver có nhiều đơn với đủ năm state | Count chỉ ASSIGNED/PICKED_UP; mỗi driver một row; không N+1 | Test SQL |
+| ADM10 | Không active hoặc missing current | Tọa độ, hai timestamp và stale cùng null | HTTP mock + test SQL + môi trường Cloud |
+| ADM11 | Fresh/stale/future; 0,0; clientTimestamp khác receivedAt | Stale theo client time; receivedAt là lastLocationUpdatedAt; ISO UTC ms | HTTP mock + test SQL |
 | ADM12 | Reassign/terminal commit giao nhau với lần đọc | Count và GPS cùng snapshot; read sau commit áp dụng privacy mới | PostgreSQL đa kết nối + cloud |
-| ADM13 | SQL lỗi, schema thiếu timestamp hoặc chưa cấu hình pool | 503 SERVICE_UNAVAILABLE; không trả 200 rỗng; không lộ SQL/secret | HTTP mock + SQL test |
-| ADM14 | Xem JSON hai danh sách | Không firebaseUid/credential/claim; Driver không email/profile ngoài SC06; không total/onlineFlag | HTTP mock + SQL test |
+| ADM13 | SQL lỗi, schema thiếu timestamp hoặc chưa cấu hình pool | 503 SERVICE_UNAVAILABLE; không trả 200 rỗng; không lộ SQL/secret | HTTP mock + test SQL |
+| ADM14 | Xem JSON hai danh sách | Không firebaseUid/credential/claim; Driver không email/profile ngoài SC06; không total/onlineFlag | HTTP mock + test SQL |
 | ADM15 | POST/PATCH tài khoản hoặc gán role qua HTTP | Không có handler trong phạm vi này | HTTP |
-| ADM16 | /healthz và /admin/me khi SQL chưa provision | Health public; /admin/me vẫn chỉ cần Firebase ADMIN | Regression HTTP |
-| ADM17 | Hosting preflight, login/logout/reload, đổi trang danh sách | CORS origin đúng; token hợp lệ; role guard backend vẫn quyết định; UI loading/empty/error rõ | Browser/cloud, TV3 + TV5 |
+| ADM16 | /healthz và /admin/me khi SQL chưa provision | Health public; /admin/me vẫn chỉ cần Firebase ADMIN | Hồi quy HTTP |
+| ADM17 | Hosting preflight, login/logout/reload, đổi trang danh sách | CORS origin đúng; token hợp lệ; role guard backend vẫn quyết định; UI loading/empty/error rõ | Trình duyệt/Cloud, TV3 + TV5 |
 
 ADM12 cần PostgreSQL đa kết nối thực; test SQL trên WASM/PGlite hoặc test mock
 không đủ để xác nhận race/snapshot giữa các transaction cạnh tranh.
@@ -68,7 +68,7 @@ không đủ để xác nhận race/snapshot giữa các transaction cạnh tran
 
 Các ID TC dưới đây giữ nguyên của VI.14; không ghi pass khi handler chưa có.
 
-| Checkpoint | Case từ đặc tả | Nội dung cần đối chiếu | Chủ component / TV6 |
+| Mốc kiểm tra | Case từ đặc tả | Nội dung cần đối chiếu | Chủ component / TV6 |
 | --- | --- | --- | --- |
 | Create/Auth nền | TC01.1–TC01.6, TC10.1–TC10.3 | Create nguyên tử shipment/history/notification/idempotency; retry snapshot 201; actor từ token; 401/403/409 | TV1/TV3; TV6 rà quyền và rollback |
 | Assign tuần 3 | TC02.1 | Admin gán D1: 200 ASSIGNED; Customer/Driver 403; event/notification đúng một lần | TV1/TV3/TV6 |
@@ -79,7 +79,7 @@ Các ID TC dưới đây giữ nguyên của VI.14; không ghi pass khi handler 
 | Publisher tuần 3 | TC04.1–TC04.2 | Chỉ DRIVER, actor server, validation; broker confirm mới 202; lỗi/timeout 503 | TV1/TV2/TV6 |
 | Vòng đời tuần 4 | TC02.5, TC03.1–TC03.4, TC07.1–TC07.2 | Assign/Pickup race; owner/driver; deliver/fail chỉ một terminal, retry không thêm tác động | TV1/TV4; TV6 rà quyền/race |
 | GPS persist tuần 4–5 | TC04.3–TC04.8 | Dedupe, first-write-wins, timestamp/order, future, buffer, ACK sau commit và recovery | TV2/TV4/TV5; TV6 đối chiếu manifest |
-| Tracking tuần 5 | TC05.1–TC05.3 | Scope, snapshot, GPS terminal/reassign, null/stale, polling cleanup | TV1/TV3/TV6 |
+| Tracking tuần 5 | TC05.1–TC05.3 | Phạm vi truy cập, snapshot, GPS khi đơn kết thúc/gán lại, null/quá cũ, dọn polling | TV1/TV3/TV6 |
 | History/ngoại lệ tuần 6 | TC06.1, TC07.3, TC08.1–TC08.2 | History/late/notification đúng owner; no-op/rollback không thêm thông báo | TV1/TV3/TV6 |
 | ETA tuần 7 | TC09.1–TC09.4 | Haversine/ceil/0 distance/30s boundary; null reason; không đổi deadline | TV2/TV3/TV4; TV6 rà case biên |
 | Hồi quy tích hợp tuần 8 | TC10.1–TC10.3 và các case đã đến checkpoint | Quyền trên read/write/retry; Firebase/SQL/PubSub lỗi và phục hồi | TV6 + chủ component |
@@ -100,7 +100,7 @@ nghiệm thu cloud hoặc đo NFR.
 
 Mỗi lượt chạy ghi một dòng theo mẫu dưới đây vào PR/test run gắn với source SHA:
 
-| Case/version | Môi trường / source / revision / migration | Fixture và actor | Expected / actual | Kết quả | Bằng chứng / defect |
+| Ca test/phiên bản | Môi trường / source / revision / migration | Fixture và actor | Mong đợi / thực tế | Kết quả | Bằng chứng / defect |
 | --- | --- | --- | --- | --- | --- |
 | ADM04/v1 | Điền theo môi trường đã chạy | ID fixture và role, không token | HTTP + field đã đối chiếu | PASS / FAIL / BLOCKED / NOT RUN | Link output đã lọc hoặc defect |
 

@@ -1,34 +1,34 @@
-# Admin assignment — local acceptance and handoff
+# Phân công của Admin — nghiệm thu local và bàn giao
 
-> B?o c?o l?ch s? theo ng?y v? source ghi b?n d??i. K?t qu? mock/local kh?ng x?c nh?n revision Cloud hi?n t?i; c?c script browser ri?ng kh?ng ???c ph?t h?nh c?ng t?i li?u.
+> Báo cáo lịch sử theo ngày và source ghi bên dưới. Kết quả mock/local không xác nhận revision Cloud hiện tại; các script browser riêng không được phát hành cùng tài liệu.
 
-Date: 2026-10-24. Base inspected: a2c245f trên feature/frontend (working changes,
+Ngày: 2026-10-24. Bản nền đã kiểm tra: a2c245f trên feature/frontend (thay đổi đang làm,
 chưa commit). Không thay AGENTS.md hoặc source backend/Worker/Driver/Customer.
 
 Trạng thái mới nhất: xem mục **Tích hợp tuần lịch 6 — 02/11/2026** ở cuối file.
 Các nhận định backend còn thiếu bên dưới chỉ áp dụng snapshot lịch sử được ghi ngày.
 
-## Results
+## Kết quả
 
-| Check | Observed result |
+| Kiểm tra | Kết quả quan sát |
 | --- | --- |
 | npm run lint tại apps/web | PASS, không error/warning |
 | npm run build tại apps/web | PASS TypeScript + Vite; 208 modules; JS640.74kB, còn cảnh báo chunk>500kB sẵn có |
-| npm test tại apps/web | 223 PASS / 20 files, gồm 30 contract API tests và 17 assignment UI tests |
-| TV6 existing provider tests | 61 PASS / 2 files: admin-directory.spec.ts và admin-list-query.spec.ts; local mock Firebase/SQL, không Cloud SQL thật |
-| Browser CDP dev localhost | PASS 375x812,1440x900,812x375 cho Shipments/Drivers/Assignment, không document overflow |
-| Browser actions | 5 POST được intercept và trả mock, không gửi backend thật; body chỉ driverId; confirmation,409/503 GET-only recovery đạt |
-| Browser accessibility | Review focus/cancel focus/Enter, reduced-motion, text scale200%, CUSTOMER bị access denied theo ProtectedRoute hiện có; 0 runtime exceptions |
+| npm test tại apps/web | 223 PASS / 20 file, gồm 30 test hợp đồng API và 17 test UI phân công |
+| Test provider hiện có của TV6 | 61 PASS / 2 file: admin-directory.spec.ts và admin-list-query.spec.ts; local mock Firebase/SQL, không Cloud SQL thật |
+| Trình duyệt CDP ở localhost khi phát triển | PASS 375x812,1440x900,812x375 cho Shipments/Drivers/Assignment, không tràn nội dung trang |
+| Thao tác trình duyệt | 5 POST được intercept và trả mock, không gửi backend thật; body chỉ driverId; xác nhận,409/503 phục hồi chỉ bằng GET đạt |
+| Khả năng tiếp cận trên trình duyệt | Review focus/focus khi hủy/Enter, giảm chuyển động, tỷ lệ chữ200%, CUSTOMER bị từ chối truy cập theo ProtectedRoute hiện có; 0 ngoại lệ khi chạy |
 | git diff --check | PASS ở lượt kiểm tra |
 | AGENTS.md SHA256 | Giữ nguyên 1FBB04859CFCCDBEAAB94F01755BEAB0443C279044B6A7C609C8C47B27FD65E6 |
 
-Browser harness: [t?i li?u chung](../README.md). Auth và responses mock chỉ
+Bộ chạy kiểm tra trình duyệt: [t?i li?u chung](../README.md). Auth và responses mock chỉ
 được CDP inject vào tab test; production app vẫn dùng Auth/API thật, không fallback.
 Ảnh kiểm tra được ghi vào temp, không thêm asset/test dependency vào app.
 Hai lần harness đầu cần sửa React CJS import và giả định redirect role; không sửa
 Auth/ProtectedRoute để làm test qua. Enter dùng sự kiện keyDown/char/keyUp Chromium.
 
-## External acceptance still open — T017 / SC006
+## Nghiệm thu bên ngoài còn mở — T017 / SC006
 
 API11 TV6 có handler/test ở code local. API02/03/04 TV1 trong base chưa có handler:
 ShipmentsController rỗng, AssignmentsController/Service cũng rỗng. Không có bằng chứng
@@ -40,7 +40,7 @@ Khi TV1/TV5 bàn giao backend, phối hợp TV6/TV4: Admin list→Detail→Assig
 Driver thấy đúng đơn; kiểm 409/no-op/mất response trên fixture được nhóm cho phép,
 ghi source/revision và kết quả thật. Race với Pickup thuộc tuần 4 theo VII.4.
 
-## Re-run
+## Chạy lại
 
 Từ root: npm run lint:web; npm run build:web;
 npm run test --workspace=@parcelflow/web.
@@ -60,9 +60,9 @@ API, migration hoặc deploy. Không có lỗi frontend mới cần sửa trong 
 | --- | --- |
 | Test Admin và contract Shipment/Driver | 57/57 đạt, 4 file; API mock |
 | Toàn bộ frontend | 351/351 đạt, 27 file; kiểm tra local |
-| `npm run lint:web` | Exit 0 |
-| `npm run build:web` | Exit 0, gồm TypeScript; bundle chính 495.88 kB |
-| Browser local | Shipments/Drivers/Assignment ở 375×812, 1440×900, 812×375 không tràn ngang; 5 POST mock, không gửi phân công thật |
+| `npm run lint:web` | Mã thoát 0 |
+| `npm run build:web` | Mã thoát 0, gồm TypeScript; bundle chính 495.88 kB |
+| Trình duyệt local | Shipments/Drivers/Assignment ở 375×812, 1440×900, 812×375 không tràn ngang; 5 POST mock, không gửi phân công thật |
 | Recovery và accessibility | 409/503 chỉ GET lại; focus review/cancel/Enter, reduced motion, chữ 200%, chặn CUSTOMER; 0 runtime exceptions |
 | File được bảo toàn | SHA256 AGENTS.md và thay đổi local `.env.example` không đổi |
 
@@ -90,8 +90,8 @@ và nội dung mới, không tạo lại `openspec/`. `.env.example`, AGENTS.md 
 | `npm run test:integration --workspace=@parcelflow/web` | 8/8 đạt; build API, typecheck bộ integration, React UI → apiClient → HTTP Nest thật → SQL PGlite cô lập trong RAM |
 | Toàn bộ frontend | 438/438 đạt, 34 file; regression local/mock |
 | API Assign/Read và Admin directory/query | 95 đạt, 36 bỏ qua; 3 file; PGlite/HTTP và mock. 35 ca PostgreSQL không có URL test local, 1 ca chờ khóa không áp dụng PGlite |
-| `npm run typecheck --workspace=@parcelflow/api` | Exit 0; gồm kiểu của test API |
-| Build frontend và API | Exit 0; bundle frontend chính 491.79 kB |
+| `npm run typecheck --workspace=@parcelflow/api` | Mã thoát 0; gồm kiểu của test API |
+| Build frontend và API | Mã thoát 0; bundle frontend chính 491.79 kB |
 
 Bộ integration ở `apps/web/integration/`, tách khỏi test nhanh và bundle production.
 Nest/PGlite chạy trong worker Node riêng; schema mới nằm trong RAM, không kết nối

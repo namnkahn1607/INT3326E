@@ -1,289 +1,99 @@
 # ParcelFlow
 
-**A logistics & delivery platform built "Cloud First" - Modular Monolith + async processing for high-throughput GPS data.**
-
-Yêu cầu hiện hành: [PF SPEC 01, nội dung v1.3 và thứ tự ưu tiên nguồn](docs/contracts/spec-baseline.md).
-Tuần 1 được bảo toàn theo VII.2; Auth/API thật từ tuần 2. Xem
-[hồ sơ tái nghiệm thu tuần 1](docs/history/frontend-week1.md)
-để phân biệt kết quả hiện tại, bằng chứng lịch sử và việc còn mở.
-
-Đặc tả tính năng, contract và báo cáo bàn giao dùng chung được dẫn tại
-[docs/README.md](docs/README.md).
+Nền tảng giao nhận và theo dõi vận chuyển, xây theo hướng Cloud-native: Modular Monolith cho nghiệp vụ, pipeline bất đồng bộ cho dữ liệu GPS tải cao.
 
 | | |
-|---|---|
-| **Course** | Cloud Application Development - UET |
-| **Topic** | Logistic & Delivery Platform |
-| **Team size** | 6 students |
-| **Timeline** | 10 weeks |
-| **Primary focus** | Performance & Scalability |
+| --- | --- |
+| Môn học | Phát triển ứng dụng Cloud (INT3326E), UET |
+| Đề tài | Logistics & Delivery Platform |
+| Nhóm | Nhóm 6, 6 thành viên |
+| Thời gian | 10 tuần (tuần 4 đến tuần 13) |
+| Trọng tâm | Hiệu năng và khả năng mở rộng |
+| Web | https://int3326e.web.app |
 
----
+## Đọc gì trước
 
-## Quick Start (Worker)
+- [AGENTS.md](AGENTS.md): cài đặt, lệnh chạy, test, ràng buộc khi viết code.
+- [ARCHITECTURE.md](ARCHITECTURE.md): kiến trúc và cấu trúc thư mục.
+- [docs/features.md](docs/features.md): tính năng nào đã xong, kiểm bằng test nào.
+- [docs/README.md](docs/README.md): mục lục toàn bộ tài liệu.
+- [Triển khai lên Cloud](docs/features/deploy.md): build, deploy, biến môi trường.
+- [Điều phối theo tuần](docs/coordination/README.md): việc từng thành viên và PR chốt tuần.
 
-Monorepo/Worker dùng Node.js >= 22.12 (Pub/Sub client hiện yêu cầu Node 22;
-Node hiện đại cũng hỗ trợ nạp NestJS 12 ESM từ build CommonJS).
+## Chạy nhanh
 
-```powershell
-# Cài sạch dependencies theo lockfile gốc (API/frontend vẫn có lockfile riêng)
-npm ci --ignore-scripts --no-audit --no-fund
-
-# PowerShell: chỉ tạo .env nếu chưa có, không ghi đè cấu hình cá nhân
-if (!(Test-Path .env)) { Copy-Item .env.example .env }
-
-# Chạy worker ở chế độ development
-npm run start:dev
-
-# Build
+```sh
+npm ci
 npm run typecheck
-npm run build
-
-# Kiểm tra health endpoint
-curl http://localhost:8080/healthz
-
-# Chạy test
-npm test
-npm run test:e2e
-
-# Lint
-npm run lint
+npm test                                  # Worker, types, infra
+npm test --workspace=@parcelflow/api
+npm test --workspace=@parcelflow/web
+npm run dev:web                           # web local, cần apps/web/.env.local
+npm run start:dev                         # Worker local, cần .env (mẫu .env.example)
 ```
 
-Để thử pipeline local, bật Docker và chạy
-`docker compose -f infra/docker-compose.yml up -d pubsub-emulator`, rồi chạy
-`sh infra/pubsub/init-pubsub.sh` trong Git Bash/WSL để tạo topic/subscription.
+## Phạm vi
 
-`.env.example` ở gốc là template chung; Worker local cần `PORT`, `GCP_PROJECT_ID`,
-`PUBSUB_SUB_GPS_EVENTS` và `PUBSUB_EMULATOR_HOST`, dùng project `parcelflow-dev`
-trên Pub/Sub emulator. Health `GET /healthz` là liveness: HTTP 200 không chứng minh
-pipeline Pub/Sub hoạt động; nếu chưa bật emulator, Worker có thể log lỗi kết nối.
-API dùng `apps/api/.env.example`; frontend không nhận credentials của Worker/API.
-Không đặt `PUBSUB_EMULATOR_HOST` trên Cloud Run; dùng project thật và ADC do TV5 cấu hình.
+**Vai trò:** Customer, Driver, Admin (Admin kiêm điều phối và gán tài xế).
 
-Typecheck/test ở gốc kiểm tra Worker, GPS contract dùng chung, smoke runner test
-và cấu hình Vitest, không gom code React
-hoặc test API. Chạy riêng API bằng `npm run typecheck --workspace=@parcelflow/api`
-và `npm test --workspace=@parcelflow/api`; frontend dùng `npm run lint:web`,
-`npm run build:web`, `npm run dev:web`. Sau khi đổi compiler config trong VS Code,
-chạy **TypeScript: Restart TS Server** nếu Problems vẫn hiển thị lỗi cũ.
-
-Contract request/event GPS hiện hành nằm trong [hợp đồng sự kiện GPS](docs/contracts/gps-event-contract.md).
-Chạy `npm run test:gps-pubsub` khi đã có Pub/Sub emulator và cấu hình
-`PUBSUB_EMULATOR_HOST`; chế độ cloud dùng `--cloud --project int3326e` và ADC.
-Xem [kiểm thử pipeline GPS](docs/history/gps-pipeline-validation.md) để chạy từng bước,
-thử trực tiếp trên Cloud Console và phân biệt bằng chứng local với cloud.
-
-### Worker trên Cloud Run
-
-Worker có package/lockfile và Dockerfile riêng trong `apps/worker`. Helper ETA dùng
-chung từ `packages/types`, nên context build của API và Worker là gốc repo:
-
-```bash
-docker build -f apps/worker/Dockerfile -t parcelflow-worker .
-docker build -f apps/api/Dockerfile -t parcelflow-api .
-```
-
-Sau khi đẩy image Worker lên registry của project, đặt `WORKER_IMAGE` bằng URL
-image đó rồi cập nhật dịch vụ. Không dùng `--source=apps/worker` vì thư mục này
-không chứa package dùng chung.
-
-```bash
-gcloud run deploy worker-service \
-  --project=int3326e \
-  --region=asia-southeast1 \
-  --image="$WORKER_IMAGE" \
-  --port=8080 \
-  --command="" \
-  --args="" \
-  --update-env-vars=GCP_PROJECT_ID=int3326e \
-  --remove-env-vars=PUBSUB_EMULATOR_HOST
-```
-
-Service account dùng ADC; `PUBSUB_SUB_GPS_EVENTS` (Worker) và `PUBSUB_TOPIC_GPS_EVENTS` (API) phải khớp subscription và topic thật của GCP. Tên cũ `PUBSUB_SUBSCRIPTION`, `PUBSUB_TOPIC` không còn được đọc.
-Health tuần 1 phải trả JSON `{"status":"ok"}`; trang mẫu Cloud Run không phải
-worker của dự án. Trên Cloud Run, kiểm tra `/healthz/` để tránh đường dẫn `/healthz`
-được Google dành riêng. Health chỉ xác nhận tiến trình HTTP, chưa xác nhận xử lý GPS.
-
----
-
-## Table of Contents
-
-1. [Overview](#1-overview)
-2. [Functional Scope (MVP)](#2-functional-scope-mvp)
-3. [System Architecture](#3-system-architecture)
-4. [Tech Stack & Infrastructure](#4-tech-stack--infrastructure)
-5. [Non-Functional Requirements](#5-non-functional-requirements)
-6. [Roadmap](#6-roadmap)
-
----
-
-## 1. Overview
-
-ParcelFlow is a delivery and logistics platform designed around a **Modular Monolith** architecture, combined with **asynchronous processing** for high-load data flows.
-
-The goal is an MVP that:
-
-- Covers the core shipment lifecycle end to end.
-- Demonstrates **scalability** and **fault tolerance** for the driver GPS tracking pipeline.
-
-## 2. Functional Scope (MVP)
-
-### User roles
-
-- **Customer**
-- **Driver**
-- **Admin** — shipment dispatching, driver assignment and operational monitoring.
-
-### Shipment state flow (single flow)
+**Trạng thái đơn:**
 
 ```
 CREATED → ASSIGNED → PICKED_UP → DELIVERED / DELIVERY_FAILED
 ```
 
-### Core use cases
+**Chức năng chính:**
 
-| # | Use case |
-|---|----------|
-| 1 | Create shipment |
-| 2 | Assign shipment to driver |
-| 3 | Update pickup/delivery status |
-| 4 | Submit driver location periodically (**async**) |
-| 5 | Track shipment status |
-| 6 | View delivery history |
-| 7 | Handle failed/late delivery |
-| 8 | Customer notifications |
-| 9 | *Advanced:* ETA prediction (Haversine formula) |
+| # | Chức năng |
+| --- | --- |
+| 1 | Tạo đơn |
+| 2 | Gán tài xế cho đơn |
+| 3 | Cập nhật lấy hàng, giao hàng |
+| 4 | Tài xế gửi vị trí định kỳ (bất đồng bộ) |
+| 5 | Theo dõi trạng thái và vị trí |
+| 6 | Xem lịch sử giao nhận |
+| 7 | Xử lý giao thất bại, giao trễ |
+| 8 | Thông báo cho khách |
+| 9 | Ước tính thời gian đến (Haversine) |
 
-### Out of scope
+**Ngoài phạm vi:** giao lại nhiều lần, hoàn hàng, COD, nhiều kho, Machine Learning cho ETA, gợi ý tuyến đường, PostGIS.
 
-Multiple redelivery attempts, returns, COD, multi-warehouse management, Machine Learning for ETA, route recommendation, PostGIS.
+## Luồng GPS
 
-## 3. System Architecture
+- **Ghi:** Driver gọi `POST /v1/locations`. API chỉ publish lên Pub/Sub và trả `202` sau khi broker xác nhận, không chờ ghi DB.
+- **Xử lý nền:** GPS Worker (Cloud Run riêng) nhận message, ghi `location_history` và `current_locations` trong một transaction, ACK sau khi commit.
+- **Đọc:** Customer polling API mỗi 5–10 giây, API đọc `current_locations`.
+- **Toàn vẹn dữ liệu:** mẫu trùng khóa (`"driverId"`, `"clientTimestamp"`) bị bỏ qua; mẫu đến muộn vẫn vào lịch sử nhưng không làm vị trí hiện tại lùi lại.
+- **Phục hồi:** Worker ngừng thì message nằm lại trong hàng đợi và được xử lý khi Worker chạy lại; message lỗi chuyển sang dead-letter subscription.
 
-The system uses a **Modular Monolith** for business logic, plus an **Event-Driven / Async pipeline** dedicated to GPS ingestion.
+## Công nghệ
 
-### 3.1. Architecture diagram
+| Thành phần | Công nghệ |
+| --- | --- |
+| Frontend | React + Vite + TypeScript, Leaflet + OpenStreetMap |
+| Backend | NestJS trên Cloud Run |
+| GPS Worker | NestJS, Cloud Run riêng |
+| Hàng đợi | Google Cloud Pub/Sub |
+| Cơ sở dữ liệu | PostgreSQL trên Cloud SQL |
+| Xác thực | Firebase Authentication |
+| Giám sát | Cloud Monitoring |
 
-```mermaid
-flowchart TD
-    C["Customer (React)"] -- "Polling REST" --> B
-    D["Driver (React)"] -- "REST" --> B
-    A["Admin (React)"] -- "REST" --> B
+## Yêu cầu phi chức năng
 
-    B["Backend<br/>NestJS on Cloud Run<br/>Modules: Shipment / Assign / Notification / ETA"]
+Giả định thiết kế: khoảng 300–500 đơn đang giao cùng lúc, tài xế gửi GPS mỗi 8 giây.
 
-    B -- "POST /v1/locations<br/>(publish only, no DB write)" --> P["Pub/Sub: gps-events"]
-    B -- "Other CRUD (sync)" --> DB[("Cloud SQL<br/>PostgreSQL")]
+| Chỉ số | Mục tiêu | Lý do |
+| --- | --- | --- |
+| Thông lượng bình thường | ~60 sự kiện/giây | 500 tài xế × 1 sự kiện / 8 giây |
+| Thông lượng khi thử tải | ~300 sự kiện/giây | Gấp khoảng 5 lần để chứng minh khả năng mở rộng |
+| p95 tạo đơn, gán tài xế | < 500 ms | Ghi đồng bộ có transaction |
+| p95 đọc tracking | < 300 ms | Đọc bảng có index |
+| p95 nhận GPS | < 150 ms | Chỉ tính thời gian publish Pub/Sub, không phụ thuộc DB |
+| Thời gian Worker phục hồi | < 60 giây | Xử lý hết backlog sau khi Worker dừng rồi chạy lại |
+| Chi phí Cloud | < 50 USD/tháng | Cloud Run scale về 0, Cloud SQL gói thấp nhất, Pub/Sub trong hạn mức miễn phí |
 
-    P -- "Subscribe" --> W["GPS Worker<br/>Cloud Run, separate service"]
-    W -- "Update current_location<br/>Insert location_history" --> DB
-    W -- "NACK on failure" --> DLQ["Dead-letter subscription"]
-```
+Các con số trên là mục tiêu. Kết quả đo thật ghi trong báo cáo thử tải (tuần 9).
 
-### 3.2. Processing flows
+## Kế hoạch
 
-#### 1. General business flow (synchronous)
-
-All business operations (create shipment, assign, notifications, auth, ...) go through synchronous REST calls from the client to the NestJS backend, which writes directly to PostgreSQL.
-
-#### 2. GPS flow (asynchronous)
-
-To meet the load requirements, the **write path** and **read path** of GPS data are fully separated:
-
-- **Write path (driver sends GPS):** The driver calls `POST /v1/locations`. The backend only **publishes** a message to Google Cloud Pub/Sub and immediately returns `HTTP 202` after broker confirmation - it does not wait for a database write.
-- **Background processing (worker):** A standalone service (**GPS Worker**) subscribes to Pub/Sub and writes the data into Cloud SQL.
-- **Read path (customer tracking):** The Customer app uses **REST polling** (every 5 to 10s) to read the `current_location` table from Postgres.
-
-#### 3. Data integrity: idempotency & out-of-order handling
-
-Each GPS event carries the payload `(driver_id, client_timestamp, lat, lng)`. The worker guarantees integrity through database-level constraints:
-
-- **`location_history`**: `INSERT ... ON CONFLICT (driver_id, client_timestamp) DO NOTHING` to drop duplicate events.
-- **`current_location`**: `UPDATE ... WHERE client_timestamp > existing.client_timestamp` to ignore late (out-of-order) events.
-
-#### 4. Failure recovery scenario
-
-Pub/Sub combined with a **dead-letter subscription** ensures location data is not lost when the worker fails. Messages remain in the queue and are processed as a backlog once the worker is back online.
-
-## 4. Tech Stack & Infrastructure
-
-| Component | Technology |
-|-----------|------------|
-| Frontend | React + Vite + TypeScript |
-| Backend core | NestJS (deployed on Google Cloud Run) |
-| GPS Worker | NestJS / Node.js script (separate Google Cloud Run service) |
-| Message queue | Google Cloud Pub/Sub |
-| Database | PostgreSQL (Google Cloud SQL) |
-| Authentication | Firebase Authentication |
-| Maps | Leaflet + OpenStreetMap |
-| CI/CD | GitHub Actions |
-| Monitoring | Google Cloud Monitoring |
-
-## 5. Non-Functional Requirements
-
-Design assumptions: at any moment there are **~300–500 active shipments**, and drivers send GPS **every 8 seconds**.
-
-| Metric (NFR) | Target | Rationale |
-|--------------|--------|-----------|
-| Throughput (normal) | ~60 events/s | 500 drivers × 1 event / 8 s |
-| Throughput (load test, ~5×) | ~300 events/s | Demonstrates scalability via load testing |
-| p95 latency - Create/Assign | < 500 ms | Synchronous transactional write |
-| p95 latency - Tracking read | < 300 ms | Indexed table read |
-| p95 latency - GPS ingest ack | < 150 ms | Pub/Sub publish latency only (independent of DB) |
-| Worker recovery time | < 60 s | Time to drain the backlog after the worker is stopped and restarted (measured via Cloud Monitoring) |
-| Cloud budget | < $50 / month | Cost optimization: Cloud Run scale-to-zero, lowest Cloud SQL tier, Pub/Sub free tier |
-
-## 6. Roadmap
-
-| Week | Focus | Milestone |
-|------|-------|-----------|
-| 1 | Init repo, React + NestJS skeleton. Set up Cloud Run, Cloud SQL, Pub/Sub. | Base URLs live, health checks pass on both services. Budget alert configured. |
-| 2 | Integrate Auth, design Postgres schema, complete Create Shipment API. | Customer can log in; created shipments persist in Cloud SQL. |
-| 3 | Assign shipment + Admin/Driver UI. Define GPS event schema. | Admin can assign a driver. Driver can publish a test message to Pub/Sub. |
-| 4 | Pickup/Delivery status updates. GPS Worker starts consuming the queue. | Basic delivery flow works. Location is persisted to the DB via the worker. |
-| 5 | Complete the end-to-end GPS pipeline. Dedupe / out-of-order handling. | Customer sees near real-time driver location (polling). **Mandatory** |
-| 6 | Failed/Late delivery handling, Notification module. | All required use cases complete. |
-| 7 | ETA prediction (Haversine) based on `current_location`. | Customer sees ETA alongside tracking. |
-| 8 | Integration & permission tests. Prepare load-test and recovery scenarios. | System stable; failure-simulation scenario ready. |
-| 9 | Run load tests per NFRs. Finalize Cloud Monitoring data, fix bugs. | Load-test report (performance & scalability); Release Candidate. |
-| 10 | Finalize documentation and final risk contingency. | Packaged product; metrics ready for the defense. |
-
-## Week 1 API scaffold
-
-The API boots with Shipment, Auth and Admin modules and exposes public `GET /healthz`, Firebase profile endpoints, and Admin-only read endpoints `GET /v1/drivers` (API11) and `GET /v1/admin/customers`. The lists validate business identity and read PostgreSQL; deployment requires the matching schema. See [Admin directory](docs/features/admin-directory.md) and the draft [QA test plan](docs/qa/test-plan.md). Shipment Create, role-scoped List/Detail and ADMIN Assign/reassign are implemented locally; GPS ingest (`POST /v1/locations`) is integrated locally; see [Na GPS merge](docs/history/gps-branch-merge.md) for validation and Cloud acceptance still pending. See [TV1 week 6](docs/history/assignment-api-week6.md) for behavior, SQL tests and Cloud acceptance. [Run and container instructions](docs/features/api-scaffold.md) preserve the week 1 setup; [contract decisions](docs/contracts/api-contract.md) and `docs/openapi.json` distinguish the implemented reads from future operations. Cancellation remains an unapproved proposal outside the five-state baseline. Week 1 deployment evidence is tracked in issue #9.
-
-## Frontend integration and Hosting
-
-The shared React frontend lives in `apps/web`. Routes are `/customer`, `/driver`,
-and `/admin`; Admin includes dispatching and driver assignment. The role contract
-is `CUSTOMER`, `DRIVER`, `ADMIN`. Authentication, shipment submission, and driver
-positions currently use scaffold/mock data; merging the apps does not activate
-the future business APIs.
-
-From the repository root:
-
-```bash
-cd apps/web
-npm ci --workspaces=false
-npm run lint
-npm run build
-npm run dev
-```
-
-Deploy the built frontend from `apps/web`:
-
-```bash
-npx --yes firebase-tools deploy --only hosting --project int3326e
-```
-
-Firebase CLI must be authenticated with access to `int3326e`. `firebase.json`
-publishes `dist` and rewrites SPA routes to `index.html`, including direct access
-to `/admin`. Hosting: https://int3326e.web.app.
-
-See the [bàn giao cấu hình frontend cho TV5](docs/features/frontend-config-handoff.md) for production
-environment variables, backend prerequisites and verification limits.
-
-Keep the API's standalone package and lockfile as documented in
-`docs/features/api-scaffold.md`. Each app is installed from its own lockfile; `apps.zip`
-is excluded from the repository.
+Kế hoạch 10 tuần và việc từng thành viên nằm ở [sheet chia việc](https://docs.google.com/spreadsheets/d/1OD9vEnT2ElFshA_2l66qCfMbiayibnajvy3BjrrLIrw/edit) và [điều phối theo tuần](docs/coordination/README.md). Mỗi tuần chốt bằng PR `week/NN` → `main`.
