@@ -2,9 +2,9 @@
 
 **A logistics & delivery platform built "Cloud First" - Modular Monolith + async processing for high-throughput GPS data.**
 
-Yêu cầu hiện hành: [PF SPEC 01, nội dung v1.3 và thứ tự ưu tiên nguồn](docs/spec-baseline.md).
+Yêu cầu hiện hành: [PF SPEC 01, nội dung v1.3 và thứ tự ưu tiên nguồn](docs/contracts/spec-baseline.md).
 Tuần 1 được bảo toàn theo VII.2; Auth/API thật từ tuần 2. Xem
-[hồ sơ tái nghiệm thu tuần 1](docs/frontend-week1-handoff.md)
+[hồ sơ tái nghiệm thu tuần 1](docs/history/frontend-week1.md)
 để phân biệt kết quả hiện tại, bằng chứng lịch sử và việc còn mở.
 
 Đặc tả tính năng, contract và báo cáo bàn giao dùng chung được dẫn tại
@@ -68,10 +68,10 @@ và `npm test --workspace=@parcelflow/api`; frontend dùng `npm run lint:web`,
 `npm run build:web`, `npm run dev:web`. Sau khi đổi compiler config trong VS Code,
 chạy **TypeScript: Restart TS Server** nếu Problems vẫn hiển thị lỗi cũ.
 
-Contract request/event GPS hiện hành nằm trong [hợp đồng sự kiện GPS](docs/gps-event-contract.md).
+Contract request/event GPS hiện hành nằm trong [hợp đồng sự kiện GPS](docs/contracts/gps-event-contract.md).
 Chạy `npm run test:gps-pubsub` khi đã có Pub/Sub emulator và cấu hình
 `PUBSUB_EMULATOR_HOST`; chế độ cloud dùng `--cloud --project int3326e` và ADC.
-Xem [kiểm thử pipeline GPS](docs/gps-pipeline-validation.md) để chạy từng bước,
+Xem [kiểm thử pipeline GPS](docs/history/gps-pipeline-validation.md) để chạy từng bước,
 thử trực tiếp trên Cloud Console và phân biệt bằng chứng local với cloud.
 
 ### Worker trên Cloud Run
@@ -251,7 +251,7 @@ Design assumptions: at any moment there are **~300–500 active shipments**, and
 
 ## Week 1 API scaffold
 
-The API boots with Shipment, Auth and Admin modules and exposes public `GET /healthz`, Firebase profile endpoints, and Admin-only read endpoints `GET /v1/drivers` (API11) and `GET /v1/admin/customers`. The lists validate business identity and read PostgreSQL; deployment requires the matching schema. See [Admin directory](docs/admin-directory.md) and the draft [QA test plan](docs/qa-test-plan.md). Shipment Create, role-scoped List/Detail and ADMIN Assign/reassign are implemented locally; GPS ingest (`POST /v1/locations`) is integrated locally; see [Na GPS merge](docs/na-gps-merge.md) for validation and Cloud acceptance still pending. See [TV1 week 6](docs/tv1-assignment-week6.md) for behavior, SQL tests and Cloud acceptance. [Run and container instructions](docs/api-scaffold.md) preserve the week 1 setup; [contract decisions](docs/api-contract.md) and `docs/openapi.json` distinguish the implemented reads from future operations. Cancellation remains an unapproved proposal outside the five-state baseline. Week 1 deployment evidence is tracked in issue #9.
+The API boots with Shipment, Auth and Admin modules and exposes public `GET /healthz`, Firebase profile endpoints, and Admin-only read endpoints `GET /v1/drivers` (API11) and `GET /v1/admin/customers`. The lists validate business identity and read PostgreSQL; deployment requires the matching schema. See [Admin directory](docs/features/admin-directory.md) and the draft [QA test plan](docs/qa/test-plan.md). Shipment Create, role-scoped List/Detail and ADMIN Assign/reassign are implemented locally; GPS ingest (`POST /v1/locations`) is integrated locally; see [Na GPS merge](docs/history/gps-branch-merge.md) for validation and Cloud acceptance still pending. See [TV1 week 6](docs/history/assignment-api-week6.md) for behavior, SQL tests and Cloud acceptance. [Run and container instructions](docs/features/api-scaffold.md) preserve the week 1 setup; [contract decisions](docs/contracts/api-contract.md) and `docs/openapi.json` distinguish the implemented reads from future operations. Cancellation remains an unapproved proposal outside the five-state baseline. Week 1 deployment evidence is tracked in issue #9.
 
 ## Frontend integration and Hosting
 
@@ -281,9 +281,9 @@ Firebase CLI must be authenticated with access to `int3326e`. `firebase.json`
 publishes `dist` and rewrites SPA routes to `index.html`, including direct access
 to `/admin`. Hosting: https://int3326e.web.app.
 
-See the [bàn giao cấu hình frontend cho TV5](docs/frontend-config-handoff.md) for production
+See the [bàn giao cấu hình frontend cho TV5](docs/features/frontend-config-handoff.md) for production
 environment variables, backend prerequisites and verification limits.
 
 Keep the API's standalone package and lockfile as documented in
-`docs/api-scaffold.md`. Each app is installed from its own lockfile; `apps.zip`
+`docs/features/api-scaffold.md`. Each app is installed from its own lockfile; `apps.zip`
 is excluded from the repository.

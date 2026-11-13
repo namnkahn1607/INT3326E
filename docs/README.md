@@ -1,48 +1,58 @@
 # Tài liệu ParcelFlow
 
-Đọc [nguồn yêu cầu hiện hành](spec-baseline.md) trước. PF SPEC 01 nội dung v1.3
-định nghĩa sản phẩm đích; code xác định phần đã triển khai. Báo cáo ghi kết quả
-tại một thời điểm, không thay thế đặc tả hoặc nghiệm thu môi trường đang chạy.
+Đọc [nguồn yêu cầu hiện hành](contracts/spec-baseline.md) trước. Đặc tả PF SPEC 01 định nghĩa sản phẩm đích; code xác định phần đã triển khai. Báo cáo cũ ghi kết quả tại một thời điểm: khi gặp "chưa triển khai" hay số test trong đó, đối chiếu ngày và SHA, đừng suy ra trạng thái hiện tại. Trạng thái hiện tại nằm ở [danh sách tính năng](features.md).
 
-## Đặc tả và hợp đồng dùng chung
+## Cấu trúc
+
+| Thư mục | Nội dung |
+| --- | --- |
+| [`contracts/`](contracts/) | Hợp đồng dùng chung, đổi phải báo cả nhóm |
+| [`features/`](features/) | Tài liệu từng tính năng: `X.md` là phạm vi và thiết kế, `X-handoff.md` là bàn giao và kết quả kiểm tra |
+| [`coordination/`](coordination/README.md) | Điều phối nhóm theo tuần |
+| [`qa/`](qa/) | Kế hoạch kiểm thử |
+| [`history/`](history/) | Báo cáo đã qua (merge, nghiệm thu cũ), chỉ để tra lại |
+| [`evidence/`](evidence/) | Ảnh và log làm bằng chứng |
+| [`agents/`](agents/) | Quy trình cho agent (Spec Kit) |
+| [`tv6/`](tv6/tv6-weekly.md) | Ghi chép riêng của TV6 |
+
+## Hợp đồng
 
 | Tài liệu | Nội dung |
 | --- | --- |
-| [Nguồn yêu cầu](spec-baseline.md) | Phiên bản, thứ tự ưu tiên và kế hoạch theo tuần |
-| [API contract](api-contract.md), [OpenAPI](openapi.json) | Method/path, request/response; phân biệt handler đã có và draft |
-| [Auth/RBAC](auth-rbac.md) | Hợp đồng Firebase, role, business linkage và quyền |
-| [GPS event](gps-event-contract.md) | Payload, timestamp, định danh và quy tắc xử lý |
-| [Frontend chung](frontend-guide.md) | Một app, routing và ranh giới Customer/Admin/Driver |
-| [Customer frontend](customer-frontend.md) | Đăng nhập, tạo đơn, danh sách/chi tiết và chọn địa chỉ |
-| [Admin phân công](admin-assignment.md) | Chọn đơn/tài xế, xác nhận và xử lý kết quả chưa rõ |
-| [Vòng đời Customer/Admin](shipment-lifecycle.md) | Trạng thái, lịch sử cơ bản và báo thất bại sau pickup |
-| [Tracking Customer/Admin](live-tracking.md) | Polling, GPS mới/cũ/thiếu và bản đồ tài xế theo trang |
-| [Tạo đơn](create-shipment.md) | Phạm vi API01, chống trùng và transaction |
-| [Admin directory](admin-directory.md) | Danh sách tài xế/khách hàng và điều kiện SQL |
-| [Điều phối nhóm theo tuần](coordination/README.md) | Việc của 6 thành viên, thứ tự, hạn và PR chốt từng tuần |
-| [Chia việc tuần 4–13](tv6/week-task-breakdown.md) | Đầu việc W<tuần>-TV<người>-<số>, phụ thuộc và tiêu chí |
+| [Nguồn yêu cầu](contracts/spec-baseline.md) | Phiên bản, thứ tự ưu tiên, kế hoạch theo tuần |
+| [API contract](contracts/api-contract.md), [OpenAPI](openapi.json) | Method, path, request, response; handler đã có và draft |
+| [Auth/RBAC](contracts/auth-rbac.md) | Firebase, role, liên kết user nghiệp vụ, quyền |
+| [GPS event](contracts/gps-event-contract.md) | Payload, timestamp, định danh, quy tắc xử lý |
 
-## Chạy, kiểm tra và bàn giao
+`openapi.json` nằm ở gốc `docs/` vì test đọc file theo đường dẫn này.
 
-| Tài liệu | Phạm vi / thời điểm |
+## Tính năng
+
+| Tính năng | Thiết kế | Bàn giao |
+| --- | --- | --- |
+| Khung API | [api-scaffold](features/api-scaffold.md) | |
+| Frontend chung | [frontend-guide](features/frontend-guide.md) | [frontend-config-handoff](features/frontend-config-handoff.md) |
+| Tạo đơn | [create-shipment](features/create-shipment.md) | [create-shipment-handoff](features/create-shipment-handoff.md) |
+| Customer | [customer-frontend](features/customer-frontend.md) | [customer-frontend-handoff](features/customer-frontend-handoff.md) |
+| Admin phân công | [admin-assignment](features/admin-assignment.md) | [admin-assignment-handoff](features/admin-assignment-handoff.md) |
+| Admin directory | [admin-directory](features/admin-directory.md) | [tv6/admin-directory-handoff](tv6/admin-directory-handoff.md) |
+| Vòng đời đơn | [shipment-lifecycle](features/shipment-lifecycle.md) | [shipment-lifecycle-handoff](features/shipment-lifecycle-handoff.md) |
+| Lấy hàng, giao hàng | [shipment-pickup-deliver/](features/shipment-pickup-deliver/spec.md) | [shipment-pickup-deliver-handoff](features/shipment-pickup-deliver-handoff.md) |
+| Driver và GPS | [driver-dashboard-gps](features/driver-dashboard-gps.md), [driver-gps/](features/driver-gps/spec.md) | [driver-shipments-handoff](features/driver-shipments-handoff.md) |
+| Tracking | [live-tracking](features/live-tracking.md) | [live-tracking-handoff](features/live-tracking-handoff.md) |
+| Auth | [contracts/auth-rbac](contracts/auth-rbac.md) | [tv6/auth-rbac-handoff](tv6/auth-rbac-handoff.md) |
+
+## Kiểm thử
+
+- [QA test plan](qa/test-plan.md): ca kiểm thử và kết quả mong đợi, không phải kết quả đã chạy.
+- [Danh sách tính năng](features.md): trạng thái từng AC và test tương ứng.
+
+## Lịch sử
+
+| Tài liệu | Thời điểm |
 | --- | --- |
-| [API scaffold](api-scaffold.md) | Hướng dẫn khởi động/container; phần runtime tuần 1 là lịch sử |
-| [Cấu hình frontend](frontend-config-handoff.md) | Build frontend, điều kiện backend; thăm dò 18/10/2026 |
-| [Auth/RBAC handoff](tv6/auth-rbac-handoff.md) | Tích hợp Auth, cấp claims, kết quả local 17/10/2026 |
-| [Admin directory handoff](tv6/admin-directory-handoff.md) | Kết quả kiểm tra local 23/10/2026 |
-| [TV6 theo tuần](tv6/tv6-weekly.md) | Mục lục công việc TV6, trỏ sang các tài liệu trên |
-| [Driver dashboard/GPS](driver-dashboard-gps.md) | Client Driver; checkpoint tích hợp 26/10/2026 |
-| [GPS validation](gps-pipeline-validation.md) | Cách kiểm thử và bằng chứng Pub/Sub ngày 16/10/2026 |
-| [GPS merge handoff](gps-merge-fix-handoff.md) | Báo cáo lỗi tại snapshot 20/10/2026; không phải danh sách lỗi hiện tại |
-| [QA test plan](qa-test-plan.md) | Expected results; không phải kết quả đã chạy |
-| [Frontend tuần 1](frontend-week1-handoff.md) | Bằng chứng tái nghiệm thu 18/10/2026 |
-| [Customer tuần 2](customer-frontend-handoff.md) | Bằng chứng frontend tại các checkpoint ghi trong báo cáo |
-| [Admin tuần 3](admin-assignment-handoff.md) | Kiểm chứng frontend; cập nhật sau merge 30/10/2026 |
-| [Vòng đời tuần 4](shipment-lifecycle-handoff.md) | Frontend Customer/Admin; giới hạn tích hợp backend |
-| [Tracking tuần 5](live-tracking-handoff.md) | Frontend, readiness Driver/API/Worker và phần Cloud chưa nghiệm thu |
-| [Create handoff](create-shipment-handoff.md) | Kiểm chứng API/SQL local 24–25/10/2026 |
-
-Các file hiện có được giữ nguyên phạm vi sở hữu. Khi đọc nhận định như
-“chưa triển khai” hoặc số test/bundle trong báo cáo cũ, đối chiếu ngày, SHA và
-giới hạn phép kiểm tra; không suy ra trạng thái deploy hiện tại. Đặc tả tính năng
-không lặp lại toàn bộ Auth, GPS contract hoặc cấu hình triển khai đã có ở trên.
+| [Frontend tuần 1](history/frontend-week1.md) | Tái nghiệm thu 18/10/2026 |
+| [GPS pipeline validation](history/gps-pipeline-validation.md) | Pub/Sub, 16/10/2026 |
+| [Sửa lỗi merge GPS](history/gps-merge-fix.md) | Snapshot 20/10/2026 |
+| [Merge nhánh GPS](history/gps-branch-merge.md) | 02/11/2026 |
+| [API gán tài xế tuần 6](history/assignment-api-week6.md) | Tuần 6 |

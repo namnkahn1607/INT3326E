@@ -1,90 +1,56 @@
-# ParcelFlow MVP - Agent contract
+# ParcelFlow – hướng dẫn cho agent
 
-## How to work here
+## Tổng quan
 
-- Smallest diff that solves the problem. Do not rename, reformat, or refactor code you were
-  not asked to touch.
-- Do not invent APIs, flags, or CI job names. Grep first. If unsure, say so.
+ParcelFlow là ứng dụng giao nhận: Customer tạo đơn, Admin gán tài xế, Driver nhận và giao hàng, Customer theo dõi vị trí tài xế.
+Monorepo npm workspaces:
 
-## Conventions (when writing code)
+| Thư mục | Vai trò |
+| --- | --- |
+| `apps/api` | NestJS API (`/v1`), Firebase Auth, PostgreSQL qua `pg` |
+| `apps/worker` | GPS Worker: nhận Pub/Sub, ghi `location_history` và `current_locations` |
+| `apps/web` | React + Vite cho Customer, Admin, Driver; deploy Firebase Hosting |
+| `packages/types` | Kiểu và hợp đồng dùng chung (GPS, ETA) |
+| `packages/database` | SQL tạo bảng (`sql/001`, `sql/002`); Prisma chỉ là bản nháp |
+| `infra/` | Pub/Sub, Firebase |
 
-- Comments explain why, or state a non-obvious invariant or memory ordering justification but not
-  restate what the code does. No banner or section comments. Do not rewrite an existing comment unless
-  the code behavior it describe changes.
+Đặc tả gốc là PF SPEC 01 v1.4 (ngoài repo). Đọc [nguồn yêu cầu](docs/contracts/spec-baseline.md) để biết phiên bản và thứ tự ưu tiên.
 
-## Quy trình phát triển bằng Spec Kit
+## Lệnh
 
-Áp dụng khi người dùng giao một tính năng hoặc nhiệm vụ phát triển bằng Spec Kit.
-Yêu cầu chỉ sửa hướng dẫn/tài liệu không tự kích hoạt chuỗi triển khai tính năng.
+```sh
+npm ci                                   # cài một lần ở gốc repo
+npm run typecheck                        # API + Worker
+npm test                                 # Worker, types, infra
+npm test --workspace=@parcelflow/api     # API
+npm test --workspace=@parcelflow/web     # web
+npm run build && npm run build:web       # Worker, web
+npm run build --workspace=@parcelflow/api
+npm run dev:web                          # web local, cần apps/web/.env.local
+```
 
-1. Đọc `AGENTS.md`, `.specify/memory/constitution.md`, tài liệu yêu cầu đã thống nhất
-   và code liên quan. Kiểm tra `git status`, `git diff` và `git diff --cached`
-   để bảo toàn cả thay đổi đã stage, chưa stage và file chưa được Git theo dõi.
-2. Xác định phạm vi, nguồn yêu cầu chính thức, hiện trạng và phụ thuộc.
-   Báo cáo do AI tạo là tài liệu hỗ trợ, không tự trở thành yêu cầu chính thức;
-   phải đối chiếu với chỉ dẫn người dùng và quyết định đã được chấp thuận.
-3. Tìm bộ spec tương ứng trước khi tạo mới; cập nhật bộ đã có và bảo toàn nội dung
-   còn hiệu lực, không tạo trùng hoặc sao chép template đè lên spec/plan/tasks hiện có.
-   Chỉ tạo hoặc sửa constitution khi nhiệm vụ yêu cầu thay đổi nguyên tắc.
-4. Đọc hướng dẫn các skill đã cài và thực hiện theo thứ tự:
+Node 26 cần `NODE_OPTIONS=--no-experimental-webstorage` khi chạy test web.
+Test trên PostgreSQL thật chỉ chạy khi có biến môi trường trỏ tới DB loopback tên `parcelflow_*_test`, xem README của từng package.
 
-   `$speckit-specify` → `$speckit-clarify` → `$speckit-plan` → `$speckit-checklist`
-   → `$speckit-tasks` → `$speckit-analyze` → `$speckit-implement` → `$speckit-converge`.
+## Ràng buộc cứng
 
-   Khi tiếp tục công việc đã có, dùng đúng bộ spec và kiểm tra artifact của các bước
-   trước; không chạy lại script tạo mới chỉ để đủ thứ tự hoặc làm mất tiến độ cũ.
-5. Sau mỗi bước, tự đọc, kiểm tra chất lượng và tính nhất quán của kết quả trước
-   khi tiếp tục. Sửa vấn đề analyze phát hiện trong phạm vi yêu cầu đã chốt,
-   cập nhật tài liệu liên quan và phân tích lại khi cần. Không triển khai khi còn
-   mâu thuẫn nghiêm trọng chưa được giải quyết.
-6. Triển khai theo tasks và phụ thuộc; chạy build/test, kiểm chứng tiêu chí nghiệm thu
-   phù hợp với phần thay đổi. Khi converge phát hiện thiếu sót trong phạm vi,
-   bổ sung task có truy vết, quay lại implement rồi converge cho đến khi đạt
-   hoặc có blocker cần quyết định/thay đổi trạng thái bên ngoài. Không đánh dấu
-   hoàn thành khi vẫn còn việc bắt buộc hoặc bước kiểm chứng chưa đạt.
+- Cột SQL dùng camelCase có ngoặc kép (`"driverId"`, `"clientTimestamp"`) theo DATA01–DATA07. Không theo tên snake_case của Prisma.
+- Worker chỉ ACK message sau khi transaction commit. GPS: mẫu đầu tiên thắng theo (`driverId`, `clientTimestamp`), `current_locations` không lùi về mẫu cũ.
+- Mọi API (trừ health) qua `FirebaseAuthGuard` và `RolesGuard`; 3 role `CUSTOMER`, `DRIVER`, `ADMIN`.
+- Không commit `.env`, key, token hay mật khẩu. Biến mẫu nằm trong `.env.example`.
+- `apps/api` và `apps/worker` giữ lockfile riêng vì Dockerfile build độc lập (`npm ci --workspaces=false`). Đổi dependency thì cập nhật cả lockfile gốc và lockfile của app.
+- Diff nhỏ nhất giải quyết vấn đề. Không đổi tên, format lại hay refactor code ngoài phạm vi. Grep trước khi dùng API, flag hay tên job; chưa chắc thì nói rõ.
+- Chú thích chỉ giải thích lý do hoặc bất biến không hiển nhiên, không lặp lại code làm gì.
 
-### Tự chủ và giới hạn hành động
+## Quy trình nhóm
 
-- Không dừng chỉ để hỏi có muốn chuyển sang bước tiếp theo. Báo tiến độ ngắn gọn
-  và tiếp tục các bước đã được giao.
-- Tự quyết định chi tiết kỹ thuật thông thường dựa trên tài liệu, constitution
-  và kiến trúc hiện có; ghi nhận giả định khi cần để người dùng kiểm tra.
-- Chỉ hỏi khi thiếu quyết định ảnh hưởng yêu cầu, API, dữ liệu hoặc phạm vi mà
-  nguồn hiện có không giải quyết được. Nêu điểm chưa rõ và tác động cụ thể;
-  trong lúc chờ, tiếp tục phần độc lập với câu trả lời.
-- Không mở rộng chức năng hoặc biến suy đoán, proposal, báo cáo AI thành yêu cầu đã chốt.
-  Nếu tài liệu mâu thuẫn, báo rõ vị trí và nội dung; không âm thầm chọn một hướng
-  làm thay đổi yêu cầu hoặc sửa constitution để hợp thức hóa implementation.
-- Bảo toàn công việc hiện có; không reset hoặc xóa thay đổi không liên quan.
-- Chỉ đánh dấu task hoàn thành khi có bằng chứng tương ứng. Phân biệt kiểm tra mock,
-  kiểm tra local và kiểm tra môi trường thật; nêu bước chưa kiểm chứng và nguyên nhân.
-- Không tự commit, push hoặc triển khai lên môi trường ngoài nếu người dùng chưa
-  yêu cầu hành động đó cho nhiệm vụ hiện tại. Yêu cầu trong nhiệm vụ trước không
-  tự cấp quyền cho nhiệm vụ mới; quy tắc này cũng áp dụng cho extension hooks.
+- Mỗi thay đổi đi qua nhánh riêng và PR vào `develop`. Cuối tuần chốt bằng PR `week/NN` → `main` (merge commit).
+- Báo kết quả kiểm tra kèm môi trường: mock, local hay Cloud. Không ghi "đạt" khi chưa chạy.
+- Ai dùng Spec Kit thì theo [quy trình Spec Kit](docs/agents/spec-kit-workflow.md).
 
-### Áp dụng cùng các giới hạn của skill
+## Tài liệu
 
-- Quy trình người dùng quy định ở đây ưu tiên hơn mặc định skill khi mâu thuẫn;
-  phải nêu rõ khác biệt và cách xử lý, giữ giới hạn phạm vi và yêu cầu kiểm chứng.
-- Với specify, chọn bộ spec đã có khi tiếp tục cùng tính năng thay vì mặc định
-  tạo feature directory mới. Không ghi đè artifact đã được người dùng chỉnh sửa.
-- Analyze vẫn chỉ đọc và xuất findings. Việc sửa được thực hiện sau bước analyze,
-  bằng cập nhật artifact/skill phù hợp; quy trình này đã ủy quyền sửa trong phạm vi
-  đã chốt, không cần hỏi lại chỉ để sửa hoặc chuyển bước.
-- Checklist đánh giá chất lượng yêu cầu, không chứng minh implementation hoàn tất.
-  Bước checklist chỉ tạo/thêm mục chưa đánh dấu; theo ủy quyền tự kiểm tra của
-  quy trình này, agent đánh giá checklist trong một bước review riêng trước implement.
-  Chỉ đánh dấu đạt khi yêu cầu có bằng chứng rõ ràng; không đánh dấu hàng loạt
-  để vượt gate, không sửa marker trong bước implement. Mục chưa đạt phải được sửa
-  trong phạm vi đã chốt hoặc làm rõ theo quy tắc hỏi ở trên, không tự bỏ qua.
-- Converge chỉ đánh giá hiện trạng và thêm task còn thiếu ở cuối `tasks.md`,
-  giữ ID/task cũ; không trực tiếp sửa code/spec/plan trong bước converge.
-  Thực hiện task bổ sung bằng lượt implement tiếp theo. Phần ngoài phạm vi chỉ
-  được báo để xem xét, không tự thêm thành chức năng hoặc xóa code của người khác.
-
-### Báo cáo cuối
-
-Nêu phần đã làm và file liên quan, kết quả kiểm chứng kèm bằng chứng,
-việc còn mở/blocker và nguyên nhân, cùng cách chạy lại các kiểm tra phù hợp.
-Nếu chỉ sửa tài liệu, kiểm tra diff/nội dung là đủ; không tuyên bố đã chạy build/test
-khi chưa chạy và không bắt đầu tính năng mới để kiểm tra quy trình này.
+- [Mục lục tài liệu](docs/README.md)
+- [Danh sách tính năng và trạng thái](docs/features.md)
+- Hợp đồng: [API](docs/contracts/api-contract.md) · [OpenAPI](docs/openapi.json) · [Auth/RBAC](docs/contracts/auth-rbac.md) · [GPS event](docs/contracts/gps-event-contract.md)
+- [Kiến trúc](ARCHITECTURE.md) · [Điều phối theo tuần](docs/coordination/README.md) · [QA test plan](docs/qa/test-plan.md)
