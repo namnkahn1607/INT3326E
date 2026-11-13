@@ -28,5 +28,12 @@ describe('GET /healthz (e2e)', () => {
       .expect(200)
       .expect({ status: 'ok' });
   });
+
+  it('also serves /health for Cloud Run', () => {
+    return request(app.getHttpServer())
+      .get('/health')
+      .expect(200)
+      .expect({ status: 'ok' });
+  });
 });
 

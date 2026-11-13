@@ -33,7 +33,7 @@ apps/
   web/          React + Vite, deploy Firebase Hosting
 packages/
   types/        kiểu dùng chung: hợp đồng GPS, hàm ETA
-  database/     SQL tạo bảng (sql/001, sql/002); prisma/ chỉ là bản nháp
+  database/     SQL tạo bảng (sql/001, sql/002)
 infra/
   pubsub/       script tạo topic/subscription, smoke test, DLQ replay
   firebase/     cấu hình Firebase

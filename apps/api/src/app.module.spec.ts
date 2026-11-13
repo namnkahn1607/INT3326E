@@ -38,6 +38,8 @@ describe('Week 1 API integration', () => {
 
   it('does not prefix the health endpoint or allow POST health probes', async () => {
     expect((await fetch(`${baseUrl}/v1/healthz`)).status).toBe(404);
+    expect((await fetch(`${baseUrl}/health`)).status).toBe(200);
+    expect((await fetch(`${baseUrl}/v1/health`)).status).toBe(404);
     expect((await fetch(`${baseUrl}/healthz`, { method: 'POST' })).status).toBe(404);
   });
 

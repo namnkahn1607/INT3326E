@@ -31,7 +31,7 @@ QA luồng end-to-end create → assign → pickup → deliver.
 
 Môi trường: PostgreSQL thật trên máy (loopback, cụm tạm đã xóa sau khi chạy), Firebase giả lập, source `develop` tại `730a84c` (đã có pickup, deliver của TV1 và Worker của Na). Không phải Cloud. Toàn bộ API: 550 test, 540 đạt, 0 lỗi, 10 skip (7 ca Firebase Emulator chưa bật, 3 ca chỉ chạy ở chế độ khác). Typecheck đạt.
 
-Ca của TV1 trong `assignments.postgres.spec.ts` chạy ở ba chế độ (PGlite, PGlite có enum, PostgreSQL thật). Ca bổ sung của TV6 nằm ở `apps/api/src/qa/week7-flow.postgres.spec.ts`, chỉ chạy với PostgreSQL thật.
+Ca của TV1 trong `assignments.postgres.spec.ts` chạy ở ba chế độ (PGlite, PGlite có enum, PostgreSQL thật). Ca bổ sung của TV6 nằm ở `apps/api/src/qa/shipment-flow.postgres.spec.ts`, chỉ chạy với PostgreSQL thật.
 
 | Ca | Tài khoản (role) | Trạng thái trước → sau | Lịch sử và thông báo | Quyền truy cập | Lỗi và phục hồi | Nguồn test | Kết quả |
 | --- | --- | --- | --- | --- | --- | --- | --- |
