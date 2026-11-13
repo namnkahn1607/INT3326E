@@ -55,7 +55,7 @@ npm run lint
 `sh infra/pubsub/init-pubsub.sh` trong Git Bash/WSL để tạo topic/subscription.
 
 `.env.example` ở gốc là template chung; Worker local cần `PORT`, `GCP_PROJECT_ID`,
-`PUBSUB_SUBSCRIPTION` và `PUBSUB_EMULATOR_HOST`, dùng project `parcelflow-dev`
+`PUBSUB_SUB_GPS_EVENTS` và `PUBSUB_EMULATOR_HOST`, dùng project `parcelflow-dev`
 trên Pub/Sub emulator. Health `GET /healthz` là liveness: HTTP 200 không chứng minh
 pipeline Pub/Sub hoạt động; nếu chưa bật emulator, Worker có thể log lỗi kết nối.
 API dùng `apps/api/.env.example`; frontend không nhận credentials của Worker/API.
@@ -100,7 +100,7 @@ gcloud run deploy worker-service \
   --remove-env-vars=PUBSUB_EMULATOR_HOST
 ```
 
-Service account dùng ADC; `PUBSUB_SUBSCRIPTION` phải khớp subscription thật của GCP.
+Service account dùng ADC; `PUBSUB_SUB_GPS_EVENTS` (Worker) và `PUBSUB_TOPIC_GPS_EVENTS` (API) phải khớp subscription và topic thật của GCP. Tên cũ `PUBSUB_SUBSCRIPTION`, `PUBSUB_TOPIC` không còn được đọc.
 Health tuần 1 phải trả JSON `{"status":"ok"}`; trang mẫu Cloud Run không phải
 worker của dự án. Trên Cloud Run, kiểm tra `/healthz/` để tránh đường dẫn `/healthz`
 được Google dành riêng. Health chỉ xác nhận tiến trình HTTP, chưa xác nhận xử lý GPS.
