@@ -16,9 +16,9 @@ export class GpsSubscriber implements OnModuleInit, OnModuleDestroy {
 
   onModuleInit() {
     const subscriptionName =
-      process.env.PUBSUB_SUBSCRIPTION ||
       process.env.PUBSUB_SUB_GPS_EVENTS ||
       'gps-events-sub';
+
 
     this.pubSubClient = new PubSub({
       projectId:

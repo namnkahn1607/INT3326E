@@ -16,7 +16,8 @@ const fileArg = process.argv.find((arg) => arg.startsWith('--file='));
 const filePath = fileArg ? fileArg.split('=')[1] : null;
 
 const projectId = process.env.GCP_PROJECT_ID || process.env.PUBSUB_PROJECT_ID || 'int3326e';
-const targetTopicName = process.env.PUBSUB_TOPIC || 'gps-events';
+const targetTopicName = process.env.PUBSUB_TOPIC_GPS_EVENTS || process.env.PUBSUB_TOPIC || 'gps-events';
+
 const dlqSubscriptionName = process.env.PUBSUB_DLQ_SUB || 'gps-events-dlq-sub';
 
 console.log('=== ParcelFlow DLQ Replay Runbook ===');
