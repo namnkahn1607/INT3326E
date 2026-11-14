@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "ParcelFlow Core Logistics API (MVP)",
-    "description": "Đã triển khai và kiểm thử trên máy API01/02/03/04/05/06 theo đặc tả ParcelFlow v1.4: tạo đơn, danh sách/chi tiết theo quyền, phân công tài xế dành cho ADMIN, và nhận hàng/giao hàng dành cho DRIVER hiện hành. API nghiệp vụ yêu cầu Firebase hợp lệ và liên kết người dùng nghiệp vụ. Các thao tác đổi trạng thái khóa dòng đơn rồi ghi đơn/lịch sử/thông báo trong cùng giao dịch. Gọi lặp cùng bước bởi actor hợp lệ là no-op, không ghi thêm dữ liệu. Chưa thay schema hay triển khai Cloud SQL. Fail và tracking vẫn là bản nháp. Xem docs/tv1-shipment-week7/spec.md. Giữ Auth, Admin directory, Notifications và geocoding hiện có.",
-    "version": "0.7.0-shipment-pickup-deliver"
+    "description": "Đã triển khai và kiểm thử trên máy API01/02/03/04/05/06/09 (cùng API08, API10, API11) theo đặc tả ParcelFlow v1.4: tạo đơn, danh sách/chi tiết theo quyền, phân công tài xế dành cho ADMIN, nhận hàng/giao hàng dành cho DRIVER hiện hành, và theo dõi vị trí + ETA (`GET /v1/shipments/{id}/tracking`). API nghiệp vụ yêu cầu Firebase hợp lệ và liên kết người dùng nghiệp vụ. Chưa thay schema hay triển khai Cloud SQL. Fail (`API07`) vẫn là bản nháp. Giữ Auth, Admin directory, Notifications và geocoding hiện có.",
+    "version": "0.8.0-shipment-tracking"
   },
   "servers": [
     {
@@ -914,8 +914,8 @@
         "tags": [
           "Tracking & Location"
         ],
-        "summary": "Get real-time tracking and ETA data for a shipment",
-        "description": "**Consolidated Read Path (Polling):**\nClients poll this endpoint periodically (every 5-10s). Returns `pickupLocation`, `dropoffLocation`, current driver coordinates, and real-time ETA.\n\n**Driver Privacy Invariant:**\nTo prevent exposing driver movements outside of active fulfillment, `currentDriverLocation` and `lastLocationUpdatedAt` are **strictly `null`** unless shipment status is `ASSIGNED` or `PICKED_UP`. In `CREATED`, `DELIVERED`, `DELIVERY_FAILED`, driver coordinates return `null`.\n\n**Conditional ETA Rule:**\nThe `eta` field is `null` during `CREATED` and `ASSIGNED` states (driver is en route to pickup). It is calculated only when status is `PICKED_UP` and driver coordinates are available.\n\n**Authorized Roles:** `CUSTOMER` (owner), `ADMIN`, `DRIVER` (assigned).",
+        "summary": "Theo dõi vị trí tài xế và ETA của đơn hàng",
+        "description": "API09. Đọc thông tin đơn, quyền xem và `current_locations` trong cùng một snapshot SQL (`LEFT JOIN current_locations`).\n\n- **Quyền truy cập:** Chủ đơn (`CUSTOMER`), Tài xế hiện hành (`DRIVER`), hoặc `ADMIN`. Ngoài quyền trả `403`, không tìm thấy đơn trả `404`, sai ID hoặc thừa query param trả `400`.\n- **Quy tắc ẩn/hiện vị trí:** Chỉ trả tọa độ và timestamps khi trạng thái là `ASSIGNED` hoặc `PICKED_UP`. Khi `CREATED`, `DELIVERED`, `DELIVERY_FAILED` hoặc chưa có GPS, toàn bộ tọa độ/timestamps/`isLocationStale` đều là `null` (vẫn giữ `driverId` khi đã terminal, còn `CREATED` trả `driverId: null`).\n- **Độ mới (Staleness):** Tuổi mẫu tính bằng `statement_timestamp() - clientTimestamp`; mẫu mới khi `0 <= age <= 30s` (`isLocationStale = false`), ngoài khoảng là `isLocationStale = true`.\n- **ETA Haversine (20 km/h):** Chỉ tính khi `status = PICKED_UP` và `isLocationStale = false`; các trường hợp khác trả `eta = null` kèm `etaUnavailableReason` (`NOT_PICKED_UP`, `LOCATION_MISSING`, `LOCATION_STALE`, `CONFIG_INVALID`).",
         "operationId": "getShipmentTracking",
         "parameters": [
           {
@@ -924,14 +924,28 @@
         ],
         "responses": {
           "200": {
-            "description": "Consolidated driver location, pickup/dropoff points, and conditional ETA",
+            "description": "Trạng thái đơn, vị trí tài xế hiện hành (nếu được phép hiển thị) và ETA theo SC05",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ShipmentTrackingResponse"
                 }
               }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "Dữ liệu nghiệp vụ không được lưu cache.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
             }
+          },
+          "400": {
+            "$ref": "#/components/responses/400BadRequest"
           },
           "401": {
             "$ref": "#/components/responses/401Unauthorized"
@@ -960,7 +974,8 @@
             "BearerAuth": []
           }
         ],
-        "x-implementation-status": "draft"
+        "x-implementation-status": "implemented-local",
+        "x-acceptance": "Đã kiểm thử HTTP/SQL trên máy (AC05, AC09, TC05.1–TC05.2); chưa nghiệm thu trên Cloud."
       }
     },
     "/healthz": {
@@ -2001,6 +2016,7 @@
       },
       "EtaDetails": {
         "type": "object",
+        "additionalProperties": false,
         "required": [
           "distanceMeters",
           "estimatedSeconds",
@@ -2009,34 +2025,47 @@
         "properties": {
           "distanceMeters": {
             "type": "number",
+            "minimum": 0,
             "description": "Direct distance to dropoff in meters computed via Haversine formula.",
             "example": 4250.5
           },
           "estimatedSeconds": {
             "type": "integer",
+            "minimum": 0,
             "description": "Predicted travel time to dropoff in seconds.",
             "example": 720
           },
           "estimatedArrivalAt": {
             "type": "string",
             "format": "date-time",
-            "example": "2026-10-05T09:45:00Z"
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$",
+            "example": "2026-10-05T09:45:00.000Z"
           }
         }
       },
       "ShipmentTrackingResponse": {
         "type": "object",
+        "additionalProperties": false,
         "required": [
           "shipmentId",
           "status",
+          "driverId",
           "pickupLocation",
-          "dropoffLocation"
+          "dropoffLocation",
+          "currentDriverLocation",
+          "lastLocationUpdatedAt",
+          "locationClientTimestamp",
+          "isLocationStale",
+          "eta",
+          "etaUnavailableReason",
+          "expectedDeliveryAt",
+          "isLate"
         ],
         "properties": {
           "shipmentId": {
             "type": "string",
-            "pattern": "^sh_[0-9A-HJKMNP-TV-Z]{26}$",
-            "example": "sh_01J7Z8K9M3Q4T5V6W7X8Y9Z012"
+            "pattern": "^sh_[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+            "example": "sh_01ARZ3NDEKTSV4RRFFQ69G5FAV"
           },
           "status": {
             "$ref": "#/components/schemas/ShipmentStatus"
@@ -2044,8 +2073,8 @@
           "driverId": {
             "type": "string",
             "nullable": true,
-            "pattern": "^usr_[0-9A-HJKMNP-TV-Z]{26}$",
-            "example": "usr_01J7Z8K9M3Q4T5V6W7X8Y9D002"
+            "pattern": "^usr_[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+            "example": "usr_01ARZ3NDEKTSV4RRFFQ69G5FA1"
           },
           "pickupLocation": {
             "$ref": "#/components/schemas/Coordinates"
@@ -2060,14 +2089,28 @@
               }
             ],
             "nullable": true,
-            "description": "Latest driver coordinates. STRICT PRIVACY INVARIANT: only populated when status is ASSIGNED or PICKED_UP. In CREATED, DELIVERED or DELIVERY_FAILED, this is strictly null."
+            "description": "Tọa độ mới nhất của tài xế đang được gán khi trạng thái là ASSIGNED hoặc PICKED_UP; strictly null ở các trạng thái khác hoặc khi chưa có GPS."
           },
           "lastLocationUpdatedAt": {
             "type": "string",
             "format": "date-time",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$",
             "nullable": true,
-            "description": "Server UTC reception timestamp (receivedAt) of the latest accepted telemetry packet. Strictly null if location is hidden or no telemetry received.",
+            "description": "Mốc server nhận mẫu GPS (receivedAt UTC ms). Null nếu ẩn vị trí hoặc chưa có GPS.",
             "example": "2026-10-05T09:30:00.120Z"
+          },
+          "locationClientTimestamp": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$",
+            "nullable": true,
+            "description": "Mốc thiết bị tài xế đo mẫu GPS (clientTimestamp UTC ms). Null nếu ẩn vị trí hoặc chưa có GPS.",
+            "example": "2026-10-05T09:29:59.500Z"
+          },
+          "isLocationStale": {
+            "type": "boolean",
+            "nullable": true,
+            "description": "True nếu tuổi mẫu tính theo clientTimestamp vượt quá 30 giây hoặc lệch tương lai (< 0ms); null nếu không có vị trí hiển thị."
           },
           "eta": {
             "allOf": [
@@ -2076,9 +2119,33 @@
               }
             ],
             "nullable": true,
-            "description": "Estimated arrival at dropoff. NULL during CREATED, ASSIGNED, and all terminal states; only calculated once status is PICKED_UP."
+            "description": "Ước tính thời gian đến nơi theo Haversine 20 km/h; chỉ có giá trị khi status = PICKED_UP và GPS còn mới (isLocationStale = false)."
+          },
+          "etaUnavailableReason": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "NOT_PICKED_UP",
+              "LOCATION_MISSING",
+              "LOCATION_STALE",
+              "CONFIG_INVALID",
+              null
+            ],
+            "description": "Lý do không tính ETA khi eta là null; null khi đã có eta."
+          },
+          "expectedDeliveryAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$",
+            "nullable": true
+          },
+          "isLate": {
+            "type": "boolean",
+            "nullable": true,
+            "description": "Cờ giao trễ đối chiếu expectedDeliveryAt (null nếu không có hạn giao)."
           }
-        }
+        },
+        "description": "PF v1.4 SC05: mọi key bắt buộc xuất hiện trong JSON response; giá trị vắng mặt trả null."
       },
       "ProblemDetails": {
         "type": "object",
