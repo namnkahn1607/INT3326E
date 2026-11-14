@@ -74,3 +74,44 @@ không tạo constitution. Tiếp tục review artifact và kiểm chứng trong
 - D5: giữ GPS và role gate hiện hành; không sửa backend, schema, role, API
   contract, dependency hoặc triển khai. Backend pickup/deliver chưa có ở base;
   test frontend/mock không đóng nghiệm thu thực tế với TV1/TV5/TV6 hoặc W707.
+
+## Bổ sung độ tin cậy emitter tuần 8 — 15/11/2026
+
+Nguồn: yêu cầu người dùng hoàn thiện emitter; bảng tuần 8, ô E31 và mục GPS
+emitter trang 3–4 của `giao-viec-tuan-8.pdf`, được chép vào
+`docs/coordination/week-08.md`. Nhánh `feature/gps-emitter-reliability`, base
+`develop@f28365d`. Tiếp tục bộ artifact này; máy không có `.specify/` hoặc skill
+Spec Kit, không tạo constitution hay chạy script tạo feature. Script k6 và
+nghiệm thu Cloud không nằm trong lượt triển khai emitter này.
+
+Phần này thay giới hạn không queue/retry của mốc tuần 7 và quy tắc dừng khi
+mẫu đo sai ở R4; giữ các hành vi R1–R3, R5–R7 và D1–D5 còn lại.
+
+- E1: bỏ qua tọa độ sai, timestamp sai, mẫu mới lấy quá cũ, timestamp trùng/lùi
+  và accuracy không hợp lệ/quá kém; không tăng seq hoặc gọi adapter. Hiển thị
+  lý do tiếng Việt, tiếp tục đo ở tick sau. Lỗi quyền/timeout/unsupported vẫn dừng.
+- E2: giữ mẫu hợp lệ trong buffer RAM của dashboard. Một request mỗi lúc, FIFO,
+  chỉ bỏ mẫu sau 202 hợp lệ hoặc lỗi không thể retry. Retry giữ nguyên tọa độ,
+  timestamp và seq; không tự thêm driverId/accuracy vào body.
+- E3: offline giữ buffer; online thử gửi ngay. Network/timeout/429/5xx retry
+  với backoff có giới hạn kể cả khi navigator vẫn báo online. Không retry lỗi
+  dữ liệu/quyền/response sai; lỗi 401/403/USER_NOT_PROVISIONED xóa buffer và
+  chặn gửi cho đến khi remount phiên. Đếm 202 hợp lệ riêng với mẫu chờ/bị bỏ.
+- E4: buffer có giới hạn số lượng và thời gian; khi đầy bỏ mẫu chờ cũ nhất,
+  không bỏ request đang gửi. Loại mẫu hết hạn trước enqueue/replay. Mẫu replay
+  cũ hơn ngưỡng tracking vẫn giữ timestamp thật để Worker lưu history đúng.
+- E5: Stop tạm dừng replay/timer và phát mẫu, giữ buffer cho Start trong cùng
+  dashboard; request đã gửi được hoàn tất. Rời trang/đăng xuất/đổi tài khoản
+  hủy request, xóa buffer/listener/timer và bỏ response muộn. Không lưu vào
+  localStorage hoặc chuyển mẫu sang phiên mới.
+  Adapter lấy token của mount tài khoản sở hữu buffer; token refresh cùng tài
+  khoản không xóa buffer, không fallback sang token tài khoản toàn cục khác.
+- E6: ghi rõ quyền vị trí, HTTPS/localhost, tab nền có thể bị throttle và không
+  đảm bảo nhịp 8 giây. Không cam kết ghi SQL từ HTTP 202 hoặc test mock.
+
+Làm rõ kỹ thuật trước implement: tài liệu không quy định con số cho accuracy,
+tuổi mẫu emitter hoặc buffer. Chọn hằng số client dễ điều chỉnh: accuracy
+0–100 m; mẫu mới lấy có tuổi tối đa 30 s, tương lai tối đa 60 s theo contract
+clock skew; tối đa 100 mẫu gồm request đang gửi; giữ tối đa 5 phút theo timestamp
+đo; backoff 1/2/4/8/16/30 s. Đây là chính sách client, không sửa NFR/API hay
+ngưỡng stale server. Timestamp trùng/lùi so với mẫu đã phát trong mount bị bỏ.

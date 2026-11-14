@@ -7,10 +7,10 @@ export interface LocationAccepted {
   receivedAt: string
 }
 
-export async function sendLocation(payload: GpsLocationRequest, signal?: AbortSignal): Promise<LocationAccepted> {
+export async function sendLocation(payload: GpsLocationRequest, signal?: AbortSignal, token?: string | null): Promise<LocationAccepted> {
   assertGpsLocationRequest(payload)
   const value = await apiClient<unknown>('/locations', {
-    method: 'POST', body: JSON.stringify(payload), expectedStatus: 202, timeoutMs: 7000, signal,
+    method: 'POST', body: JSON.stringify(payload), expectedStatus: 202, timeoutMs: 7000, signal, token,
   })
   if (!value || typeof value !== 'object') throw new ApiError(202, 'INVALID_RESPONSE')
   const response = value as Record<string, unknown>

@@ -48,3 +48,25 @@ Firebase UID không phải business driverId; scope do backend xác thực. Open
 pickup/deliver vẫn draft nhưng đã có method/body/response; frontend có thể dùng
 contract này và hiển thị lỗi thật, không giả backend thành công. Phạm vi mới
 được người dùng cấp trực tiếp, không lấy bảng QA làm yêu cầu tự mở rộng.
+
+## Kế hoạch emitter tuần 8
+
+1. Giữ component/adapter/Auth và payload hiện hành. Bổ sung lọc acquisition
+   trong GpsEmitter, giữ timestamp đo, không dừng khi chỉ mẫu đó không đạt.
+2. Tách buffer/retry thành GpsDeliveryQueue, tạo theo mount DriverDashboard.
+   Dashboard key theo user.id và role gate giữ nguyên; cleanup dispose queue.
+   Queue sở hữu một AbortController, một timer backoff và listener online/offline.
+   Adapter nhận token gắn mount tài khoản qua tùy chọn token sẵn có của apiClient;
+   cập nhật token trong cùng mount khi refresh, không đọc global account lúc replay.
+3. Nối Start/Stop qua callback trạng thái emitter. Hiển thị số mẫu chờ, mẫu bị
+   bỏ và lỗi; không đưa token hoặc thông tin triển khai vào UI.
+4. Test các biên accuracy/tuổi/thứ tự; backlog/offline/replay bất biến;
+   overflow/expiry, backoff và lỗi vĩnh viễn, Stop/restart, StrictMode và phiên.
+5. Chạy kiểm tra chuẩn toàn repo và harness browser local; cập nhật bàn giao,
+   features và điều phối tuần. Không commit/push/deploy theo giới hạn người dùng.
+
+Analyze trước implement (chỉ đọc, 15/11/2026): E1–E6 có truy vết tới giao việc;
+buffer và mẫu mới lấy cần hai giới hạn tuổi riêng để không vô hiệu hóa gửi bù.
+Không có thay đổi backend/API. Lỗi quyền phải chặn queue thay vì thử mẫu tiếp
+theo; response muộn sau dispose không được tạo retry. Không có mâu thuẫn nghiêm
+trọng sau khi ghi rõ phần thay thế R4 và giới hạn queue/retry tuần 7 trong spec.
