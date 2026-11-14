@@ -73,3 +73,84 @@ Tại gốc repo: `npm run lint:web`, `npm run build:web`,
 `npm run test --workspace=@parcelflow/web`; chạy UI bằng `npm run dev:web`.
 Với API thật, mở chi tiết Customer/Admin và `/admin/live-map`, dùng các account/đơn
 được nhóm cấp. API chưa sẵn sàng phải hiện lỗi/thiếu GPS, không hiện vị trí mẫu.
+
+## Tiếp tục tuần 8 — 14/11/2026
+
+Nguồn hiện hành là [PF SPEC 01 v1.4](https://docs.google.com/document/d/1S9gY8a08d8-9Rd4bhTOeT_IAJUrYtFnZtDKjKKEpuq8/edit),
+FR05/AC05, API09/SC05, VII tuần 8; đối chiếu trực tiếp sheet `Tiến độ 10 Tuần`,
+A28:G33. Phần TV3 là Leaflet tracking/polling Customer. Các mục ngày 30/10 ở trên
+là bằng chứng lịch sử theo lịch kỹ thuật cũ, không phải hiện trạng backend hôm nay.
+
+Đã fetch origin và fast-forward `feature/frontend` từ `bb0a6f1` lên `c2bddbc`.
+Code mới gồm SQL GPS và QA Worker duplicate/out-of-order của nhóm, cùng tài liệu
+điều phối. Giữ nguyên `.env.example` local và `AGENTS.md`; không tự commit/push/deploy.
+
+### Thay đổi frontend
+
+- Customer/Admin Detail truyền hai điểm lấy/giao đã đọc đúng quyền vào tracking.
+  Loading, tải lại thủ công và lỗi mạng/503 giữ cùng map instance, không tải lại
+  toàn bộ nền bản đồ. GPS cũ bị bỏ khỏi view khi đọc thất bại.
+- 401/403/404, tài khoản chưa provision hoặc response sai ẩn map và dừng polling;
+  giữ nút thử lại. Không có endpoint giả hay fallback dữ liệu mẫu trong luồng thật.
+- Viewport giữ vị trí người dùng đã kéo/zoom khi GPS cập nhật hoặc tạm mất marker.
+  Lần đầu có GPS, đổi driver, đổi đơn/account hoặc điểm giao nhận thì căn lại khung.
+- Vùng chữ loading/lỗi/GPS có chiều cao ổn định, trạng thái có nhãn và screen reader;
+  giữ theme sáng/tối, reduced motion và các hành động nghiệp vụ hiện có.
+- Bổ sung kiểm tra map/panel và route Customer/Admin qua apiClient/parser thật.
+  Route tests mock HTTP, không thay thế kiểm tra handler API09 thật.
+
+### Kết quả kiểm tra local
+
+| Kiểm tra | Kết quả và giới hạn |
+| --- | --- |
+| `npm run test --workspace=@parcelflow/web` | 538/538, 40 file; Vitest/jsdom, có API mock |
+| `npm run lint:web` | Đạt, exit 0 |
+| `npm run build:web` | TypeScript/build đạt; main 512,33 kB còn cảnh báo >500 kB có từ trước, không tăng ngưỡng |
+| `npm run test:integration --workspace=@parcelflow/web` | 11/11 UI → Nest → PGlite đạt; bộ này chưa kiểm API09 vì handler chưa có |
+| Edge local, Leaflet và tile thật | Customer/Admin ở 390/768/1440px; fresh/stale/missing/503/reassign/403/terminal đạt, không tràn ngang; Auth/API mock riêng |
+| Ổn định map và giao diện | Giữ cùng map qua lỗi/refresh; chênh vị trí trên của map khi đổi fresh → lỗi là 0px ở cả 6 view; terminal/route cleanup dừng polling |
+| Ảnh và trạng thái trình duyệt | 11 ảnh local, 0 runtime exceptions; kiểm thêm theme sáng và reduced motion |
+
+Lượt integration đầu timeout khi khởi tạo fixture 30 giây. Khởi tạo riêng Nest/PGlite
+đạt khoảng 8,6 giây; chạy lại suite đạt 11/11, không tăng timeout hoặc bỏ test.
+Node local 24.21.0; chạy test với `NODE_OPTIONS=--no-experimental-webstorage`.
+Tốc độ/sẵn sàng tile bên ngoài không được bảo đảm bởi các kết quả này.
+
+### Phụ thuộc chưa hoàn tất
+
+`origin/develop` tại `c2bddbc` có POST `/v1/locations`, DTO tracking và repository
+đọc GPS, nhưng chưa có handler GET `/v1/shipments/{id}/tracking`. Vì vậy chưa thể
+chạy UI → Nest API09 → SQL thật hoặc xác nhận marker Customer di chuyển trên Cloud.
+Không suy ra API09 đã chạy từ sự tồn tại DTO, SQL GPS hoặc health 200.
+
+TV1 cần bàn giao API09 đúng SC05, quyền Customer owner/Admin/current Driver,
+snapshot thống nhất và quy tắc null/stale/reassign/terminal. TV5 cần triển khai
+API/Worker/web từ bản tích hợp cùng SHA, cấu hình SQL/PubSub đúng runtime đã chốt.
+Sau đó TV3/TV6 kiểm lại TC05.1–05.3 với GPS được Worker ghi thật; đối chiếu vị trí
+trong UI với mẫu trong SQL, ghi revision/SHA và dữ liệu kiểm tra không chứa bí mật.
+
+**Kết luận:** phần frontend đã được triển khai và kiểm chứng local; checkpoint
+tracking tuần 8 trên Cloud còn mở. Lượt này không sửa API/Driver/Worker/SQL,
+không truy cập tài khoản demo hoặc thay đổi Cloud.
+
+## Tích hợp develop — 15/11/2026
+
+Tích hợp frontend `f270154` với `origin/develop` tại `ba230a3`. Backend mới đã có
+handler API09 và kiểm tra response SC05; phần thiếu handler ghi ở ngày 14/11 phía
+trên là hiện trạng trước tích hợp. Giữ tài liệu tại `docs/features/`, xử lý một
+conflict ở phần nguồn đặc tả của `live-tracking.md`, không có conflict code.
+`AGENTS.md` giữ nguyên phiên bản từ develop, không chỉnh sửa thêm.
+
+- `npm run check`: exit 0, gồm lint/typecheck/test/build API, Worker và web.
+  Frontend 538/538; API 454 đạt, 108 bỏ qua; Worker/shared 122 đạt, 8 bỏ qua;
+  health e2e 2/2. Test PostgreSQL/emulator phụ thuộc môi trường không được tính
+  như đã chạy đạt. Cảnh báo lint cũ và main web >500 kB vẫn còn.
+- `npm run test:integration --workspace=@parcelflow/web`: 12/12 đạt, có đọc API09
+  qua Nest/PGlite với parser frontend thật: CREATED không lộ GPS, ASSIGNED có GPS,
+  reassign không dùng driver cũ, PICKED_UP và DELIVERED ẩn vị trí khi kết thúc.
+- Map/panel UI giữ các kết quả mock local đã ghi ngày 14/11. Chưa kiểm marker
+  di chuyển bằng GPS thật qua Worker/Cloud, chưa deploy trong lượt merge này.
+
+Phụ thuộc hiện tại là triển khai bản tích hợp và QA đầu cuối; không còn chờ viết
+handler API09 trong source develop. Không thay API, schema, auth hoặc dữ liệu khi
+giải quyết conflict. `.env.example` local được bảo toàn, không đưa vào commit merge.

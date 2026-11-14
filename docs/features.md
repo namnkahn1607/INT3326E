@@ -4,7 +4,8 @@ Mỗi dòng là một tiêu chí nghiệm thu (AC) của đặc tả v1.4. Chỉ
 
 Trạng thái: `chưa có` · `đang làm` · `local` (đạt trên máy, PostgreSQL thật hoặc mock như ghi chú) · `cloud` (đạt trên môi trường Cloud, kèm revision).
 
-Cập nhật: 14/11/2026, `develop` tại `75357d1`. Kiểm tra toàn repo: `npm run check`.
+Cập nhật: 15/11/2026, tích hợp `develop` tại `ba230a3` với frontend `f270154`.
+Kiểm tra toàn repo: `npm run check` đạt; integration web/Nest/PGlite 12/12 đạt.
 
 | AC | Hành vi | API / thành phần | Lệnh kiểm tra | Trạng thái |
 | --- | --- | --- | --- | --- |
@@ -12,7 +13,7 @@ Cập nhật: 14/11/2026, `develop` tại `75357d1`. Kiểm tra toàn repo: `npm
 | AC02 | Admin gán và gán lại tài xế trước khi lấy hàng; khóa dòng chống gán cạnh tranh | API04, API11 | `npm test --workspace=@parcelflow/api -- assignments.postgres` | local |
 | AC03 | Tài xế được gán lấy hàng rồi giao hàng; gọi lặp không ghi thêm; sai người hoặc sai bước bị chặn | API05, API06 | `npm test --workspace=@parcelflow/api -- assignments.postgres shipment-flow` | local |
 | AC04 | Driver gửi GPS; Worker ghi lịch sử và vị trí hiện tại, mẫu đầu tiên thắng, không lùi vị trí, ACK sau commit | API08, EVT01, DATA04, DATA05 | `npm test -- gps-writer gps-duplicate-order` (cần `WORKER_TEST_DATABASE_URL`, thiếu thì bị bỏ qua) | local (Cloud chưa xác nhận) |
-| AC05 | Customer chủ đơn xem vị trí tài xế gần real-time, ẩn hoặc hiện theo trạng thái, nhãn vị trí cũ | API09, UI01 | `npm test --workspace=@parcelflow/api -- assignments.postgres`, `npm run test:integration --workspace=@parcelflow/web`; web UI mock: `npm test --workspace=@parcelflow/web -- tracking` | local (Cloud chưa xác nhận; bản đồ UI chờ TV3 nối) |
+| AC05 | Customer chủ đơn xem vị trí tài xế gần real-time, ẩn hoặc hiện theo trạng thái, nhãn vị trí cũ | API09, UI01 | `npm test --workspace=@parcelflow/api -- assignments.postgres`, `npm run test:integration --workspace=@parcelflow/web`; web UI mock: `npm test --workspace=@parcelflow/web -- tracking` | local (API09 Nest/PGlite, bản đồ UI mock; Cloud chưa xác nhận) |
 | AC06 | Lịch sử trạng thái đúng thứ tự, đúng người thực hiện, đúng phạm vi quyền | API02, API03 | `npm test --workspace=@parcelflow/api -- shipment-flow` (TC06.1) | local |
 | AC07 | Báo giao thất bại sau khi lấy hàng; phát hiện giao trễ | API07 | Chưa có | chưa có (việc tuần 9) |
 | AC08 | Thông báo tạo cùng lúc đổi trạng thái; người dùng chỉ đọc thông báo của mình | API10, DATA06 | `npm test --workspace=@parcelflow/api -- notifications` | local |

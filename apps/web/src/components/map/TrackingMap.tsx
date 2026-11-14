@@ -16,15 +16,18 @@ const icons = Object.fromEntries(['pickup', 'dropoff', 'fresh', 'stale'].map(kin
 })]))
 
 function Frame({ pins, scope, selectedId }: { pins: TrackingPin[]; scope: string; selectedId?: string }) {
-  const map = useMap(), reduced = useReducedMotion(), previous = useRef('')
-  const key = JSON.stringify([scope, selectedId, pins.map(pin => pin.id)])
+  const map = useMap(), reduced = useReducedMotion(), previous = useRef({ key: '', driverId: '' })
+  const fixed = pins.filter(pin => pin.kind === 'pickup' || pin.kind === 'dropoff')
+  const driverId = fixed.length > 0 ? pins.find(pin => pin.kind === 'fresh' || pin.kind === 'stale')?.id : undefined
+  const key = JSON.stringify([scope, selectedId, fixed.length > 0 ? fixed.map(pin => [pin.id, pin.position]) : pins.map(pin => pin.id)])
   useEffect(() => {
-    if (key === previous.current || pins.length === 0) return
-    previous.current = key
+    if (pins.length === 0 || (key === previous.current.key && (!driverId || driverId === previous.current.driverId))) return
+    // Losing GPS during a read must not undo the user's pan or zoom.
+    previous.current = { key, driverId: driverId ?? '' }
     const selected = pins.find(pin => pin.id === selectedId)
     if (selected) map.setView([selected.position.lat, selected.position.lng], 14, { animate: !reduced })
     else map.fitBounds(latLngBounds(pins.map(pin => [pin.position.lat, pin.position.lng])), { padding: [36, 36], maxZoom: 15, animate: false })
-  }, [key, pins, selectedId, map, reduced])
+  }, [key, driverId, pins, selectedId, map, reduced])
   return null
 }
 

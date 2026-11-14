@@ -1,7 +1,9 @@
 # Customer/Admin — theo dõi GPS
 
-Nguồn: [PF SPEC 01 nội dung v1.3](../contracts/spec-baseline.md), VII.6, FR04/05, AC05,
-UI01/03, API09/11 và SC05/06. Phạm vi frontend tuần 5; không thay API/Driver/Worker/SQL.
+Nguồn hiện hành: [PF SPEC 01 v1.4](https://docs.google.com/document/d/1S9gY8a08d8-9Rd4bhTOeT_IAJUrYtFnZtDKjKKEpuq8/edit),
+FR05/AC05, UI01/03, API09/11 và SC05/06. Phạm vi TV3 tuần 8 theo lịch hiện hành;
+nền tảng tracking được làm trước theo lịch kỹ thuật cũ. Không thay API/Driver/Worker/SQL.
+Thứ tự ưu tiên nguồn xem [baseline](../contracts/spec-baseline.md).
 
 ## Theo dõi đơn
 
@@ -21,8 +23,14 @@ GPS cũ là vị trí ghi nhận gần nhất, không gọi là vị trí trực
 cập nhật khi chờ request; thời điểm đọc thành công tránh nhầm mẫu mới nhận là future
 chỉ vì tick giao diện chưa chạy. receivedAt không thay thế thời điểm mẫu.
 
-Lỗi đọc xóa dữ liệu GPS cũ khỏi view. Lỗi transient tiếp tục thử đọc sau 5 giây;
-401/403/404, tài khoản chưa liên kết hoặc response sai dừng tự đọc, có nút thử lại.
+Lỗi đọc xóa marker/tọa độ GPS cũ khỏi view. Khi đã đọc được Detail đúng quyền,
+loading, tải lại thủ công hoặc lỗi transient giữ cùng map instance và hai điểm
+giao nhận của đơn, giúp tránh tải lại tile. Không lưu snapshot GPS để dự phòng.
+Vùng thông báo có chiều cao tối thiểu để bản đồ không bị đẩy khi đổi trạng thái.
+Mỗi mẫu GPS mới không tự căn lại viewport; driver mới hoặc đơn khác căn lại khung.
+Lỗi transient tiếp tục thử đọc sau 5 giây;
+401/403/404, tài khoản chưa liên kết hoặc response sai ẩn bản đồ và dừng tự đọc,
+có nút thử lại.
 Không tự ghi lại trạng thái hoặc suy kết quả mutation từ marker.
 Không tính ETA, deadline, late hoặc tuyến đường trong frontend.
 

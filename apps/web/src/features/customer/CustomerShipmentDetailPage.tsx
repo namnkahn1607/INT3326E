@@ -51,7 +51,8 @@ function DetailData({ id, onRetry }: { id: string; onRetry: () => void }) {
     <StatusBadge status={shipment.status} /><h2 className="customer-tracking-number">{shipment.trackingNumber}</h2>
     <dl className="customer-detail-grid">{rows.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
     <ShipmentLifecycleDetails shipment={shipment} />
-    <ShipmentTracking key={shipment.driverId + ':' + shipment.status} id={shipment.id} status={shipment.status} />
+    <ShipmentTracking key={shipment.driverId + ':' + shipment.status} id={shipment.id} status={shipment.status}
+      pickupLocation={shipment.pickupLocation} dropoffLocation={shipment.dropoffLocation} />
     <p className="customer-helper">“—” là thông tin chưa có. Hạn giao dự kiến không phải ETA hoặc cam kết giao đúng giờ.</p>
     <div className="form-actions"><button type="button" className="btn btn-outline" onClick={onRetry}>Tải lại thông tin</button>
       <Link className="btn btn-primary" to="/customer/create">Tạo đơn mới</Link></div>
