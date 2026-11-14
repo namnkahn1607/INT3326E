@@ -141,5 +141,36 @@ Bản đồ Leaflet, polling và panel tracking đã có trên web (`components/
 
 ## Thực tế từng người
 
+Tích hợp ngày 15/11 theo yêu cầu người dùng: emitter `2585638` và k6 `930e59e`
+được kết hợp trên `merge/gps-week8`, base `develop@f28365d`. Chỉ có xung đột
+ở file tuần này, đã giữ đủ hai báo cáo; code khớp hai nhánh gốc. Check toàn
+repo đạt (web 584, API 454, Worker/shared/load 166, health e2e 2; 116 ca môi
+trường bị bỏ qua). Chạy lại k6 thật → Nest HTTP local đạt 5/5 kịch bản, 6/6
+accepted, Firebase/lookup/PubSub mock. [Bằng chứng bản kết hợp](../evidence/gps-week8-merge/report.json).
+Các ghi nhận chưa merge bên dưới là mốc bàn giao ban đầu; lượt tích hợp này
+đã được người dùng yêu cầu merge/push vào develop, không deploy.
+
+- **TV4** (15/11): hoàn thiện emitter trên `feature/gps-emitter-reliability`,
+  base `develop@f28365d`: lọc mẫu sai/cũ/accuracy, buffer RAM tối đa 100 mẫu/
+  5 phút, gửi bù giữ timestamp/seq với backoff, Stop/Start, cách ly token và
+  buffer theo tài khoản. `npm.cmd run check` exit 0 (web 584, API 454,
+  Worker/shared 122, health e2e 2; 116 ca môi trường bị bỏ qua). Bộ chuyên biệt
+  113/113, Edge 47/47 với Auth/API mock; chưa nghiệm thu Cloud. Xem
+  [bàn giao và lệnh chạy lại](../features/gps-emitter-reliability-handoff.md).
+  Script k6 và journey Driver trên Cloud vẫn còn mở, không thuộc lượt emitter.
+  Sau bàn giao, người dùng cho phép commit/push nhánh; chưa merge/deploy.
+
+Ghi nhận phần script k6 của **TV4** ngày 15/11: nhánh `test/gps-ingest-load`
+tạo riêng từ `develop@f28365d`, không kéo theo PR emitter. Có tham số số Driver,
+chu kỳ/thời gian, token riêng, kiểm tra 202 đúng body và JSON summary. 44/44
+test config/contract; k6 thật → Nest HTTP local đạt 5/5 kịch bản, 6/6 accepted
+từ 2 Driver × 3 mẫu. Firebase/lookup/PubSub mock; không Worker/SQL/Cloud.
+`npm.cmd run check` exit 0 (166 Worker/shared/load, 454 API, 538 web, 2 health
+e2e; 116 ca môi trường bị bỏ qua). [Hướng dẫn và chạy lại](../../infra/load/README.md),
+[bằng chứng](../evidence/gps-ingest-load/report.json). Máy hiện tại đã có k6
+portable trong `.vitest/tools/k6`, không cài hệ thống hoặc đưa binary/token
+vào Git. Nghiệm thu Driver Cloud/hiệu năng thật còn mở. Sau bàn giao người dùng
+yêu cầu commit/push nhánh; chưa merge hoặc deploy.
+
 - **TV1** (14/11): đã triển khai `API09` (`GET /v1/shipments/:id/tracking`, `Cache-Control: no-store`), ẩn/hiện vị trí tài xế theo trạng thái và nhãn quá cũ (`> 30s` theo `statement_timestamp()`), tính ETA Haversine `20 km/h` khi `PICKED_UP` và GPS còn mới trong một snapshot SQL (`LEFT JOIN current_locations`), đồng bộ `docs/openapi.json` (`SC05` + `EtaDetails`) và thêm test SQL/HTTP/web integration (`assignments.postgres.spec.ts`, `shipment-flow.spec.tsx`). Kiểm tra mức local (PGlite / mock Firebase); PostgreSQL thật (`SHIPMENT_TEST_DATABASE_URL`) và Cloud chưa xác nhận.
 - **TV3** (15/11): tích hợp frontend `f270154` với `develop` `ba230a3`, giữ tracking Leaflet/polling Customer/Admin, map không dựng lại khi refresh/lỗi tạm thời và không giữ GPS cũ khi lỗi. Giải quyết một conflict ở tài liệu tracking, giữ cấu trúc `docs/features/`. `npm run check` đạt (frontend 538, API 454, Worker/shared 122, health e2e 2 test); 116 ca PostgreSQL/emulator bị bỏ qua do chưa cấu hình môi trường. Bộ tích hợp web/Nest/PGlite đạt 12/12, có API09 lifecycle/reassign. Bản đồ và tương tác UI đã kiểm bằng Auth/API mock riêng, không phải bằng chứng Cloud. Chờ deploy và đối chiếu mẫu GPS qua Worker để chốt checkpoint.

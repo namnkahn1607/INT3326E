@@ -43,3 +43,28 @@
   commit/push/merge được người dùng cho phép riêng sau bàn giao, không deploy.
 - [ ] W713 — D5: cùng TV1/5/6 nghiệm thu list → pickup → deliver trên backend thật;
   cần handler TV1, revision/config và tài khoản có linkage. Không đóng bằng mock.
+
+- [x] E801 — E1–E6: cập nhật spec/clarify/plan, review checklist riêng và analyze.
+  Bằng chứng: phần bổ sung tuần 8, review C11–C14 trước implement và analyze
+  tại plan; baseline `npm.cmd run check` exit 0 (538 test web, ngày 15/11).
+- [x] E802 — E1/E6: lọc mẫu mới lấy và tài liệu giới hạn trình duyệt; test biên.
+  Bằng chứng: GpsEmitter.spec.tsx; bộ chuyên biệt 113/113, browser 47/47 local.
+- [x] E803 — E2–E5: buffer FIFO, retry/backoff, giới hạn, dọn theo phiên và UI;
+  test mất mạng, replay, lỗi quyền, tràn/hết hạn và cleanup.
+  Bằng chứng: gps-delivery.spec.ts, DriverPlaceholderPage.spec.tsx; bộ 113/113
+  và browser offline/replay/account; xem bàn giao gps-emitter-reliability.
+- [x] E804 — E1–E6: kiểm tra chuẩn toàn repo, browser local và review/converge;
+  cập nhật bàn giao/trạng thái với bằng chứng đúng môi trường.
+  Bằng chứng: `npm.cmd run check` exit 0 (web 584, API 454, Worker/shared 122,
+  e2e 2; 116 ca môi trường thật bị bỏ qua), Edge 47/47, diff check đạt.
+  docs/evidence/gps-emitter-reliability/report.json ghi SHA-256 nguồn cuối.
+- [x] E805 — E5, review/converge: kiểm tra Stop và HTTP hoàn tất trong cùng
+  một lượt trước effect React; tạm dừng queue ngay trong thao tác Stop. Ràng
+  buộc token gửi bù với đúng mount tài khoản thay vì đọc tài khoản Firebase
+  toàn cục có thể vừa thay đổi; refresh token cùng tài khoản vẫn giữ buffer.
+  Thực hiện và kiểm chứng bằng lượt implement tiếp theo, không sửa code trong
+  lượt review/converge này.
+  Bằng chứng implement tiếp theo: test Stop cùng lượt resolve đạt với cơ chế
+  React hiện có, không cần sửa Stop. Test token từng FAIL do dùng global token;
+  đã pin token theo mount, kiểm tra null/refresh/đổi tài khoản và đạt 113/113.
+  Review/converge cuối chỉ đọc không còn finding bắt buộc trong E1–E6.

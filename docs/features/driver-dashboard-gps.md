@@ -1,5 +1,9 @@
 # Bàn giao Driver dashboard và gửi GPS thử
 
+Hành vi buffer/retry hiện tại được bổ sung ở
+[bàn giao emitter tuần 8](gps-emitter-reliability-handoff.md). Các mốc dưới đây
+giữ nguyên bằng chứng lịch sử, gồm giới hạn không queue/retry của tuần 6–7.
+
 Phạm vi: Driver login/dashboard và gửi GPS thử, mốc 26/10–01/11/2026,
 tương ứng VII.4/tuần 3 lộ trình sản phẩm. Branch `feature/driver-dashboard-gps`,
 base develop `8038c83`.

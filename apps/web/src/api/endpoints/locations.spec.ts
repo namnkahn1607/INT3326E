@@ -33,6 +33,22 @@ describe('GPS API boundary', () => {
     expect(fetcher).not.toHaveBeenCalled()
   })
 
+  it('keeps a buffered sample bound to its account token when the global account changes', async () => {
+    setTokenReader(async () => 'new-account-token')
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify(accepted), { status: 202 }))
+    vi.stubGlobal('fetch', fetcher)
+    await sendLocation(payload, undefined, 'buffer-owner-token')
+    expect(new Headers(fetcher.mock.calls[0][1].headers).get('Authorization')).toBe('Bearer buffer-owner-token')
+  })
+
+  it('does not fall back to another account when the buffer owner has no token', async () => {
+    setTokenReader(async () => 'new-account-token')
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify(accepted), { status: 202 }))
+    vi.stubGlobal('fetch', fetcher)
+    await sendLocation(payload, undefined, null)
+    expect(new Headers(fetcher.mock.calls[0][1].headers).has('Authorization')).toBe(false)
+  })
+
   it.each([200, 201])('does not count HTTP %s as accepted', async status => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(accepted), { status })))
     await expect(sendLocation(payload)).rejects.toMatchObject({ code: 'INVALID_RESPONSE' })
