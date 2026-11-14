@@ -52,7 +52,7 @@ for (const mode of ['pglite', 'pglite-enums', 'postgres'] as const) {
       if (mode !== 'postgres') {
         engine = new PGlite();
         let tail = Promise.resolve();
-        adapter = { query, end: async () => {}, connect: async () => {
+        adapter = { query: intercepted, end: async () => {}, connect: async () => {
           const previous = tail;
           let release!: () => void;
           tail = new Promise<void>(r => { release = r; });
@@ -69,7 +69,7 @@ for (const mode of ['pglite', 'pglite-enums', 'postgres'] as const) {
         await pool.query(`CREATE SCHEMA "${schema}"`); await pool.end();
         pool = new Pool({ connectionString: nativeUrl, max: 8, connectionTimeoutMillis: 5000, statement_timeout: 5000,
           options: `-c search_path=${schema}` });
-        adapter = { query, end: async () => {}, connect: async () => {
+        adapter = { query: intercepted, end: async () => {}, connect: async () => {
           const client = await pool!.connect();
           return { query: (sql: string, params: unknown[]) => intercepted(sql, params, client),
             release: (error?: Error) => client.release(error) };
@@ -85,7 +85,14 @@ for (const mode of ['pglite', 'pglite-enums', 'postgres'] as const) {
           .replace('"fromStatus" text CHECK', '"fromStatus" shipment_status CHECK')
           .replace('"toStatus" text NOT NULL', '"toStatus" shipment_status NOT NULL');
       }
-      if (engine) await engine.exec(sql); else await pool!.query(sql);
+      const gpsSql = await readFile(resolve(process.cwd(), '../../packages/database/sql/002-create-gps-locations.sql'), 'utf8');
+      if (engine) {
+        await engine.exec(sql);
+        await engine.exec(gpsSql);
+      } else {
+        await pool!.query(sql);
+        await pool!.query(gpsSql);
+      }
       if (mode === 'pglite-enums') {
         const types = await query(`SELECT table_name, column_name, udt_name FROM information_schema.columns
           WHERE table_schema=current_schema() AND ((table_name='shipments' AND column_name='status')
@@ -117,7 +124,7 @@ for (const mode of ['pglite', 'pglite-enums', 'postgres'] as const) {
 
     beforeEach(async () => {
       failWrite = null; loseCommit = false; blockWrite = null;
-      await query('TRUNCATE idempotency_requests, notifications, shipment_status_events, shipments');
+      await query('TRUNCATE current_locations, location_history, idempotency_requests, notifications, shipment_status_events, shipments');
     });
     afterAll(async () => {
       await app?.close(); await engine?.close();
@@ -140,6 +147,23 @@ for (const mode of ['pglite', 'pglite-enums', 'postgres'] as const) {
         headers: body === undefined ? { Authorization: `Bearer ${actor}` } : headers(actor),
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       });
+    const tracking = (s: string, actor: Actor = 'customer', suffix = '') =>
+      fetch(`${base}/shipments/${s}/tracking${suffix}`, { headers: headers(actor) });
+    const upsertGps = async (driverId: string, lat: number, lng: number, ageSeconds: number, lagMs = 150) => {
+      const sql = `INSERT INTO current_locations
+        ("driverId", lat, lng, "clientTimestamp", "receivedAt", "eventId")
+        VALUES ($1, $2, $3,
+          clock_timestamp() - ($4::numeric * interval '1 second'),
+          clock_timestamp() - ($4::numeric * interval '1 second') + ($5::numeric * interval '1 millisecond'),
+          $6)
+        ON CONFLICT ("driverId") DO UPDATE SET
+          lat = EXCLUDED.lat, lng = EXCLUDED.lng,
+          "clientTimestamp" = EXCLUDED."clientTimestamp",
+          "receivedAt" = EXCLUDED."receivedAt",
+          "eventId" = EXCLUDED."eventId",
+          "updatedAt" = clock_timestamp()`;
+      await query(sql, [driverId, lat, lng, ageSeconds, lagMs, `evt_${randomUUID()}`]);
+    };
     const create = async (actor: 'customer' | 'other' = 'customer', extra: object = {}) => {
       const response = await fetch(`${base}/shipments`, { method: 'POST',
         headers: { ...headers(actor), 'Idempotency-Key': randomUUID() }, body: JSON.stringify({ ...payload, ...extra }) });
@@ -540,6 +564,242 @@ for (const mode of ['pglite', 'pglite-enums', 'postgres'] as const) {
       expect(detail.driverId).toBe(id(4));
       expect(detail.statusHistory.map((e: { action: string }) => e.action)).toEqual(['CREATED', 'ASSIGNED', 'REASSIGNED']);
       expect(detail.statusHistory[2]).toMatchObject({ previousDriverId: id(3), newDriverId: id(4) });
+    });
+
+    it('API09 quyền truy cập, lỗi đầu vào, 404/403/503 và Cache-Control no-store', async () => {
+      const s = await create();
+      await assign(s.id, id(3));
+
+      expect((await fetch(`${base}/shipments/${s.id}/tracking`)).status).toBe(401);
+      for (const actor of ['missing', 'mismatch'] as const) {
+        const res = await tracking(s.id, actor);
+        expect(res.status).toBe(409);
+        expect((await res.json()).code).toBe('USER_NOT_PROVISIONED');
+      }
+      expect((await tracking('not-an-id', 'customer')).status).toBe(400);
+      expect((await tracking(s.id, 'customer', '?extra=1')).status).toBe(400);
+      expect((await tracking(shipmentId(999), 'admin')).status).toBe(404);
+
+      // Customer khác và driver khác bị chặn 403; chủ đơn, tài xế được gán, admin đọc thành công.
+      for (const actor of ['other', 'driver2'] as const) {
+        const denied = await tracking(s.id, actor);
+        expect(denied.status).toBe(403);
+        expect((await denied.json()).code).toBe('FORBIDDEN_RESOURCE');
+      }
+      for (const actor of ['customer', 'driver1', 'admin'] as const) {
+        const ok = await tracking(s.id, actor);
+        expect(ok.status).toBe(200);
+        expect(ok.headers.get('cache-control')).toBe('no-store');
+      }
+
+      // Giả lập lỗi đọc bảng current_locations -> 503 không lộ SQL.
+      failWrite = 'LEFT JOIN current_locations';
+      try {
+        const failed = await tracking(s.id, 'customer');
+        expect(failed.status).toBe(503);
+        expect(JSON.stringify(await failed.json())).not.toMatch(/SELECT|LEFT JOIN|current_locations|credentials/);
+      } finally {
+        failWrite = null;
+      }
+      expect((await tracking(s.id, 'customer')).status).toBe(200);
+    });
+
+    it('TC05.2 & TC09.1–TC09.3: điều kiện lộ vị trí theo trạng thái, stale 30s, ETA Haversine và khớp schema SC05', async () => {
+      const openapi = JSON.parse(await readFile(resolve(process.cwd(), '../../docs/openapi.json'), 'utf8'));
+      const etaMod = await import(resolve(process.cwd(), '../../packages/types/src/eta.ts'));
+      const sc05Keys = [...(openapi.components.schemas.ShipmentTrackingResponse.required as string[])].sort((a, b) => a.localeCompare(b));
+      expect(openapi.components.schemas.ShipmentTrackingResponse.additionalProperties).toBe(false);
+
+      const expectedDeadline = new Date(Date.now() + 60_000).toISOString();
+      const s = await create('customer', { expectedDeliveryAt: expectedDeadline });
+      await upsertGps(id(3), 21.0285, 105.8048, 2);
+
+      // 1. CREATED: ẩn toàn bộ vị trí dù driver1 có GPS trong bảng.
+      const createdTrack = await (await tracking(s.id, 'customer')).json();
+      expect(Object.keys(createdTrack).sort((a, b) => a.localeCompare(b))).toEqual(sc05Keys);
+      expect(createdTrack).toEqual({
+        shipmentId: s.id,
+        status: 'CREATED',
+        driverId: null,
+        pickupLocation: payload.pickupLocation,
+        dropoffLocation: payload.dropoffLocation,
+        currentDriverLocation: null,
+        lastLocationUpdatedAt: null,
+        locationClientTimestamp: null,
+        isLocationStale: null,
+        eta: null,
+        etaUnavailableReason: 'NOT_PICKED_UP',
+        expectedDeliveryAt: expectedDeadline,
+        isLate: false,
+      });
+
+      // 2. ASSIGNED chưa có GPS của tài xế được gán (driver2): vị trí null, eta null (NOT_PICKED_UP).
+      await assign(s.id, id(4), 'admin');
+      const assignedNoGps = await (await tracking(s.id, 'customer')).json();
+      expect(assignedNoGps).toMatchObject({
+        shipmentId: s.id,
+        status: 'ASSIGNED',
+        driverId: id(4),
+        currentDriverLocation: null,
+        lastLocationUpdatedAt: null,
+        locationClientTimestamp: null,
+        isLocationStale: null,
+        eta: null,
+        etaUnavailableReason: 'NOT_PICKED_UP',
+      });
+
+      // 3. ASSIGNED có GPS mới -> hiện vị trí, isLocationStale=false, eta=null (NOT_PICKED_UP).
+      await upsertGps(id(4), 21.031, 105.79, 5);
+      const assignedFresh = await (await tracking(s.id, 'customer')).json();
+      expect(assignedFresh).toMatchObject({
+        status: 'ASSIGNED',
+        driverId: id(4),
+        currentDriverLocation: { lat: 21.031, lng: 105.79 },
+        isLocationStale: false,
+        eta: null,
+        etaUnavailableReason: 'NOT_PICKED_UP',
+      });
+
+      // 4. PICKED_UP thiếu GPS -> LOCATION_MISSING.
+      await pickup(s.id, 'driver2');
+      await query('DELETE FROM current_locations WHERE "driverId"=$1', [id(4)]);
+      const pickedNoGps = await (await tracking(s.id, 'customer')).json();
+      expect(pickedNoGps).toMatchObject({
+        status: 'PICKED_UP',
+        driverId: id(4),
+        currentDriverLocation: null,
+        lastLocationUpdatedAt: null,
+        locationClientTimestamp: null,
+        isLocationStale: null,
+        eta: null,
+        etaUnavailableReason: 'LOCATION_MISSING',
+      });
+
+      // 5. PICKED_UP có GPS cũ (> 30s) hoặc tương lai (ageMs < 0) -> trả mẫu cũ kèm isLocationStale=true, eta=null, LOCATION_STALE.
+      await upsertGps(id(4), 21.02, 105.81, 31);
+      const pickedStale = await (await tracking(s.id, 'customer')).json();
+      expect(pickedStale).toMatchObject({
+        status: 'PICKED_UP',
+        currentDriverLocation: { lat: 21.02, lng: 105.81 },
+        isLocationStale: true,
+        eta: null,
+        etaUnavailableReason: 'LOCATION_STALE',
+      });
+
+      await upsertGps(id(4), 21.021, 105.811, -5, 10000);
+      const pickedFutureSkew = await (await tracking(s.id, 'customer')).json();
+      expect(pickedFutureSkew).toMatchObject({
+        status: 'PICKED_UP',
+        currentDriverLocation: { lat: 21.021, lng: 105.811 },
+        isLocationStale: true,
+        eta: null,
+        etaUnavailableReason: 'LOCATION_STALE',
+      });
+
+      // 6. PICKED_UP có GPS mới (<= 30s) -> hiện vị trí + tính ETA Haversine 20 km/h khớp packages/types.
+      await upsertGps(id(4), payload.dropoffLocation.lat, payload.dropoffLocation.lng, 29);
+      const arrivedAtDropoff = await (await tracking(s.id, 'customer')).json();
+      expect(arrivedAtDropoff).toMatchObject({
+        status: 'PICKED_UP',
+        isLocationStale: false,
+        etaUnavailableReason: null,
+      });
+      expect(arrivedAtDropoff.eta.distanceMeters).toBe(0);
+      expect(arrivedAtDropoff.eta.estimatedSeconds).toBe(0);
+
+      await upsertGps(id(4), 21.0285, 105.8048, 5);
+      const pickedFresh = await (await tracking(s.id, 'customer')).json();
+      expect(pickedFresh).toMatchObject({
+        status: 'PICKED_UP',
+        driverId: id(4),
+        currentDriverLocation: { lat: 21.0285, lng: 105.8048 },
+        isLocationStale: false,
+        etaUnavailableReason: null,
+      });
+      const expectedDistance = etaMod.calculateHaversineDistance(pickedFresh.currentDriverLocation, pickedFresh.dropoffLocation);
+      expect(pickedFresh.eta.distanceMeters).toBeCloseTo(expectedDistance, 6);
+      expect(pickedFresh.eta.estimatedSeconds).toBe(Math.ceil(expectedDistance / ((20 * 1000) / 3600)));
+      expect(Date.parse(pickedFresh.eta.estimatedArrivalAt)).toBeGreaterThan(Date.parse(pickedFresh.locationClientTimestamp));
+
+      // 7. DELIVERED & DELIVERY_FAILED: giữ driverId, ẩn toàn bộ vị trí, eta=null, NOT_PICKED_UP.
+      await deliver(s.id, 'driver2', { proofOfDeliveryNotes: 'Đã giao' });
+      const deliveredTrack = await (await tracking(s.id, 'customer')).json();
+      expect(deliveredTrack).toMatchObject({
+        status: 'DELIVERED',
+        driverId: id(4),
+        currentDriverLocation: null,
+        lastLocationUpdatedAt: null,
+        locationClientTimestamp: null,
+        isLocationStale: null,
+        eta: null,
+        etaUnavailableReason: 'NOT_PICKED_UP',
+        isLate: false,
+      });
+
+      const failedShipment = await create();
+      await assign(failedShipment.id, id(3), 'admin');
+      await upsertGps(id(3), 21.01, 105.82, 2);
+      await query(`UPDATE shipments SET status='DELIVERY_FAILED', "failureReason"='Không liên lạc được',
+        "failedByUserId"=$2, "failedByRole"='DRIVER', "expectedDeliveryAt"='2026-01-01T00:00:00Z' WHERE id=$1`, [failedShipment.id, id(3)]);
+      await query(`INSERT INTO shipment_status_events
+        (id,"shipmentId",action,"fromStatus","toStatus","actorUserId","actorRole","previousDriverId","newDriverId",reason,"occurredAt")
+        VALUES ($1,$2,'DELIVERY_FAILED','PICKED_UP','DELIVERY_FAILED',$3,'DRIVER',$3,$3,'Không liên lạc được','2026-01-01T00:05:00Z')`,
+      [randomUUID(), failedShipment.id, id(3)]);
+      const failedTrack = await (await tracking(failedShipment.id, 'customer')).json();
+      expect(failedTrack).toMatchObject({
+        status: 'DELIVERY_FAILED',
+        driverId: id(3),
+        currentDriverLocation: null,
+        lastLocationUpdatedAt: null,
+        locationClientTimestamp: null,
+        isLocationStale: null,
+        eta: null,
+        etaUnavailableReason: 'NOT_PICKED_UP',
+        isLate: true,
+      });
+    });
+
+    it('TC05.1: sau khi gán lại tài xế không bao giờ lộ vị trí của tài xế cũ', async () => {
+      const s = await create();
+      await assign(s.id, id(3), 'admin');
+      await upsertGps(id(3), 21.0378, 105.7829, 3);
+      expect((await (await tracking(s.id, 'customer')).json()).currentDriverLocation).toEqual({ lat: 21.0378, lng: 105.7829 });
+
+      // Admin gán lại sang driver2 chưa có GPS -> tuyệt đối không rơi lại tọa độ driver1.
+      await assign(s.id, id(4), 'admin2');
+      const afterReassign = await (await tracking(s.id, 'customer')).json();
+      expect(afterReassign).toMatchObject({
+        driverId: id(4),
+        currentDriverLocation: null,
+        lastLocationUpdatedAt: null,
+        locationClientTimestamp: null,
+        isLocationStale: null,
+      });
+      expect((await tracking(s.id, 'driver1')).status).toBe(403);
+      expect((await tracking(s.id, 'driver2')).status).toBe(200);
+    });
+
+    it('adapter tracking của frontend parse được toàn bộ trạng thái thật từ API09', async () => {
+      const { getShipmentTracking } = await import(resolve(process.cwd(), '../web/src/api/endpoints/tracking.ts'));
+      const { setTokenReader } = await import(resolve(process.cwd(), '../web/src/features/auth/session.ts'));
+      const s = await create();
+      vi.stubEnv('VITE_API_URL', base);
+      try {
+        setTokenReader(async () => 'customer');
+        expect((await getShipmentTracking(s.id)).status).toBe('CREATED');
+        await assign(s.id, id(3), 'admin');
+        await upsertGps(id(3), 21.0378, 105.7829, 4);
+        expect((await getShipmentTracking(s.id)).currentDriverLocation).toEqual({ lat: 21.0378, lng: 105.7829 });
+        await pickup(s.id, 'driver1');
+        const picked = await getShipmentTracking(s.id);
+        expect(picked.status).toBe('PICKED_UP');
+        expect(picked.eta).not.toBeNull();
+        expect(picked.etaUnavailableReason).toBeNull();
+        await deliver(s.id, 'driver1');
+        const delivered = await getShipmentTracking(s.id);
+        expect(delivered.currentDriverLocation).toBeNull();
+        expect(delivered.etaUnavailableReason).toBe('NOT_PICKED_UP');
+      } finally { setTokenReader(null); vi.unstubAllEnvs(); }
     });
   });
 }
