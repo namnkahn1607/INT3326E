@@ -24,3 +24,16 @@ Review riêng trước implement ngày 08/11/2026: C07 đối chiếu D1/D2 và 
 scope Driver; C08 đối chiếu D3 với method/body/200 của OpenAPI; C09 đối chiếu
 D4 và cơ chế đối chiếu hiện có của Admin; C10 đối chiếu D5 và base cbec8fb.
 Các mục đủ rõ để triển khai frontend; không xác nhận handler hoặc Cloud đã đạt.
+
+## Checklist yêu cầu emitter tuần 8
+
+- [x] C11: E1 xác định mẫu bị bỏ, seq và khả năng phục hồi khi lấy mẫu kế tiếp.
+- [x] C12: E2–E4 xác định FIFO, retry, giới hạn và tuổi mẫu replay riêng acquisition.
+- [x] C13: E3/E5 xác định lỗi quyền, Stop, phiên, request muộn và cleanup.
+- [x] C14: E6 xác định giới hạn trình duyệt và phân biệt local/Cloud.
+
+Review riêng trước implement ngày 15/11/2026: C11 đối chiếu E1 và validator
+GPS; C12 đối chiếu E2–E4 và quy tắc timestamp/retry của contract; C13 đối chiếu
+E3/E5 với keyed dashboard và AbortSignal; C14 đối chiếu E6/R7. Các hằng số
+client và phạm vi thay thế yêu cầu tuần 7 được ghi rõ trong spec. Không có
+điểm thiếu yêu cầu chặn implement; các dấu này không chứng minh code đã đạt.

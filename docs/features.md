@@ -4,8 +4,9 @@ Mỗi dòng là một tiêu chí nghiệm thu (AC) của đặc tả v1.4. Chỉ
 
 Trạng thái: `chưa có` · `đang làm` · `local` (đạt trên máy, PostgreSQL thật hoặc mock như ghi chú) · `cloud` (đạt trên môi trường Cloud, kèm revision).
 
-Cập nhật: 15/11/2026, tích hợp `develop` tại `ba230a3` với frontend `f270154`.
-Kiểm tra toàn repo: `npm run check` đạt; integration web/Nest/PGlite 12/12 đạt.
+Cập nhật: 15/11/2026, nhánh `feature/gps-emitter-reliability` từ `develop@f28365d`, chưa merge.
+Kiểm tra toàn repo: `npm run check` đạt (web 584, API 454, Worker/shared 122,
+health e2e 2); 116 ca PostgreSQL/Firebase emulator bỏ qua do thiếu cấu hình.
 
 | AC | Hành vi | API / thành phần | Lệnh kiểm tra | Trạng thái |
 | --- | --- | --- | --- | --- |
@@ -19,6 +20,13 @@ Kiểm tra toàn repo: `npm run check` đạt; integration web/Nest/PGlite 12/12
 | AC08 | Thông báo tạo cùng lúc đổi trạng thái; người dùng chỉ đọc thông báo của mình | API10, DATA06 | `npm test --workspace=@parcelflow/api -- notifications` | local |
 | AC09 | ETA Haversine 20 km/h khi đơn đang giao và vị trí còn mới; không sửa hạn giao | ETA01, API09 | `npm test --workspace=@parcelflow/api -- assignments.postgres` và `npm test -- eta` | local (Cloud chưa xác nhận) |
 | AC10 | Phân quyền 3 role; sai quyền 403, chưa liên kết user 409, không token 401 | AUTH01 | `npm test --workspace=@parcelflow/api -- auth shipment-flow` (TC10.x) | local |
+
+Phần client AC04/UI02: emitter lọc mẫu sai/cũ/accuracy, buffer RAM có giới hạn,
+gửi bù có backoff, tách buffer/token theo tài khoản và dọn khi rời trang. Đạt
+local: bộ emitter/dashboard/queue/adapter 113/113; Edge 47/47 với Auth/API mock,
+layout 320/390/1440 px. Xem [bàn giao emitter tuần 8](features/gps-emitter-reliability-handoff.md)
+và [báo cáo browser](evidence/gps-emitter-reliability/report.json). Không nâng
+trạng thái Cloud của AC04 hoặc checkpoint tuần 8 từ các kiểm tra này.
 
 Một số test chỉ chạy trên PostgreSQL thật, thiếu biến thì bị bỏ qua (vẫn báo đạt, nên đọc số "skipped"):
 
