@@ -4,8 +4,8 @@ Mỗi dòng là một tiêu chí nghiệm thu (AC) của đặc tả v1.4. Chỉ
 
 Trạng thái: `chưa có` · `đang làm` · `local` (đạt trên máy, PostgreSQL thật hoặc mock như ghi chú) · `cloud` (đạt trên môi trường Cloud, kèm revision).
 
-Cập nhật: 15/11/2026, nhánh `feature/gps-emitter-reliability` từ `develop@f28365d`, chưa merge.
-Kiểm tra toàn repo: `npm run check` đạt (web 584, API 454, Worker/shared 122,
+Cập nhật: 15/11/2026, bản tích hợp `merge/gps-week8` gồm emitter `2585638` và k6 `930e59e`, từ `develop@f28365d`.
+Kiểm tra bản kết hợp: `npm run check` đạt (web 584, API 454, Worker/shared/load 166,
 health e2e 2); 116 ca PostgreSQL/Firebase emulator bỏ qua do thiếu cấu hình.
 
 | AC | Hành vi | API / thành phần | Lệnh kiểm tra | Trạng thái |
@@ -48,4 +48,7 @@ Firebase/lookup/PubSub mock, 6/6 accepted từ 2 Driver × 3 mẫu. Bằng chứ
 [report](evidence/gps-ingest-load/report.json). `npm.cmd run check` exit 0
 (Worker/shared/load 166, API 454, web 538, health e2e 2; 116 ca môi trường bị
 bỏ qua). Không thay trạng thái AC04/Cloud hoặc kết luận NFR từ smoke này;
-nhánh emitter vẫn độc lập, chưa merge vào base của lượt k6.
+base của lượt k6 riêng chưa bao gồm emitter. Bản kết hợp ngày 15/11 đã được
+kiểm tra lại bằng check toàn repo và 5/5 smoke k6 (6/6 accepted); xem
+[bằng chứng tích hợp](evidence/gps-week8-merge/report.json). Code hai phần giữ
+nguyên, chỉ giải quyết xung đột tài liệu; chưa deploy/nghiệm thu Cloud.

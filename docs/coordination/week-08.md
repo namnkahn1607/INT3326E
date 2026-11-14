@@ -141,6 +141,15 @@ Bản đồ Leaflet, polling và panel tracking đã có trên web (`components/
 
 ## Thực tế từng người
 
+Tích hợp ngày 15/11 theo yêu cầu người dùng: emitter `2585638` và k6 `930e59e`
+được kết hợp trên `merge/gps-week8`, base `develop@f28365d`. Chỉ có xung đột
+ở file tuần này, đã giữ đủ hai báo cáo; code khớp hai nhánh gốc. Check toàn
+repo đạt (web 584, API 454, Worker/shared/load 166, health e2e 2; 116 ca môi
+trường bị bỏ qua). Chạy lại k6 thật → Nest HTTP local đạt 5/5 kịch bản, 6/6
+accepted, Firebase/lookup/PubSub mock. [Bằng chứng bản kết hợp](../evidence/gps-week8-merge/report.json).
+Các ghi nhận chưa merge bên dưới là mốc bàn giao ban đầu; lượt tích hợp này
+đã được người dùng yêu cầu merge/push vào develop, không deploy.
+
 - **TV4** (15/11): hoàn thiện emitter trên `feature/gps-emitter-reliability`,
   base `develop@f28365d`: lọc mẫu sai/cũ/accuracy, buffer RAM tối đa 100 mẫu/
   5 phút, gửi bù giữ timestamp/seq với backoff, Stop/Start, cách ly token và
