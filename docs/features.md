@@ -31,3 +31,13 @@ Một số test chỉ chạy trên PostgreSQL thật, thiếu biến thì bị b
 Mỗi biến phải trỏ tới DB loopback dùng tạm; test tự tạo và xóa schema riêng.
 
 Kết quả từng tuần và bằng chứng Cloud ghi ở [điều phối theo tuần](coordination/README.md).
+
+Công cụ thử tải GPS tuần 8 (15/11/2026): nhánh `test/gps-ingest-load` từ
+`develop@f28365d` có [script k6 và hướng dẫn](../infra/load/README.md) cho API08,
+tham số số Driver/nhịp/thời gian, token riêng theo Driver và JSON summary.
+Đạt local: 44/44 test config/contract và 5/5 smoke k6 thật → Nest HTTP với
+Firebase/lookup/PubSub mock, 6/6 accepted từ 2 Driver × 3 mẫu. Bằng chứng ở
+[report](evidence/gps-ingest-load/report.json). `npm.cmd run check` exit 0
+(Worker/shared/load 166, API 454, web 538, health e2e 2; 116 ca môi trường bị
+bỏ qua). Không thay trạng thái AC04/Cloud hoặc kết luận NFR từ smoke này;
+nhánh emitter vẫn độc lập, chưa merge vào base của lượt k6.
