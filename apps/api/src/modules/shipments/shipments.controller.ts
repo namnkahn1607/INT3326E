@@ -25,6 +25,13 @@ export class ShipmentsController {
     return this.shipments.detail(request.businessUser!, id, query);
   }
 
+  @Get(':id/tracking')
+  @Roles(UserRole.CUSTOMER, UserRole.DRIVER, UserRole.ADMIN)
+  @Header('Cache-Control', 'no-store')
+  tracking(@Req() request: AuthenticatedRequest, @Param('id') id: string, @Query() query: Record<string, unknown>) {
+    return this.shipments.tracking(request.businessUser!, id, query);
+  }
+
   @Post()
   @Roles(UserRole.CUSTOMER)
   create(@Req() request: AuthenticatedRequest, @Body() body: unknown,
