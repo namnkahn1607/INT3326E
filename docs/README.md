@@ -42,6 +42,12 @@
 | Tracking | [live-tracking](features/live-tracking.md) | [live-tracking-handoff](features/live-tracking-handoff.md) |
 | Auth | [contracts/auth-rbac](contracts/auth-rbac.md) | [tv6/auth-rbac-handoff](tv6/auth-rbac-handoff.md) |
 
+## Vận hành
+
+- [Độ tin cậy](RELIABILITY.md): lệnh chuẩn, hai luồng chính phải luôn chạy được, tín hiệu runtime.
+- [Nợ kỹ thuật](tech-debt.md): việc cố ý để sau, kèm rủi ro.
+- [Triển khai](features/deploy.md): build, deploy, biến môi trường.
+
 ## Kiểm thử
 
 - [QA test plan](qa/test-plan.md): ca kiểm thử và kết quả mong đợi, không phải kết quả đã chạy.

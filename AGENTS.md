@@ -19,18 +19,22 @@ Monorepo npm workspaces:
 ## Lệnh
 
 ```sh
-npm ci                                   # cài một lần ở gốc repo
-npm run typecheck                        # API + Worker
-npm test                                 # Worker, types, infra
-npm test --workspace=@parcelflow/api     # API
-npm test --workspace=@parcelflow/web     # web
-npm run build && npm run build:web       # Worker, web
-npm run build --workspace=@parcelflow/api
-npm run dev:web                          # web local, cần apps/web/.env.local
+npm ci              # cài một lần ở gốc repo
+npm run check       # kiểm tra chuẩn: lint, typecheck, test, build cho API, Worker, web
+npm run dev:web     # web local, cần apps/web/.env.local
+npm run start:dev   # Worker local, cần .env
 ```
 
-Node 26 cần `NODE_OPTIONS=--no-experimental-webstorage` khi chạy test web.
+`npm run check` là lệnh duy nhất dùng để kết luận repo đạt; chạy riêng từng phần xem `package.json`.
+Node 26 cần `NODE_OPTIONS=--no-experimental-webstorage` cho test web.
 Test trên PostgreSQL thật chỉ chạy khi có biến môi trường trỏ tới DB loopback tên `parcelflow_*_test`, xem README của từng package.
+
+## Đầu phiên làm việc
+
+1. `git pull` trên `develop`, đọc commit gần đây (`git log --oneline -10`).
+2. Đọc [danh sách tính năng](docs/features.md) và file tuần hiện tại trong [điều phối](docs/coordination/README.md) để biết việc đang dở.
+3. Chạy `npm run check`. Nếu đang đỏ, sửa cho xanh trước, không chồng việc mới lên.
+4. Chọn một việc, làm xong việc đó rồi mới sang việc khác.
 
 ## Ràng buộc cứng
 
@@ -42,10 +46,27 @@ Test trên PostgreSQL thật chỉ chạy khi có biến môi trường trỏ t�
 - Diff nhỏ nhất giải quyết vấn đề. Không đổi tên, format lại hay refactor code ngoài phạm vi. Grep trước khi dùng API, flag hay tên job; chưa chắc thì nói rõ.
 - Chú thích chỉ giải thích lý do hoặc bất biến không hiển nhiên, không lặp lại code làm gì.
 
+## Thế nào là xong
+
+Một việc chỉ xong khi:
+
+- hành vi đã được triển khai đúng đặc tả;
+- `npm run check` đạt, và test của chính việc đó đã chạy (không chỉ "code trông ổn");
+- `docs/features.md` cập nhật trạng thái kèm môi trường đã kiểm (local hay Cloud);
+- tài liệu bị ảnh hưởng đã sửa trong cùng PR.
+
+Không xóa hoặc nới test để cho qua. Không ghi "đạt" khi chưa chạy.
+
+## Cuối phiên làm việc
+
+1. Cập nhật `docs/features.md` và file tuần trong `docs/coordination/`.
+2. Việc cố ý để sau thì ghi vào [nợ kỹ thuật](docs/tech-debt.md), kèm rủi ro.
+3. Commit, mở PR vào `develop`; ghi rõ cái gì chưa kiểm.
+
 ## Quy trình nhóm
 
 - Mỗi thay đổi đi qua nhánh riêng và PR vào `develop`. Cuối tuần chốt bằng PR `week/NN` → `main` (merge commit).
-- Báo kết quả kiểm tra kèm môi trường: mock, local hay Cloud. Không ghi "đạt" khi chưa chạy.
+- Báo kết quả kiểm tra kèm môi trường: mock, local hay Cloud.
 - Ai dùng Spec Kit thì theo [quy trình Spec Kit](docs/agents/spec-kit-workflow.md).
 
 ## Tài liệu
@@ -53,4 +74,5 @@ Test trên PostgreSQL thật chỉ chạy khi có biến môi trường trỏ t�
 - [Mục lục tài liệu](docs/README.md)
 - [Danh sách tính năng và trạng thái](docs/features.md)
 - Hợp đồng: [API](docs/contracts/api-contract.md) · [OpenAPI](docs/openapi.json) · [Auth/RBAC](docs/contracts/auth-rbac.md) · [GPS event](docs/contracts/gps-event-contract.md)
-- [Kiến trúc](ARCHITECTURE.md) · [Điều phối theo tuần](docs/coordination/README.md) · [QA test plan](docs/qa/test-plan.md)
+- [Kiến trúc](ARCHITECTURE.md) · [Độ tin cậy](docs/RELIABILITY.md) · [Nợ kỹ thuật](docs/tech-debt.md) · [Triển khai](docs/features/deploy.md)
+- [Điều phối theo tuần](docs/coordination/README.md) · [QA test plan](docs/qa/test-plan.md)

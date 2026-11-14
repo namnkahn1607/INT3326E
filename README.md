@@ -18,18 +18,16 @@ Nền tảng giao nhận và theo dõi vận chuyển, xây theo hướng Cloud-
 - [docs/features.md](docs/features.md): tính năng nào đã xong, kiểm bằng test nào.
 - [docs/README.md](docs/README.md): mục lục toàn bộ tài liệu.
 - [Triển khai lên Cloud](docs/features/deploy.md): build, deploy, biến môi trường.
+- [Độ tin cậy](docs/RELIABILITY.md) và [nợ kỹ thuật](docs/tech-debt.md).
 - [Điều phối theo tuần](docs/coordination/README.md): việc từng thành viên và PR chốt tuần.
 
 ## Chạy nhanh
 
 ```sh
 npm ci
-npm run typecheck
-npm test                                  # Worker, types, infra
-npm test --workspace=@parcelflow/api
-npm test --workspace=@parcelflow/web
-npm run dev:web                           # web local, cần apps/web/.env.local
-npm run start:dev                         # Worker local, cần .env (mẫu .env.example)
+npm run check        # lint, typecheck, test, build cho API, Worker, web
+npm run dev:web      # web local, cần apps/web/.env.local
+npm run start:dev    # Worker local, cần .env (mẫu .env.example)
 ```
 
 ## Phạm vi
