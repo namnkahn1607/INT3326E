@@ -3,6 +3,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { assignShipment, createShipment, deliverShipment, pickupShipment } from '../src/api/endpoints/shipments'
+import { getShipmentTracking } from '../src/api/endpoints/tracking'
 import { AdminAssignmentPage } from '../src/features/admin/AdminAssignmentPage'
 import { AdminShipmentsPage } from '../src/features/admin/AdminShipmentsPage'
 import { AdminShipmentDetailPage } from '../src/features/admin/AdminShipmentDetailPage'
@@ -339,5 +340,44 @@ describe('Driver list/detail → real Nest HTTP → isolated SQL (Firebase fixtu
     expect(node.querySelector('form')).toBeNull()
     await mount('/driver', 'driver2')
     await eventually(() => expect(node.textContent).toContain(order.trackingNumber))
+  })
+  it('reads real tracking snapshots across lifecycle and reassignment through API09', async () => {
+    await server.query('DELETE FROM current_locations')
+    const order = await create()
+    const created = await getShipmentTracking(order.id)
+    expect(created.currentDriverLocation).toBeNull()
+    expect(created.etaUnavailableReason).toBe('NOT_PICKED_UP')
+
+    session.actor = 'admin'; await assignShipment(order.id, userId(3))
+    await server.query(`INSERT INTO current_locations ("driverId", lat, lng, "clientTimestamp", "receivedAt")
+      VALUES ($1, 21.0285, 105.8048, clock_timestamp() - interval '5 seconds', clock_timestamp())`, [userId(3)])
+    session.actor = 'customer'
+    const assigned = await getShipmentTracking(order.id)
+    expect(assigned.currentDriverLocation).toEqual({ lat: 21.0285, lng: 105.8048 })
+    expect(assigned.eta).toBeNull()
+
+    // Gán lại sang driver2 chưa có GPS -> không lộ vị trí của driver1.
+    session.actor = 'admin'; await assignShipment(order.id, userId(4))
+    session.actor = 'customer'
+    const reassigned = await getShipmentTracking(order.id)
+    expect(reassigned.driverId).toBe(userId(4))
+    expect(reassigned.currentDriverLocation).toBeNull()
+
+    await server.query(`INSERT INTO current_locations ("driverId", lat, lng, "clientTimestamp", "receivedAt")
+      VALUES ($1, 21.031, 105.79, clock_timestamp() - interval '4 seconds', clock_timestamp())`, [userId(4)])
+    session.actor = 'driver2'; await pickupShipment(order.id)
+    session.actor = 'customer'
+    const picked = await getShipmentTracking(order.id)
+    expect(picked.status).toBe('PICKED_UP')
+    expect(picked.isLocationStale).toBe(false)
+    expect(picked.eta).not.toBeNull()
+    expect(picked.etaUnavailableReason).toBeNull()
+
+    session.actor = 'driver2'; await deliverShipment(order.id, '')
+    session.actor = 'customer'
+    const delivered = await getShipmentTracking(order.id)
+    expect(delivered.currentDriverLocation).toBeNull()
+    expect(delivered.etaUnavailableReason).toBe('NOT_PICKED_UP')
+    await server.query('DELETE FROM current_locations')
   })
 })
