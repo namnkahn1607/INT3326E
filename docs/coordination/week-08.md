@@ -138,3 +138,7 @@ Bản đồ Leaflet, polling và panel tracking đã có trên web (`components/
 | Khi API09 có PR | TV3 nối bản đồ (chạy local trước). TV6 review. |
 | 15/11 | Merge vào `develop`. TV5 deploy lại API và web từ một SHA. |
 | Sau deploy | Cả nhóm kiểm trên Cloud. Customer thấy marker tài xế di chuyển là đạt checkpoint. |
+
+## Thực tế từng người
+
+- **TV1** (14/11): đã triển khai `API09` (`GET /v1/shipments/:id/tracking`, `Cache-Control: no-store`), ẩn/hiện vị trí tài xế theo trạng thái và nhãn quá cũ (`> 30s` theo `statement_timestamp()`), tính ETA Haversine `20 km/h` khi `PICKED_UP` và GPS còn mới trong một snapshot SQL (`LEFT JOIN current_locations`), đồng bộ `docs/openapi.json` (`SC05` + `EtaDetails`) và thêm test SQL/HTTP/web integration (`assignments.postgres.spec.ts`, `shipment-flow.spec.tsx`). Kiểm tra mức local (PGlite / mock Firebase); PostgreSQL thật (`SHIPMENT_TEST_DATABASE_URL`) và Cloud chưa xác nhận.
