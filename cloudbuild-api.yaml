@@ -5,11 +5,11 @@ steps:
       - -f
       - apps/api/Dockerfile
       - -t
-      - asia-southeast1-docker.pkg.dev/int3326e/cloud-run-source-deploy/api-image:latest
+      - asia-southeast1-docker.pkg.dev/int3326e/cloud-run-source-deploy/api-image:$_TAG
       - .
   - name: gcr.io/cloud-builders/docker
     args:
       - push
-      - asia-southeast1-docker.pkg.dev/int3326e/cloud-run-source-deploy/api-image:latest
+      - asia-southeast1-docker.pkg.dev/int3326e/cloud-run-source-deploy/api-image:$_TAG
 images:
-  - asia-southeast1-docker.pkg.dev/int3326e/cloud-run-source-deploy/api-image:latest
+  - asia-southeast1-docker.pkg.dev/int3326e/cloud-run-source-deploy/api-image:$_TAG
