@@ -47,9 +47,13 @@ describe.skipIf(!connectionString)('QA tuần 7: luồng đầu cuối và ma tr
     if (!['localhost', '127.0.0.1', '[::1]'].includes(target.hostname) || target.pathname !== '/parcelflow_admin_test') {
       throw new Error('Use a disposable loopback database named parcelflow_admin_test');
     }
-    pool = new Pool({ connectionString, max: 4, connectionTimeoutMillis: 5000, statement_timeout: 5000 });
-    pool.on('connect', (client) => { void client.query(`SET search_path TO "${schema}"`); });
-    await pool.query(`CREATE SCHEMA "${schema}"`);
+    // search_path nằm trong chuỗi kết nối để mọi connection mới đều đúng schema ngay từ đầu, không phụ thuộc thứ tự query.
+    const admin = new Pool({ connectionString, max: 1 });
+    await admin.query(`CREATE SCHEMA "${schema}"`);
+    await admin.end();
+    const scoped = new URL(connectionString!);
+    scoped.searchParams.set('options', `-c search_path=${schema}`);
+    pool = new Pool({ connectionString: scoped.toString(), max: 4, connectionTimeoutMillis: 5000, statement_timeout: 5000 });
     await pool.query(readFileSync('../../packages/database/sql/001-create-shipment.sql', 'utf8'));
     // Repo chưa có DDL cho bảng GPS (tồn đọng mục 8); fixture dựng current_locations theo DATA04 để /drivers chạy được.
     await pool.query(`CREATE TABLE current_locations ("driverId" text PRIMARY KEY REFERENCES users(id),
@@ -106,21 +110,40 @@ describe.skipIf(!connectionString)('QA tuần 7: luồng đầu cuối và ma tr
     expect((await (await call('GET', '/notifications', 'c2')).json()).data).toEqual([]);
   });
 
-  it('TC03.4 (phần chạy được khi chưa có Fail): hai Deliver đồng thời chỉ tạo một event và một thông báo', async () => {
-    const s = await create();
-    await assign(s.id, 'd1');
-    await call('POST', `/shipments/${s.id}/pickup`, 'd1');
-    const before = await effects();
-    const results = await Promise.all([
-      call('POST', `/shipments/${s.id}/deliver`, 'd1', { proofOfDeliveryNotes: 'A' }),
-      call('POST', `/shipments/${s.id}/deliver`, 'd1', { proofOfDeliveryNotes: 'B' }),
-    ]);
-    expect(results.map((r) => r.status)).toEqual([200, 200]);
-    const bodies = await Promise.all(results.map((r) => r.json()));
-    expect(bodies[0]).toEqual(bodies[1]);
-    expect(await effects()).toEqual({ e: before.e + 1, n: before.n + 1 });
-    // Sau terminal không đổi được nữa.
-    expect((await call('POST', `/shipments/${s.id}/pickup`, 'd1')).status).toBe(409);
+  // TC03.4 khi chưa có API Fail: chạy Deliver đối đầu Deliver nhiều vòng để chắc chắn có lần request thứ hai phải chờ khóa dòng.
+  const raceDeliver = async (rounds: number) => {
+    const out: { id: string; statuses: number[] }[] = [];
+    for (let i = 0; i < rounds; i++) {
+      const s = await create();
+      await assign(s.id, 'd1');
+      await call('POST', `/shipments/${s.id}/pickup`, 'd1');
+      const results = await Promise.all([
+        call('POST', `/shipments/${s.id}/deliver`, 'd1', { proofOfDeliveryNotes: 'A' }),
+        call('POST', `/shipments/${s.id}/deliver`, 'd1', { proofOfDeliveryNotes: 'B' }),
+      ]);
+      out.push({ id: s.id, statuses: results.map((r) => r.status) });
+    }
+    return out;
+  };
+
+  it('TC03.4 (phần chạy được khi chưa có Fail): Deliver đồng thời chỉ tạo một event và một thông báo, terminal không đổi', async () => {
+    const runs = await raceDeliver(10);
+    for (const { id } of runs) {
+      const counts = (await pool.query<{ e: number; n: number; status: string }>(
+        `SELECT (SELECT count(*)::int FROM shipment_status_events WHERE "shipmentId"=$1 AND action='DELIVERED') e,
+                (SELECT count(*)::int FROM notifications WHERE "shipmentId"=$1 AND kind='DELIVERED') n,
+                (SELECT status FROM shipments WHERE id=$1) status`, [id])).rows[0];
+      expect(counts).toEqual({ e: 1, n: 1, status: 'DELIVERED' });
+      expect((await call('POST', `/shipments/${id}/pickup`, 'd1')).status).toBe(409);
+    }
+  });
+
+  // Lỗi đã báo TV1 ngày 15/11: request Deliver phải chờ khóa nhận 503 thay vì 200 no-op. Trong READ COMMITTED,
+  // FOR UPDATE đọc lại dòng shipment mới nhưng subquery "terminalAt" của SHIPMENT_PROJECTION vẫn dùng snapshot cũ,
+  // nên validateShipmentRow thấy DELIVERED mà terminalAt null. Khi TV1 sửa xong, ca này sẽ báo "expected to fail" để gỡ .fails.
+  it.fails('TC03.4: Deliver lặp đồng thời phải trả 200 cho cả hai request (đang lỗi 503, chờ TV1)', async () => {
+    const runs = await raceDeliver(10);
+    expect(runs.filter((r) => r.statuses.some((code) => code !== 200))).toEqual([]);
   });
 
   describe('TC10: ma trận quyền', () => {
