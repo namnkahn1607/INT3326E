@@ -5,11 +5,11 @@ steps:
       - -f
       - apps/worker/Dockerfile
       - -t
-      - asia-southeast1-docker.pkg.dev/int3326e/worker-repo/worker-image:latest
+      - asia-southeast1-docker.pkg.dev/int3326e/worker-repo/worker-image:$_TAG
       - .
   - name: gcr.io/cloud-builders/docker
     args:
       - push
-      - asia-southeast1-docker.pkg.dev/int3326e/worker-repo/worker-image:latest
+      - asia-southeast1-docker.pkg.dev/int3326e/worker-repo/worker-image:$_TAG
 images:
-  - asia-southeast1-docker.pkg.dev/int3326e/worker-repo/worker-image:latest
+  - asia-southeast1-docker.pkg.dev/int3326e/worker-repo/worker-image:$_TAG
