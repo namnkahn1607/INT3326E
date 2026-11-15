@@ -1,0 +1,15 @@
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - apps/api/Dockerfile
+      - -t
+      - asia-southeast1-docker.pkg.dev/int3326e/cloud-run-source-deploy/api-image:latest
+      - .
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - asia-southeast1-docker.pkg.dev/int3326e/cloud-run-source-deploy/api-image:latest
+images:
+  - asia-southeast1-docker.pkg.dev/int3326e/cloud-run-source-deploy/api-image:latest

@@ -9,9 +9,10 @@ import { GeocodingModule } from './modules/geocoding/geocoding.module';
 import { ShipmentsModule } from './modules/shipments/shipments.module';
 import { AssignmentsModule } from './modules/assignments/assignments.module';
 import { LocationModule } from './modules/location/location.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
-  imports: [AuthModule, AdminModule, ShipmentsModule, AssignmentsModule, GeocodingModule, LocationModule],
+  imports: [AuthModule, AdminModule, ShipmentsModule, AssignmentsModule, GeocodingModule, LocationModule, NotificationsModule],
   controllers: [HealthController],
   providers: [{ provide: APP_FILTER, useClass: ApiExceptionFilter }],
 })

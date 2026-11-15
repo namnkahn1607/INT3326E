@@ -7,8 +7,8 @@ import { configureApp } from '../../config/app.config';
 import { UserRole } from '../auth/enums/user-role.enum';
 import { FIREBASE_AUTH } from '../auth/providers/firebase-auth.provider';
 import { USER_DATABASE } from '../users/user-database.provider';
-import type { DriverDirectoryRow } from './admin-directory.repository';
-import { AdminDirectoryRepository } from './admin-directory.repository';
+import type { DriverDirectoryRow } from './repositories/admin-directory.repository';
+import { AdminDirectoryRepository } from './repositories/admin-directory.repository';
 import { encodeDirectoryCursor } from './dto/admin-list-query';
 
 const id = (n: number) => `usr_${String(n).padStart(26, '0')}`;

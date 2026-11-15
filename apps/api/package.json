@@ -23,6 +23,7 @@
     "@google-cloud/pubsub": "^6.1.0"
   },
   "devDependencies": {
+    "@parcelflow/types": "file:../../packages/types",
     "@electric-sql/pglite": "0.5.11",
     "@nestjs/testing": "^11.0.0",
     "@types/node": "^22.0.0",

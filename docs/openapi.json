@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "ParcelFlow Core Logistics API (MVP)",
-    "description": "Đã triển khai và kiểm thử trên máy API01/02/03/04 theo đặc tả ParcelFlow v1.3: tạo đơn, danh sách/chi tiết theo quyền và phân công tài xế dành cho ADMIN. API nghiệp vụ yêu cầu Firebase hợp lệ và liên kết người dùng nghiệp vụ. Phân công khóa dòng đơn rồi ghi đơn/lịch sử/thông báo trong cùng giao dịch. Gán lại đúng tài xế không ghi thêm dữ liệu. Chưa thay schema hay triển khai Cloud SQL. Pickup/Deliver/Fail, tracking và GPS ingest vẫn là bản nháp. Xem docs/tv1-assignment-week6.md. Giữ Auth, Admin directory và geocoding hiện có.",
-    "version": "0.6.0-shipment-assignment"
+    "description": "Đã triển khai và kiểm thử trên máy API01/02/03/04/05/06 theo đặc tả ParcelFlow v1.4: tạo đơn, danh sách/chi tiết theo quyền, phân công tài xế dành cho ADMIN, và nhận hàng/giao hàng dành cho DRIVER hiện hành. API nghiệp vụ yêu cầu Firebase hợp lệ và liên kết người dùng nghiệp vụ. Các thao tác đổi trạng thái khóa dòng đơn rồi ghi đơn/lịch sử/thông báo trong cùng giao dịch. Gọi lặp cùng bước bởi actor hợp lệ là no-op, không ghi thêm dữ liệu. Chưa thay schema hay triển khai Cloud SQL. Fail và tracking vẫn là bản nháp. Xem docs/tv1-shipment-week7/spec.md. Giữ Auth, Admin directory, Notifications và geocoding hiện có.",
+    "version": "0.7.0-shipment-pickup-deliver"
   },
   "servers": [
     {
@@ -35,6 +35,10 @@
     {
       "name": "Health",
       "description": "Week 1 public liveness"
+    },
+    {
+      "name": "Notifications",
+      "description": "In-app notifications for the owning Customer; read-only."
     }
   ],
   "paths": {
@@ -646,7 +650,7 @@
           "Shipments"
         ],
         "summary": "Driver confirms pickup",
-        "description": "Transitions state from `ASSIGNED` to `PICKED_UP`.\n\n**Authorized Roles:** `DRIVER` (must be assigned driver).\n\n**Natural Idempotency:** If the assigned driver retries `/pickup` when the shipment is already `PICKED_UP`, the server returns `200 OK` with current state instead of `409 Conflict`.",
+        "description": "API05. Chuyển trạng thái từ `ASSIGNED` sang `PICKED_UP`. Chỉ dành cho `DRIVER` hiện đang được gán cho đơn (`shipment.driverId === actor.id`). Khóa dòng đơn bằng `SELECT FOR UPDATE`, kiểm tra quyền sở hữu tài nguyên trước khi xét trạng thái, sau đó cập nhật đơn, ghi `shipment_status_events` (`PICKED_UP`) và `notifications` trong cùng giao dịch. Nếu đơn đã `PICKED_UP` bởi đúng tài xế này, trả `200 OK` (no-op) giữ nguyên dữ liệu hiện tại.",
         "operationId": "pickupShipment",
         "parameters": [
           {
@@ -656,6 +660,17 @@
         "responses": {
           "200": {
             "description": "Shipment picked up (or already in picked up state by this driver)",
+            "headers": {
+              "Cache-Control": {
+                "description": "Dữ liệu nghiệp vụ không được lưu cache.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -663,6 +678,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "$ref": "#/components/responses/400BadRequest"
           },
           "401": {
             "$ref": "#/components/responses/401Unauthorized"
@@ -688,7 +706,8 @@
             "BearerAuth": []
           }
         ],
-        "x-implementation-status": "draft"
+        "x-implementation-status": "implemented-local",
+        "x-acceptance": "Đã kiểm thử HTTP/SQL trên máy (AC03, TC02.5, TC06.1); chưa chạy migration hoặc deploy Cloud. Xem docs/tv1-shipment-week7/spec.md."
       }
     },
     "/shipments/{id}/deliver": {
@@ -697,7 +716,7 @@
           "Shipments"
         ],
         "summary": "Driver confirms delivery completion",
-        "description": "Transitions state from `PICKED_UP` to `DELIVERED` (terminal state).\n\n**Authorized Roles:** `DRIVER` (must be assigned driver).\n\n**Natural Idempotency:** If the assigned driver retries `/deliver` when the shipment is already `DELIVERED`, the server returns `200 OK` with the current state.",
+        "description": "API06. Chuyển trạng thái từ `PICKED_UP` sang `DELIVERED` (terminal state). Chỉ dành cho `DRIVER` hiện đang được gán cho đơn (`shipment.driverId === actor.id`). Khóa dòng đơn bằng `SELECT FOR UPDATE`, lưu `proofOfDeliveryNotes` tùy chọn (sau khi trim tối đa 255 ký tự Unicode), ghi `shipment_status_events` (`DELIVERED`) và `notifications` trong cùng giao dịch. Nếu đơn đã `DELIVERED` bởi đúng tài xế này, trả `200 OK` (no-op) giữ nguyên `proofOfDeliveryNotes` và thời gian ban đầu.",
         "operationId": "deliverShipment",
         "parameters": [
           {
@@ -717,6 +736,17 @@
         "responses": {
           "200": {
             "description": "Shipment delivered (or already in delivered state)",
+            "headers": {
+              "Cache-Control": {
+                "description": "Dữ liệu nghiệp vụ không được lưu cache.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -724,6 +754,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "$ref": "#/components/responses/400BadRequest"
           },
           "401": {
             "$ref": "#/components/responses/401Unauthorized"
@@ -749,7 +782,8 @@
             "BearerAuth": []
           }
         ],
-        "x-implementation-status": "draft"
+        "x-implementation-status": "implemented-local",
+        "x-acceptance": "Đã kiểm thử HTTP/SQL trên máy (AC03, TC06.1); chưa chạy migration hoặc deploy Cloud. Xem docs/tv1-shipment-week7/spec.md."
       }
     },
     "/shipments/{id}/fail": {
@@ -1166,6 +1200,68 @@
           }
         }
       }
+    },
+    "/notifications": {
+      "get": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Danh sách thông báo của Customer (API10)",
+        "description": "CUSTOMER with matching business linkage only. Server scopes to the caller's customerId from the verified business user, never from the query. Sorted createdAt DESC/id DESC with keyset cursor, default limit 20, max 100. Only limit and cursor are accepted. No mark-read, unread count or subscription preferences.",
+        "operationId": "listNotifications",
+        "x-implementation-status": "implemented",
+        "x-acceptance": "Đã kiểm thử HTTP/SQL trên máy (AC08); chưa chạy migration hoặc deploy Cloud. Xem docs/tv6/week-09.md.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DirectoryLimit"
+          },
+          {
+            "$ref": "#/components/parameters/NotificationCursor"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Page of notifications; empty data is valid.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedNotificationsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/409Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/503ServiceUnavailable"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1222,6 +1318,17 @@
           "format": "uuid",
           "example": "e4eaaaf2-d142-41e1-b3e4-080027620cdd",
           "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+        }
+      },
+      "NotificationCursor": {
+        "name": "cursor",
+        "in": "query",
+        "required": false,
+        "description": "Opaque keyset cursor from the previous response, bound to the calling Customer. A cursor issued to another Customer, or with a wrong version or format, returns 400. It does not grant access.",
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
         }
       }
     },
@@ -1477,9 +1584,11 @@
       },
       "DeliverShipmentRequest": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
           "proofOfDeliveryNotes": {
             "type": "string",
+            "nullable": true,
             "maxLength": 255,
             "example": "Delivered to reception desk on 2nd floor."
           }
@@ -2419,6 +2528,76 @@
         },
         "additionalProperties": false,
         "description": "PF v1.3 SC02, every key required; null is a value, not permission to omit a property. Create replay returns original snapshot."
+      },
+      "NotificationResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "shipmentId",
+          "trackingNumber",
+          "kind",
+          "title",
+          "body",
+          "createdAt"
+        ],
+        "description": "SC07. No readAt, unread count or read receipt in the MVP.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "shipmentId": {
+            "type": "string",
+            "pattern": "^sh_[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+            "example": "sh_01ARZ3NDEKTSV4RRFFQ69G5FAV"
+          },
+          "trackingNumber": {
+            "type": "string",
+            "pattern": "^PF[0-9]{8}[0-9A-HJKMNP-TV-Z]{6}$",
+            "example": "PF202610247K9M3Q"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "CREATED",
+              "ASSIGNED",
+              "REASSIGNED",
+              "PICKED_UP",
+              "DELIVERED",
+              "DELIVERY_FAILED"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PaginatedNotificationsResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "pagination"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NotificationResponse"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/DirectoryPagination"
+          }
+        }
       }
     }
   },

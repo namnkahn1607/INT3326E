@@ -5,6 +5,7 @@ import { ApiProblem } from '../../common/api-problem';
 import { logDependencyFailure, type DependencyStage } from '../../common/dependency-diagnostics';
 import { USER_DATABASE } from '../users/user-database.provider';
 import type { ShipmentResponseDto } from './dto/shipment-response.dto';
+import { SHIPMENT_PROJECTION, shipmentResponse, type ShipmentRow } from './shipment-response.mapper';
 
 interface IdempotencyRow {
   requestHash: string;
@@ -101,6 +102,77 @@ export class ShipmentsRepository {
         logDependencyFailure(this.logger, 'shipments.rollback', rollbackError);
         releaseError = new Error('Transaction connection is unusable');
       }
+      if (error instanceof HttpException) throw error;
+      throw new ServiceUnavailableException();
+    } finally { client?.release(releaseError); }
+  }
+
+  async pickup(driverId: string, id: string): Promise<ShipmentResponseDto> {
+    return this.transitionByDriver(driverId, id, 'PICKED_UP', null);
+  }
+
+  async deliver(driverId: string, id: string, proofOfDeliveryNotes: string | null): Promise<ShipmentResponseDto> {
+    return this.transitionByDriver(driverId, id, 'DELIVERED', proofOfDeliveryNotes);
+  }
+
+  private async transitionByDriver(driverId: string, id: string, target: 'PICKED_UP' | 'DELIVERED',
+    proofOfDeliveryNotes: string | null): Promise<ShipmentResponseDto> {
+    if (!this.pool) throw new ServiceUnavailableException();
+    let client: PoolClient | undefined;
+    let releaseError: Error | undefined;
+    try {
+      client = await this.pool.connect();
+      await client.query('BEGIN');
+      // Khóa dòng đơn trước khi kiểm tra quyền sở hữu và trạng thái để tránh race với phân công lại.
+      const locked = await client.query<ShipmentRow>(
+        `SELECT ${SHIPMENT_PROJECTION} FROM shipments s WHERE s.id = $1 FOR UPDATE OF s`, [id]);
+      const current = locked.rows[0];
+      if (!current) throw new ApiProblem(404, 'RESOURCE_NOT_FOUND', 'Không tìm thấy đơn hàng');
+      if (current.driverId !== driverId) {
+        throw new ApiProblem(403, 'FORBIDDEN_RESOURCE', 'Không có quyền thao tác với đơn hàng này');
+      }
+      if (current.status === target) {
+        const response = shipmentResponse(current);
+        // Gọi lặp cùng bước bởi tài xế hiện hành là no-op, giữ nguyên ghi chú và thời điểm đầu tiên.
+        await client.query('COMMIT');
+        return response;
+      }
+      const expectedFrom = target === 'PICKED_UP' ? 'ASSIGNED' : 'PICKED_UP';
+      if (current.status !== expectedFrom) {
+        throw new ApiProblem(409, 'INVALID_STATE_TRANSITION', 'Trạng thái đơn hiện tại không cho phép thực hiện thao tác này');
+      }
+
+      const clock = await client.query<{ now: Date }>('SELECT clock_timestamp() AS now');
+      const occurredAt = new Date(clock.rows[0].now).toISOString();
+      if (target === 'PICKED_UP') {
+        await client.query(`UPDATE shipments SET status='PICKED_UP', "updatedAt"=$2 WHERE id=$1`, [id, occurredAt]);
+      } else {
+        await client.query(
+          `UPDATE shipments SET status='DELIVERED', "proofOfDeliveryNotes"=$2, "updatedAt"=$3 WHERE id=$1`,
+          [id, proofOfDeliveryNotes, occurredAt]);
+      }
+      const eventId = randomUUID();
+      await client.query(`INSERT INTO shipment_status_events
+        (id,"shipmentId",action,"fromStatus","toStatus","actorUserId","actorRole","previousDriverId","newDriverId",reason,"occurredAt")
+        VALUES ($1,$2,$3,$4,$5,$6,'DRIVER',$6,$6,NULL,$7)`,
+      [eventId, id, target, expectedFrom, target, driverId, occurredAt]);
+      await client.query(`INSERT INTO notifications
+        (id,"customerId","shipmentId","statusEventId",kind,title,body,"createdAt")
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`, [
+        randomUUID(), current.senderId, id, eventId, target,
+        target === 'PICKED_UP' ? 'Tài xế đã lấy hàng' : 'Đơn hàng đã giao thành công',
+        target === 'PICKED_UP'
+          ? `Đơn ${current.trackingCode} đã được tài xế nhận và đang giao.`
+          : `Đơn ${current.trackingCode} đã được giao thành công.`,
+        occurredAt,
+      ]);
+      const updated = await client.query<ShipmentRow>(`SELECT ${SHIPMENT_PROJECTION} FROM shipments s WHERE s.id=$1`, [id]);
+      const response = shipmentResponse(updated.rows[0]);
+      await client.query('COMMIT');
+      return response;
+    } catch (error) {
+      try { await client?.query('ROLLBACK'); }
+      catch { releaseError = new Error('Kết nối không còn dùng được sau khi hoàn tác giao dịch'); }
       if (error instanceof HttpException) throw error;
       throw new ServiceUnavailableException();
     } finally { client?.release(releaseError); }

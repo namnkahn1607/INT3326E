@@ -1,5 +1,5 @@
 import { Inject, Injectable, ServiceUnavailableException } from '@nestjs/common';
-import { AdminDirectoryRepository, type DirectoryRow, type DriverDirectoryRow } from '../admin-directory.repository';
+import { AdminDirectoryRepository, type DirectoryRow, type DriverDirectoryRow } from '../repositories/admin-directory.repository';
 import type { CustomerSummaryResponse, DirectoryPage, DriverResponse } from '../dto/admin-directory-response.dto';
 import { DIRECTORY_USER_ID, encodeDirectoryCursor, type AdminListQuery, type DirectoryScope } from '../dto/admin-list-query';
 

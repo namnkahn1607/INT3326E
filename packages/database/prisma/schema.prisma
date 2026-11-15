@@ -136,15 +136,15 @@ model ShipmentStatusEvent {
 
 // DATA04: Current Locations
 model CurrentLocation {
-  driverId        String    @id @map("driver_id")
+  driverId        String    @id
   lat             Float
   lng             Float
-  clientTimestamp DateTime  @map("client_timestamp") @db.Timestamptz(3)
-  receivedAt      DateTime  @map("received_at") @db.Timestamptz(3)
-  eventId         String    @map("event_id")
-  sessionId       String?   @map("session_id") @db.Uuid
+  clientTimestamp DateTime  @db.Timestamptz(3)
+  receivedAt      DateTime  @db.Timestamptz(3)
+  eventId         String
+  sessionId       String?   @db.Uuid
   seq             Int?
-  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @db.Timestamptz(3)
 
   driver          User      @relation(fields: [driverId], references: [id], onDelete: Cascade)
 
@@ -154,15 +154,15 @@ model CurrentLocation {
 // DATA05: Location History
 model LocationHistory {
   id              BigInt    @id @default(autoincrement())
-  driverId        String    @map("driver_id")
+  driverId        String
   lat             Float
   lng             Float
-  clientTimestamp DateTime  @map("client_timestamp") @db.Timestamptz(3)
-  receivedAt      DateTime  @map("received_at") @db.Timestamptz(3)
-  eventId         String    @map("event_id")
-  sessionId       String?   @map("session_id") @db.Uuid
+  clientTimestamp DateTime  @db.Timestamptz(3)
+  receivedAt      DateTime  @db.Timestamptz(3)
+  eventId         String
+  sessionId       String?   @db.Uuid
   seq             Int?
-  persistedAt     DateTime  @default(now()) @map("persisted_at") @db.Timestamptz(3)
+  persistedAt     DateTime  @default(now()) @db.Timestamptz(3)
 
   driver          User      @relation(fields: [driverId], references: [id], onDelete: Cascade)
 

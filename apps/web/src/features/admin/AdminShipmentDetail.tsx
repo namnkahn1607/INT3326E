@@ -3,7 +3,7 @@ import { StatusBadge } from '../../components/ui/StatusBadge'
 import { formatDateTime } from '../../utils'
 import { ShipmentLifecycleDetails } from '../../components/shipment/ShipmentLifecycleDetails'
 
-export function AdminShipmentDetail({ shipment }: { shipment: ShipmentResponse | ShipmentDetail }) {
+export function AdminShipmentDetail({ shipment, compact = false }: { shipment: ShipmentResponse | ShipmentDetail; compact?: boolean }) {
   return <section className="admin-shipment-detail" aria-label="Chi tiết đơn hiện hành">
     <div className="card-top"><h2>{shipment.trackingNumber}</h2><StatusBadge status={shipment.status} /></div>
     <dl className="admin-detail-grid">
@@ -13,6 +13,7 @@ export function AdminShipmentDetail({ shipment }: { shipment: ShipmentResponse |
       <div><dt>Tài xế hiện hành (ID)</dt><dd className="admin-api-id">{shipment.driverId ?? 'Chưa phân công'}</dd></div>
       <div><dt>Cập nhật lúc</dt><dd>{formatDateTime(shipment.updatedAt)}</dd></div>
     </dl>
-    <ShipmentLifecycleDetails shipment={shipment} />
+    {compact ? <details className="assignment-history"><summary>Lịch sử trạng thái</summary><ShipmentLifecycleDetails shipment={shipment} /></details>
+      : <ShipmentLifecycleDetails shipment={shipment} />}
   </section>
 }

@@ -9,7 +9,7 @@ export function AdminPageFeedback({ loading, error, empty, label, onRetry }: {
     <h3>Chưa tải được {label}</h3><p>{adminErrorMessage(error)}</p>
     <button className="btn btn-outline" type="button" onClick={onRetry}>Tải lại {label}</button>
   </section>
-  if (empty) return <p className="admin-api-message" role="status">Không có {label} trong trang hoặc bộ lọc này.</p>
+  if (empty) return <p className="admin-api-message" role="status">Không có {label}.</p>
   return null
 }
 

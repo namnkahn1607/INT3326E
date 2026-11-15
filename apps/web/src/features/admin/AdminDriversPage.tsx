@@ -17,17 +17,16 @@ function DriverDirectory() {
   return <div className="admin-page admin-api-page">
     <div className="page-header"><div>
       <h1 className="page-title">Tài xế</h1>
-      <p className="page-subtitle">Danh sách từ API. Số đơn active không phải trạng thái online; tài xế có thể nhận nhiều đơn.</p>
+      <p className="page-subtitle">Số đơn đang xử lý và vị trí GPS gần nhất được hệ thống cung cấp.</p>
     </div><button className="btn btn-outline" type="button" disabled={state.loading} onClick={state.refresh}>Làm mới</button></div>
     <AdminPageFeedback loading={state.loading} error={state.error} empty={state.page?.data.length === 0} label="tài xế" onRetry={state.refresh} />
     {state.page && <>
-      <p className="ui-result-count" role="status">{state.page.data.length} tài xế trong trang đang hiển thị, không phải tổng đội xe.</p>
       {!!state.page.data.length && <div className="data-table-wrapper" role="region" aria-label="Danh sách tài xế, cuộn ngang để xem đầy đủ" tabIndex={0}>
-        <table className="data-table"><thead><tr><th>Tài xế</th><th>Đơn active</th><th>Thông tin vị trí</th><th>Server tiếp nhận lúc</th></tr></thead>
+        <table className="data-table"><thead><tr><th>Tài xế</th><th className="ui-numeric">Đơn đang xử lý</th><th>Thông tin vị trí</th><th>Tiếp nhận lúc</th></tr></thead>
           <tbody>{state.page.data.map(driver => <tr key={driver.id}>
             <td><strong>{driver.name}</strong><p className="admin-api-id">{driver.id}</p></td>
-            <td>{driver.activeShipmentCount}</td>
-            <td>{driver.currentLocation === null ? 'Chưa có vị trí được phép hiển thị' : driver.isLocationStale ? 'Vị trí đã cũ' : 'Có vị trí gần đây'}</td>
+            <td className="ui-numeric"><strong>{driver.activeShipmentCount}</strong></td>
+            <td><span className="admin-location-state" data-gps={driver.currentLocation === null ? 'missing' : driver.isLocationStale ? 'stale' : 'fresh'}>{driver.currentLocation === null ? 'Chưa có vị trí được phép hiển thị' : driver.isLocationStale ? 'Vị trí đã cũ' : 'Có vị trí gần đây'}</span></td>
             <td>{formatDateTime(driver.lastLocationUpdatedAt)}</td>
           </tr>)}</tbody>
         </table></div>}

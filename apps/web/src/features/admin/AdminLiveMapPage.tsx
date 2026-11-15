@@ -34,11 +34,10 @@ export function AdminLiveMapPage() {
   const clearFilter = () => { setFilter('all'); firstFilter.current?.focus() }
   return <div className="admin-page admin-map-page">
     <div className="page-header"><div><h1 className="page-title">Bản đồ tài xế</h1>
-      <p className="page-subtitle">Vị trí GPS trong trang tài xế đang hiển thị.</p></div>
+      <p className="page-subtitle">Vị trí GPS của tài xế.</p></div>
       <button type="button" className="btn btn-outline" disabled={result.loading || result.refreshing} onClick={result.refresh}>Tải lại vị trí</button>
     </div>
     <div className="tracking-meta" role="status">
-      <span>Trang {cursors.length} · {drivers.length} tài xế đã tải</span>
       {result.updatedAt && <span>Cập nhật {formatDateTime(new Date(result.updatedAt).toISOString())}</span>}
     </div>
     <AdminPageFeedback loading={result.loading} error={result.error} empty={!!result.data && drivers.length === 0}
@@ -50,7 +49,7 @@ export function AdminLiveMapPage() {
       <AppliedFilters filters={filter === 'all' ? [] : [{ key: 'gps', label: 'GPS', value: labels[filter], onRemove: clearFilter }]} onClear={clearFilter} />
       <div className="live-map-workspace">
         <aside className="driver-map-sidebar">
-          <div className="driver-map-sidebar-header"><h2>Tài xế trong trang</h2></div>
+          <div className="driver-map-sidebar-header"><h2>Tài xế</h2></div>
           <div className="map-filter-tabs" role="group" aria-label="Lọc dữ liệu GPS">
             {(Object.keys(labels) as Filter[]).map(value => <button key={value} ref={value === 'all' ? firstFilter : undefined} type="button" aria-pressed={filter === value}
               className={filter === value ? 'active' : ''} onClick={() => { setFilter(value); setSelectedId(undefined) }}>{labels[value]}</button>)}

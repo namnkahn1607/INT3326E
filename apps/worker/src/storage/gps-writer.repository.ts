@@ -1,5 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { NormalizedGpsEvent } from '../consumer/gps-processor.service';
+import {
+  Coordinates,
+  ShipmentStatus,
+  ShipmentTrackingResponse,
+  buildShipmentTrackingResponse,
+} from '@parcelflow/types';
 
 export interface GpsWriteResult {
   historyInserted: boolean;
@@ -145,12 +151,12 @@ export class GpsWriterRepository {
       // Step 1: First-write-wins insert into location_history
       const historyInsertQuery = `
         INSERT INTO location_history (
-          driver_id, lat, lng, client_timestamp, received_at, event_id, session_id, seq, persisted_at
+          "driverId", lat, lng, "clientTimestamp", "receivedAt", "eventId", "sessionId", seq, "persistedAt"
         ) VALUES (
           $1, $2, $3, $4, $5, $6, $7, $8, NOW()
         )
-        ON CONFLICT (driver_id, client_timestamp) DO NOTHING
-        RETURNING id, driver_id, lat, lng, client_timestamp, received_at, event_id, session_id, seq;
+        ON CONFLICT ("driverId", "clientTimestamp") DO NOTHING
+        RETURNING id, "driverId", lat, lng, "clientTimestamp", "receivedAt", "eventId", "sessionId", seq;
       `;
       const insertRes = await client.query(historyInsertQuery, [
         event.driverId,
@@ -173,26 +179,26 @@ export class GpsWriterRepository {
       } else {
         // Fetch canonical row
         const fetchCanonicalQuery = `
-          SELECT driver_id, lat, lng, client_timestamp, received_at, event_id, session_id, seq
+          SELECT "driverId", lat, lng, "clientTimestamp", "receivedAt", "eventId", "sessionId", seq
           FROM location_history
-          WHERE driver_id = $1 AND client_timestamp = $2
+          WHERE "driverId" = $1 AND "clientTimestamp" = $2
           LIMIT 1;
         `;
         const canonicalRes = await client.query(fetchCanonicalQuery, [event.driverId, clientTimestampDate]);
         if (canonicalRes.rows.length > 0) {
           const row = canonicalRes.rows[0];
           canonical = {
-            eventId: row.event_id,
-            driverId: row.driver_id,
+            eventId: row.eventId ?? row.event_id,
+            driverId: row.driverId ?? row.driver_id,
             latitude: Number(row.lat),
             longitude: Number(row.lng),
             lat: Number(row.lat),
             lng: Number(row.lng),
-            clientTimestamp: new Date(row.client_timestamp).getTime(),
-            clientTimestampIso: new Date(row.client_timestamp).toISOString(),
-            receivedAt: new Date(row.received_at).toISOString(),
-            receivedAtMs: new Date(row.received_at).getTime(),
-            sessionId: row.session_id,
+            clientTimestamp: new Date(row.clientTimestamp ?? row.client_timestamp).getTime(),
+            clientTimestampIso: new Date(row.clientTimestamp ?? row.client_timestamp).toISOString(),
+            receivedAt: new Date(row.receivedAt ?? row.received_at).toISOString(),
+            receivedAtMs: new Date(row.receivedAt ?? row.received_at).getTime(),
+            sessionId: row.sessionId ?? row.session_id,
             seq: row.seq,
           };
           if (canonical.lat !== event.lat || canonical.lng !== event.lng) {
@@ -213,21 +219,21 @@ export class GpsWriterRepository {
       if (!isHistoryOnly) {
         const upsertCurrentQuery = `
           INSERT INTO current_locations (
-            driver_id, lat, lng, client_timestamp, received_at, event_id, session_id, seq, updated_at
+            "driverId", lat, lng, "clientTimestamp", "receivedAt", "eventId", "sessionId", seq, "updatedAt"
           ) VALUES (
             $1, $2, $3, $4, $5, $6, $7, $8, NOW()
           )
-          ON CONFLICT (driver_id) DO UPDATE SET
+          ON CONFLICT ("driverId") DO UPDATE SET
             lat = EXCLUDED.lat,
             lng = EXCLUDED.lng,
-            client_timestamp = EXCLUDED.client_timestamp,
-            received_at = EXCLUDED.received_at,
-            event_id = EXCLUDED.event_id,
-            session_id = EXCLUDED.session_id,
+            "clientTimestamp" = EXCLUDED."clientTimestamp",
+            "receivedAt" = EXCLUDED."receivedAt",
+            "eventId" = EXCLUDED."eventId",
+            "sessionId" = EXCLUDED."sessionId",
             seq = EXCLUDED.seq,
-            updated_at = NOW()
-          WHERE EXCLUDED.client_timestamp > current_locations.client_timestamp
-          RETURNING driver_id;
+            "updatedAt" = NOW()
+          WHERE EXCLUDED."clientTimestamp" > current_locations."clientTimestamp"
+          RETURNING "driverId";
         `;
         const currentRes = await client.query(upsertCurrentQuery, [
           canonical.driverId,
@@ -267,24 +273,24 @@ export class GpsWriterRepository {
     if (this.pool) {
       try {
         const res = await this.pool.query(
-          `SELECT driver_id, lat, lng, client_timestamp, received_at, event_id, session_id, seq
-           FROM current_locations WHERE driver_id = $1 LIMIT 1`,
+          `SELECT "driverId", lat, lng, "clientTimestamp", "receivedAt", "eventId", "sessionId", seq
+           FROM current_locations WHERE "driverId" = $1 LIMIT 1`,
           [driverId],
         );
         if (res.rows.length === 0) return null;
         const row = res.rows[0];
         return {
-          eventId: row.event_id,
-          driverId: row.driver_id,
+          eventId: row.eventId ?? row.event_id,
+          driverId: row.driverId ?? row.driver_id,
           latitude: Number(row.lat),
           longitude: Number(row.lng),
           lat: Number(row.lat),
           lng: Number(row.lng),
-          clientTimestamp: new Date(row.client_timestamp).getTime(),
-          clientTimestampIso: new Date(row.client_timestamp).toISOString(),
-          receivedAt: new Date(row.received_at).toISOString(),
-          receivedAtMs: new Date(row.received_at).getTime(),
-          sessionId: row.session_id,
+          clientTimestamp: new Date(row.clientTimestamp ?? row.client_timestamp).getTime(),
+          clientTimestampIso: new Date(row.clientTimestamp ?? row.client_timestamp).toISOString(),
+          receivedAt: new Date(row.receivedAt ?? row.received_at).toISOString(),
+          receivedAtMs: new Date(row.receivedAt ?? row.received_at).getTime(),
+          sessionId: row.sessionId ?? row.session_id,
           seq: row.seq,
         };
       } catch (err: any) {
@@ -293,6 +299,7 @@ export class GpsWriterRepository {
     }
     return this.currentStore.get(driverId) ?? null;
   }
+
 
   /**
    * Evaluates tracking snapshot and freshness per Section 6 & TC05.1-TC05.3
@@ -324,6 +331,48 @@ export class GpsWriterRepository {
       eventId: current.eventId,
     };
   }
+
+  /**
+   * Builds canonical SC05 tracking response incorporating shipment state,
+   * terminal visibility restrictions (Week 6), and fresh Haversine ETA (Week 7).
+   */
+  async getShipmentTrackingSnapshot(
+    shipment: {
+      id: string;
+      status: ShipmentStatus;
+      driverId: string | null;
+      pickupLocation: Coordinates;
+      dropoffLocation: Coordinates;
+      expectedDeliveryAt?: string | null;
+      isLate?: boolean | null;
+    },
+    referenceTimeMs: number = Date.now(),
+    speedKmH: number = 20,
+  ): Promise<ShipmentTrackingResponse> {
+    const rawSnapshot = shipment.driverId
+      ? await this.getTrackingSnapshot(shipment.driverId, referenceTimeMs)
+      : null;
+
+    return buildShipmentTrackingResponse(
+      {
+        shipmentId: shipment.id,
+        status: shipment.status,
+        driverId: shipment.driverId,
+        pickupLocation: shipment.pickupLocation,
+        dropoffLocation: shipment.dropoffLocation,
+        currentDriverLocation: rawSnapshot?.currentDriverLocation ?? null,
+        lastLocationUpdatedAt: rawSnapshot?.lastLocationUpdatedAt ?? null,
+        locationClientTimestamp: rawSnapshot?.locationClientTimestamp ?? null,
+        expectedDeliveryAt: shipment.expectedDeliveryAt,
+        isLate: shipment.isLate,
+      },
+      {
+        serverNowMs: referenceTimeMs,
+        speedKmH,
+      },
+    );
+  }
+
 
   async getHistoryCount(driverId?: string): Promise<number> {
     if (!driverId) return this.historyStore.size;

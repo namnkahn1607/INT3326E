@@ -5,6 +5,12 @@ TV6 chủ trì. Ngày soạn: 23/10/2026. Baseline đọc:
 Phần III AC01–AC10, VI.14, AUTH01/API11/SC01/SC06, VII tuần 3.
 Kế hoạch này mô tả expected result; không mặc định các case đã đạt trên cloud.
 
+Cập nhật 07/11/2026: mã case TC vẫn theo VI.14; cột "tuần" ở bảng checkpoint
+dùng số tuần của lộ trình cũ 1–10, lịch hiện hành là tuần 4–13 (xem
+[TV6 theo tuần](tv6/tv6-weekly.md)). Kết quả chạy tuần 7 ghi ở
+[week-07](tv6/week-07.md#kết-quả-chạy-07112026). Phần dưới chưa đối chiếu lại
+với đặc tả v1.4.
+
 ## Phạm vi đợt này
 
 - Kiểm chứng Admin directory, Auth/RBAC, business linkage, phân trang và quyền
@@ -78,13 +84,16 @@ Các ID TC dưới đây giữ nguyên của VI.14; không ghi pass khi handler 
 | ETA tuần 7 | TC09.1–TC09.4 | Haversine/ceil/0 distance/30s boundary; null reason; không đổi deadline | TV2/TV3/TV4; TV6 rà case biên |
 | Hồi quy tích hợp tuần 8 | TC10.1–TC10.3 và các case đã đến checkpoint | Quyền trên read/write/retry; Firebase/SQL/PubSub lỗi và phục hồi | TV6 + chủ component |
 
-Assignment chưa có handler trên baseline này. Các test với controller probe/mock
-không chứng minh API04, ownership Shipment, ghi history hoặc notification đã chạy.
-TV6 không tạo handler Assign/GPS thay chủ component chỉ để đánh dấu QA đạt.
+Tại baseline 23/10, Assignment chưa có handler. Từ 01/11 Create và Assign đã có
+handler trên `develop`, kết quả TC01.x và TC02.x ở [week-07](tv6/week-07.md#kết-quả-chạy-07112026).
+Pickup, deliver, fail và endpoint history vẫn chưa có, nên TC03.x và TC06.1 chỉ
+ghi BLOCKED. Test với controller probe hoặc mock không chứng minh ownership
+Shipment, ghi history hay notification đã chạy.
+TV6 không tạo handler vòng đời hay GPS thay chủ component chỉ để đánh dấu QA đạt.
 
 ## Cách chạy và ghi kết quả
 
-Các lệnh tự động, điều kiện SQL test nằm ở [Admin directory](tv6-admin-directory.md#kiểm-tra).
+Các lệnh tự động, điều kiện SQL test nằm ở [Admin directory](admin-directory.md#kiểm-tra).
 Unit/HTTP thường chạy cùng `npm test` tại `apps/api`; Firebase Emulator và SQL
 integration opt-in phải ghi rõ đã chạy hay skip. Build/typecheck pass không thay
 nghiệm thu cloud hoặc đo NFR.

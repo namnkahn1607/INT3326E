@@ -1,7 +1,7 @@
 .admin-api-page { min-width: 0; }
 .admin-api-page :is(input, select) { font: inherit; min-height: 44px; width: 100%; padding: 10px 12px; border: 1px solid var(--ui-line, #d8d2df); border-radius: 8px; background: white; color: inherit; }
 .admin-api-page label { display: block; font-weight: 600; margin-bottom: 8px; }
-.admin-api-controls { display: flex; align-items: end; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+.admin-api-page .admin-api-controls { display: flex; flex-direction: row; align-items: end; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
 .admin-api-controls > div { flex: 1 1 210px; min-width: 0; }
 .admin-api-page .page-header { flex-wrap: wrap; gap: 16px; }
 .admin-api-page :is(.assignment-col, .assignment-select-card, .admin-shipment-detail) { min-width: 0; }
