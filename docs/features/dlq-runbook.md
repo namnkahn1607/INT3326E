@@ -15,7 +15,7 @@
 
 Khi Worker không thể ghi nhận sự kiện GPS do lỗi tạm thời (Database timeout, mất kết nối mạng chập chờn) hoặc gặp gói tin độc hại (Poison pill), Worker sẽ không `ack()` message (hoặc gọi `nack()`). 
 
-Google Cloud Pub/Sub được cấu hình chính sách Dead Letter với `maxDeliveryAttempts = 5`:
+Google Cloud Pub/Sub được cấu hình chính sách Dead Letter với `maxDeliveryAttempts = 5` (cấu hình này cần TV5 xác nhận trên GCP):
 - Nếu tin nhắn thử lại quá 5 lần vẫn thất bại, Pub/Sub tự động chuyển tiếp message sang topic Dead Letter Queue: `gps-events-dlq`.
 - Việc này giúp **hàng đợi chính không bị nghẽn (unblock pipeline)** và bảo toàn các message lỗi để kỹ sư vận hành điều tra, phân loại và replay.
 
