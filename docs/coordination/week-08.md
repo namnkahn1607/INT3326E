@@ -152,7 +152,8 @@ Bản đồ Leaflet, polling và panel tracking đã có trên web (`components/
   Cần TV5 kiểm tra quyền hiệu lực publish trên topic `gps-events` cho
   `cloud-run-backend@int3326e.iam.gserviceaccount.com`; chưa xem được topic
   IAM, chưa có eventId 202 hoặc tài khoản SQL để đối chiếu đầu cuối.
-  DB được để chạy, không đổi IAM/secret/schema. Check toàn repo đạt trên
+  Sau nghiệm thu đã Stop DB theo yêu cầu người dùng, xác nhận Stopped lúc
+  16:48:49; cần bật lại khi kiểm tiếp. Không đổi IAM/secret/schema. Check toàn repo đạt trên
   `8168a1a` (code `2ed8f04`): Worker/shared/load 166, API 454, web 584,
   health e2e 2; 125 ca môi trường bị bỏ qua. [Bằng chứng Cloud](../evidence/driver-cloud-week8/report.md).
 

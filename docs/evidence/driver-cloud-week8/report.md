@@ -33,7 +33,12 @@ Overview xác nhận **Stopped**.
 Ban đầu người dùng chọn chỉ đọc log. Sau đó người dùng cho phép bật DB
 2 vCPU/8 GB có tính phí và tiếp tục nghiệm thu. Start bắt đầu 15:51:41,
 hoàn tất 15:55:37; Overview chuyển **Runnable**. Danh sách/chi tiết Driver
-sau đó trả 200. DB được để chạy; không đổi secret, schema hoặc IAM.
+sau đó trả 200. Không đổi secret, schema hoặc IAM.
+
+Sau nghiệm thu, theo yêu cầu tắt tài nguyên tính phí của người dùng, đã Stop
+instance: bắt đầu 16:48:03, Console xác nhận **Stopped** lúc 16:48:49.
+DB hiện dừng và cần bật lại khi nghiệm thu tiếp; các luồng phụ thuộc DB sẽ
+không hoạt động trong thời gian này. Dừng instance không xóa dữ liệu.
 
 ## W713 — đơn kiểm thử mới, nhận và giao thành công
 
