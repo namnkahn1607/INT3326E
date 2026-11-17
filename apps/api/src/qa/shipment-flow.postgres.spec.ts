@@ -138,10 +138,8 @@ describe.skipIf(!connectionString)('QA tuần 7: luồng đầu cuối và ma tr
     }
   });
 
-  // Lỗi đã báo TV1 ngày 15/11: request Deliver phải chờ khóa nhận 503 thay vì 200 no-op. Trong READ COMMITTED,
-  // FOR UPDATE đọc lại dòng shipment mới nhưng subquery "terminalAt" của SHIPMENT_PROJECTION vẫn dùng snapshot cũ,
-  // nên validateShipmentRow thấy DELIVERED mà terminalAt null. Khi TV1 sửa xong, ca này sẽ báo "expected to fail" để gỡ .fails.
-  it.fails('TC03.4: Deliver lặp đồng thời phải trả 200 cho cả hai request (đang lỗi 503, chờ TV1)', async () => {
+  // Trong READ COMMITTED, nhánh no-op đọc lại đơn bằng một SELECT mới để snapshot thấy event DELIVERED vừa commit.
+  it('TC03.4: Deliver lặp đồng thời phải trả 200 cho cả hai request', async () => {
     const runs = await raceDeliver(10);
     expect(runs.filter((r) => r.statuses.some((code) => code !== 200))).toEqual([]);
   });
