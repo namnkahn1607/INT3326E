@@ -21,9 +21,10 @@
   cùng TV2/5/6, lưu revision/eventId và kết quả thật; không đóng bằng test mock.
   Kiểm lại 17/11: Hosting có emitter tuần 8 nhưng GPS trả 503, accepted 0;
   chưa có eventId đối chiếu. Xem [bằng chứng Cloud](../../evidence/driver-cloud-week8/report.md).
-  Blocker hiện tại: Cloud SQL `int3326esql` Stopped; log connector có
-  `409 invalidState`, `users.lookup` có `ECONNREFUSED`. Người dùng chưa cho
-  bật DB. Sau khôi phục cần đối chiếu cùng eventId qua Worker/SQL.
+  Đã bật lại DB theo cho phép của người dùng; sau khôi phục GPS vẫn 503 tại
+  publish (6 mẫu, 0 accepted). Cần TV5 kiểm tra quyền hiệu lực publish của
+  service account API trên `gps-events`; chưa xem được topic IAM và chưa có
+  tài khoản SQL. Cần đối chiếu cùng eventId được chấp nhận qua Worker/SQL.
   Không coi commit/push/deploy là bằng chứng đóng mục này.
 - [x] W708 — R4/R6, finding converge: nhánh lỗi định vị cần xóa interval ngay,
   không chỉ chờ React effect cleanup. Thêm hồi quy lỗi native đồng bộ và nhiều
@@ -45,10 +46,13 @@
   Bằng chứng: docs/features/driver-shipments-handoff.md; D1–D5 không còn thiếu sót local,
   W713/W707 giữ mở cho backend/môi trường thật. Lượt implement chưa commit/push/deploy;
   commit/push/merge được người dùng cho phép riêng sau bàn giao, không deploy.
-- [ ] W713 — D5: cùng TV1/5/6 nghiệm thu list → pickup → deliver trên backend thật;
+- [x] W713 — D5: cùng TV1/5/6 nghiệm thu list → pickup → deliver trên backend thật;
   cần handler TV1, revision/config và tài khoản có linkage. Không đóng bằng mock.
-  Kiểm lại 17/11: Driver đăng nhập được, `/auth/me` 200 nhưng list 503;
-  chưa thực hiện nhận/giao. Xem [bằng chứng Cloud](../../evidence/driver-cloud-week8/report.md).
+  Đạt Cloud 17/11 sau khôi phục DB: đơn mới `PF20261117CGDANJ`, lấy hàng
+  16:36, giao thành công 16:39; Driver/Customer/Admin đọc lại khớp trạng thái,
+  lịch sử và ghi chú. API `backend-service-00036-f67`. Không suy rộng sang
+  các ca cạnh tranh/gọi lặp hoặc toàn bộ AC03.
+  Xem [bằng chứng Cloud](../../evidence/driver-cloud-week8/report.md).
 
 - [x] E801 — E1–E6: cập nhật spec/clarify/plan, review checklist riêng và analyze.
   Bằng chứng: phần bổ sung tuần 8, review C11–C14 trước implement và analyze

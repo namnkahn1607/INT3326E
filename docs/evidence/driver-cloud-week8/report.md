@@ -1,95 +1,113 @@
 # TV4 — nghiệm thu Driver trên Cloud, 17/11/2026
 
-Kết quả: **BLOCKED**, chưa đóng W707/W713. Kiểm tra trực tiếp trên phiên
-Driver do người dùng đăng nhập, không dùng Auth/API mock. Nguồn repo kiểm
-tra: `develop@2ed8f04`; nhánh ghi bằng chứng: `test/tv4-week8-cloud-acceptance`.
+Kết quả: **W713 đạt luồng list → pickup → deliver trên Cloud; W707 còn BLOCKED**.
+Kiểm tra trực tiếp bằng Customer, Admin và Driver do người dùng đăng nhập,
+không dùng Auth/API mock. Nguồn repo: `develop@2ed8f04`; nhánh bằng chứng:
+`test/week8-driver-cloud-acceptance`.
 
 ## Môi trường và phiên bản
 
-- Web: `https://int3326e.web.app/driver`, HTTP 200.
-- Bundle Hosting: `/assets/index-BIrSjnkZ.js`, HTTP 200, Last-Modified
-  `Tue, 17 Nov 2026 03:12:34 GMT`. Đã có nhãn buffer 100 mẫu/5 phút và gửi bù
-  của emitter tuần 8. Chưa xác minh SHA build của Hosting.
-- API: `https://backend-service-wcvss3dnxa-as.a.run.app`.
+- Web: `https://int3326e.web.app`, bundle `/assets/index-BIrSjnkZ.js`, HTTP 200,
+  Last-Modified `Tue, 17 Nov 2026 03:12:34 GMT`; có buffer/retry tuần 8.
+  Chưa xác minh SHA build Hosting.
+- API: `https://backend-service-wcvss3dnxa-as.a.run.app`. Revision đọc trực
+  tiếp từ Cloud Run: `backend-service-00036-f67`, nhận 100% traffic, triển
+  khai 17/11 lúc 10:02:01 +0700. Chưa xác minh SHA image này.
 - Worker: `https://worker-service-wcvss3dnxa-as.a.run.app`.
-- Bàn giao TV2 ghi SHA Cloud `286f6db`, revision API
-  `backend-service-00035-b6c`, Worker `worker-service-00020-kht`. Đây là thông
-  tin được bàn giao, chưa đọc lại cấu hình Cloud Run trong lượt nghiệm thu này.
-- Thời điểm quan sát browser: khoảng 15:26–15:29 ngày 17/11, giờ Việt Nam
-  (08:26–08:29 UTC). Chỉ dùng GPS **Mô phỏng**, không lấy vị trí thiết bị.
+  Revision `worker-service-00020-kht` và SHA `286f6db` là thông tin bàn giao
+  TV2, chưa đọc lại revision Worker trong lượt này.
+- Project `int3326e`, region `asia-southeast1`, Cloud SQL `int3326esql`.
+- Mốc giờ dưới đây là giờ Việt Nam ngày 17/11/2026. Chỉ dùng GPS **Mô phỏng**,
+  không lấy vị trí thiết bị. Không sao chép token, cookie hoặc mật khẩu.
 
-## Kết quả quan sát
+## Khôi phục DB
 
-| Kiểm tra | Kết quả thực tế | Kết luận |
-| --- | --- | --- |
-| Đăng nhập Driver và role route | Trang Driver hiển thị tài khoản và vai trò Tài xế | Đạt bước truy cập UI |
-| Firebase account lookup | Browser Network: HTTP 200 | Firebase có phản hồi thành công |
-| `GET /v1/auth/me` sau reload | Browser Network: HTTP 200 | Profile xác thực đọc được |
-| API `/health`, Worker `/health` | GET trực tiếp đều HTTP 200 | Chỉ xác nhận HTTP process, không xác nhận DB/pipeline |
-| `GET /v1/shipments?limit=20` | Browser Network: HTTP 503; preflight 204. Lỗi còn sau reload | Không tải được danh sách, chưa kiểm pickup/deliver |
-| `POST /v1/locations` | Browser Network: 5 phản hồi 503 trong lượt có retry; preflight 204 | Chưa có GPS được API chấp nhận |
-| Buffer khi API lỗi | Tạo 4 mẫu, accepted 0, pending 4; UI báo API chưa nhận được mẫu GPS | Đã quan sát giữ mẫu trên API thật bị lỗi; chưa kiểm replay thành công |
-| Dừng và dọn | Stop chuyển sang Đã dừng; reload đưa generated/accepted/pending về 0 | Không để emitter tiếp tục phát/retry sau kiểm tra |
-| Pickup/deliver | Không thực hiện vì không tải được đơn | W713 còn mở |
-| Pub/Sub → Worker → SQL và tracking | Chưa có accepted `eventId` từ lượt này để đối chiếu | W707 còn mở |
+Lượt đầu 15:26–15:30: `/v1/auth/me` trả 200 nhưng danh sách đơn và GPS trả
+503. API và Worker `/health` đều 200; health không chứng minh DB/pipeline.
+Log tại `2026-11-17T08:26:42.321Z`: Cloud SQL connector không lấy được
+certificate cho `int3326e:asia-southeast1:int3326esql`, trả `409 invalidState`;
+`UsersRepository` ghi
+`{"event":"dependency_failure","stage":"users.lookup","code":"ECONNREFUSED"}`.
+Overview xác nhận **Stopped**.
 
-Body một phản hồi GPS được đọc trong Network → Response (không sao chép
-Authorization, cookie hoặc Firebase token):
+Ban đầu người dùng chọn chỉ đọc log. Sau đó người dùng cho phép bật DB
+2 vCPU/8 GB có tính phí và tiếp tục nghiệm thu. Start bắt đầu 15:51:41,
+hoàn tất 15:55:37; Overview chuyển **Runnable**. Danh sách/chi tiết Driver
+sau đó trả 200. DB được để chạy; không đổi secret, schema hoặc IAM.
 
-```json
-{
-  "type": "about:blank",
-  "title": "Service temporarily unavailable",
-  "status": 503,
-  "code": "SERVICE_UNAVAILABLE",
-  "instance": "/v1/locations",
-  "timestamp": "2026-11-17T08:26:42.322Z"
-}
-```
+## W713 — đơn kiểm thử mới, nhận và giao thành công
 
-## Nguyên nhân xác nhận từ Cloud Console
+Theo yêu cầu người dùng, tạo **một đơn mới**, không đổi trạng thái các đơn có
+sẵn. Tên, điện thoại, bưu kiện và địa chỉ là dữ liệu mô phỏng, không giao thật.
 
-Sau lượt thử, người dùng mở Logs Explorer của project `int3326e`. Đã đọc
-log `backend-service` đúng khoảng 15:26–15:30 và kiểm tra trang Overview của
-Cloud SQL `int3326esql`:
+| Trường | Giá trị |
+| --- | --- |
+| Mã vận đơn | `PF20261117CGDANJ` |
+| Shipment ID | `sh_01M7MCZ70H77SVH0AFY0B1PXN4` |
+| Customer | `usr_01M5SW7618CWKRAADEJZ7FAJX8` |
+| Admin | `usr_01M5SW7612Q3QZDNAY0AE7SWY9` |
+| Driver | `usr_01M5SW7617KAKAMEE4G0W50HRX` (Nguyen Van B) |
 
-- `2026-11-17T08:26:42.321Z`: Cloud SQL connector không lấy được ephemeral
-  certificate cho `int3326e:asia-southeast1:int3326esql`; Google API trả
-  `409 invalidState`, "The instance or operation is not in an appropriate
-  state to handle the request".
-- Cùng thời điểm, `UsersRepository` ghi
-  `{"event":"dependency_failure","stage":"users.lookup","code":"ECONNREFUSED"}`.
-- Lỗi tương tự lặp lại khi gọi GPS, và tại
-  `2026-11-17T08:28:08.355Z` ngay sau GET danh sách đơn 503.
-- Cloud SQL Overview hiển thị **Stopped** và "This instance is stopped.
-  Start it to allow connections and operations". Vì DB dừng, API không đọc
-  được business user trước khi xử lý danh sách đơn hoặc publish GPS.
-- Người dùng yêu cầu **chỉ đọc log, chưa bật database**. Không khởi động
-  instance, không thay cấu hình/secret/schema. W707/W713 vẫn BLOCKED;
-  chưa xác nhận hành vi sau khi DB được bật lại.
+| Bước UI thật | Kết quả quan sát |
+| --- | --- |
+| Customer tạo đơn, 16:21 | Trang xác nhận tạo thành công, có mã và liên kết chi tiết |
+| Admin gán Driver, 16:28 | Máy chủ xác nhận phân công đúng đơn và Driver |
+| Driver đọc danh sách/chi tiết | Có đơn mới, trạng thái Đã gán tài xế |
+| Driver xác nhận lấy hàng, 16:36 | “Máy chủ đã xác nhận lấy hàng.”; Đang giao hàng; lịch sử đúng Driver |
+| Driver xác nhận giao thành công, 16:39 | “Máy chủ đã xác nhận giao thành công.”; lịch sử thêm đúng bước và Driver |
+| Đọc lại sau giao | Driver sau reload, Customer và Admin cùng hiển thị Giao thành công, lịch sử 16:36/16:39 và ghi chú giao hàng |
+| Tracking đơn kết thúc | Customer/Admin: “Đơn đã kết thúc”, “Đã dừng theo dõi và ẩn vị trí tài xế.” |
 
-## Tái hiện và tiếp tục
+Ghi chú giao hàng đã lưu và đối chiếu:
+`NGHIEM THU CLOUD W8 17/11/2026 - don mo phong, khong giao hang thuc te.`
 
-1. Đăng nhập tài khoản test DRIVER trên Hosting, mở `/driver`, thử đọc danh
-   sách đơn. DevTools Network ghi `shipments?limit=20` trả 503.
-2. Chọn Mô phỏng, bắt đầu phát, chờ chu kỳ 8 giây. `locations` trả 503;
-   accepted giữ 0 và pending tăng. Dừng phát sau khi có bằng chứng.
-3. Nguyên nhân DB dừng đã được xác nhận bằng log và Cloud SQL Overview như
-   trên. Cần người có quyền và được cho phép bật lại `int3326esql`, đợi instance
-   sẵn sàng rồi kiểm tra lại API. Không sửa secret/schema hoặc nới guard để
-   che lỗi kết nối; chưa thực hiện khởi động theo lựa chọn của người dùng.
-4. Sau khi API hoạt động, dùng đơn test đã gán để kiểm list → pickup → deliver;
-   lấy `eventId` của GPS 202 rồi cùng TV2/5/6 đối chiếu log Worker,
-   `location_history`, `current_locations` và tracking. Chỉ đóng W707/W713
-   khi các bằng chứng tương ứng có thật.
+W713 đạt luồng trên backend thật. Chưa thử cạnh tranh, gọi lặp, sai quyền
+hoặc truy vấn transaction SQL; không nâng toàn bộ AC03/AC06/AC10 lên Cloud.
+
+## W707 — GPS vẫn lỗi publish sau khi DB hoạt động
+
+Sau khôi phục DB, simulator tạo **6 mẫu, accepted 0, pending 6**. Đã Stop và
+rời dashboard để dọn buffer; không để emitter phát/retry liên tục. Lượt trước
+DB khôi phục có 4 mẫu, accepted 0, pending 4, cũng đã dừng và dọn.
+
+Logs Explorer 15:59:41–16:00:19: `POST /v1/locations` **503**, preflight 204;
+`LocationService` ghi “Không publish được sự kiện GPS”. Ví dụ lần lỗi
+`evt_375ce7c3-8d46-4356-a482-71802c1680be` tại `2026-11-17T08:59:43.123Z`.
+Đây **không phải eventId đã được chấp nhận**; chưa có bằng chứng 202/Broker
+Confirmed để đối chiếu Worker/SQL. Catch hiện tại không ghi lỗi Pub/Sub gốc,
+nên chưa kết luận chính xác lỗi IAM từ phản hồi 503.
+
+Cấu hình và quyền đọc trực tiếp từ Console:
+
+- API runtime service account: `cloud-run-backend@int3326e.iam.gserviceaccount.com`.
+- `PUBSUB_TOPIC_GPS_EVENTS=gps-events`, `FIREBASE_PROJECT_ID=int3326e`.
+  Topic `projects/int3326e/topics/gps-events` và subscription `gps-events-sub`
+  tồn tại. Biến legacy `PUBSUB_TOPIC=int3326e_pubsub` không được code API08 dùng.
+- Project IAM hiển thị Cloud SQL Client, Firebase Authentication Viewer,
+  Secret Manager Secret Accessor cho service account API; không thấy Pub/Sub
+  Publisher cấp project. **Chưa biết quyền hiệu lực cấp topic**.
+- Console không cho tài khoản hiện tại xem Permissions của topic:
+  “You don't have permission to view the permissions of the selected resource”.
+  Edit principal ở Project IAM bị vô hiệu hóa. Không thay quyền để thử.
+- Người dùng chưa có tài khoản database; chưa đối chiếu trực tiếp
+  `location_history` và `current_locations` qua SQL Studio.
+
+TV5/người có quyền cần kiểm tra `pubsub.topics.publish` của service account
+API trên `gps-events`. Nếu thiếu, cấp `roles/pubsub.publisher` chỉ trên topic
+này theo quy trình cấp quyền. Nếu quyền đủ, lấy lỗi publish gốc để chẩn đoán.
+Sau sửa, chạy lại simulator, lấy eventId được API trả 202 rồi đối chiếu
+Pub/Sub, Worker và SQL với **cùng eventId** trước khi đóng W707. Log Worker
+nhận message riêng lẻ không chứng minh transaction đã commit.
 
 ## Kiểm tra local trong cùng phiên
 
 `NODE_OPTIONS=--no-experimental-webstorage npm run check`: **exit 0** trên
-`2ed8f04`; lint, typecheck và build API/Worker/web đạt. Worker/shared/load
-166 passed / 8 skipped, health e2e 2 passed, API 454 passed / 117 skipped,
-web 584 passed. Tổng 125 ca phụ thuộc môi trường bị bỏ qua; không coi là đã
-chạy PostgreSQL/Firebase emulator thật trong lượt này. Log local:
-`.vitest/driver-acceptance-20261117-check.log` (không đưa log đầy đủ vào Git).
+`8168a1a` (code không đổi so với `develop@2ed8f04`, chỉ khác tài liệu).
+Lint, typecheck và build API/Worker/web đạt. Worker/shared/load 166 passed /
+8 skipped, health e2e 2 passed, API 454 passed / 117 skipped, web 584 passed.
+Tổng 125 ca phụ thuộc môi trường bỏ qua; không coi là đã chạy PostgreSQL/
+Firebase emulator thật. Log local `.vitest/driver-cloud-final-check.log`
+(không đưa log đầy đủ vào Git). Cảnh báo bundle web lớn không làm check thất bại.
 
-Không nâng trạng thái AC03/AC04/AC05 lên Cloud từ các kiểm tra trên.
+Không nâng AC04/AC05 hoặc toàn bộ AC03 lên Cloud. Nghiệm thu đầy đủ còn W707;
+bật DB đã giải quyết lỗi đọc đơn, chưa giải quyết lỗi publish GPS.

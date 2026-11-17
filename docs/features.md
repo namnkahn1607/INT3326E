@@ -53,12 +53,14 @@ kiểm tra lại bằng check toàn repo và 5/5 smoke k6 (6/6 accepted); xem
 [bằng chứng tích hợp](evidence/gps-week8-merge/report.json). Code hai phần giữ
 nguyên, chỉ giải quyết xung đột tài liệu; chưa deploy/nghiệm thu Cloud.
 
-Nghiệm thu TV4 trên Cloud ngày 17/11/2026: Hosting đã có emitter tuần 8,
-Driver đăng nhập và `/auth/me` trả 200, nhưng danh sách đơn và GPS đều trả
-503. Đã quan sát buffer giữ 4 mẫu (accepted 0), dừng phát và dọn khi reload.
-W707/W713 vẫn mở, chưa đối chiếu Worker/SQL hoặc nhận/giao. `npm run check`
-đạt trên `develop@2ed8f04` (125 ca phụ thuộc môi trường bị bỏ qua).
-Đã đọc log và Cloud SQL Overview: instance `int3326esql` đang Stopped;
-connector trả `409 invalidState`, `users.lookup` ghi `ECONNREFUSED`.
-Người dùng chọn chỉ đọc log, chưa bật database nên nghiệm thu vẫn bị chặn.
-Xem [bằng chứng và bước tái hiện](evidence/driver-cloud-week8/report.md).
+Nghiệm thu TV4 trên Cloud ngày 17/11/2026: đã bật lại `int3326esql` theo
+cho phép của người dùng, khắc phục lỗi đọc đơn do DB Stopped. **W713 đạt**:
+đơn kiểm thử mới `PF20261117CGDANJ` được Customer tạo, Admin gán, Driver lấy
+hàng 16:36 và giao thành công 16:39; đọc lại trên cả ba role khớp lịch sử,
+ghi chú và tracking kết thúc. API revision `backend-service-00036-f67`.
+**W707 còn mở**: sau khôi phục DB, GPS vẫn 503 tại publish, 6 mẫu/0 accepted;
+chưa đối chiếu Worker/SQL. Cần người có quyền xác minh quyền publish cấp
+topic của service account API; Console hiện tại không cho xem topic IAM.
+`npm run check` đạt trên `8168a1a`, code giữ nguyên `develop@2ed8f04`
+(125 ca môi trường bỏ qua). Không nâng toàn bộ AC03/AC04/AC05 lên Cloud.
+Xem [bằng chứng và bước tiếp tục](evidence/driver-cloud-week8/report.md).

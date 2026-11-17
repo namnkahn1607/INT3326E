@@ -141,17 +141,20 @@ Bản đồ Leaflet, polling và panel tracking đã có trên web (`components/
 
 ## Thực tế từng người
 
-- **TV4 (17/11, nghiệm thu Cloud):** Hosting đã có buffer/retry tuần 8;
-  Firebase và `GET /v1/auth/me` trả 200. `GET /v1/shipments?limit=20` và
-  `POST /v1/locations` trả 503 `SERVICE_UNAVAILABLE`, preflight 204. Lượt GPS
-  mô phỏng tạo 4 mẫu, accepted 0, pending 4; đã dừng và reload để dọn buffer.
-  Chưa thể kiểm pickup/deliver hoặc đối chiếu accepted eventId qua Worker/SQL;
-  W707/W713 còn mở. Đã đọc log: Cloud SQL connector trả `409 invalidState`,
-  `users.lookup` ghi `ECONNREFUSED`; Overview xác nhận `int3326esql` Stopped.
-  Người dùng chọn chỉ đọc log, chưa bật database. Chờ được phép khởi động DB
-  và kiểm lại API trước khi nghiệm thu tiếp.
-  Check toàn repo đạt trên `2ed8f04`: Worker/shared/load 166, API 454, web 584,
-  health e2e 2; 125 ca môi trường bị bỏ qua. [Bằng chứng Cloud và tái hiện](../evidence/driver-cloud-week8/report.md).
+- **TV4 (17/11, nghiệm thu Cloud):** Đã khôi phục Cloud SQL `int3326esql`
+  theo cho phép của người dùng (Start 15:51:41, hoàn tất 15:55:37, Runnable),
+  giải quyết lỗi đọc đơn. **W713 đạt** với đơn mới `PF20261117CGDANJ`:
+  Customer tạo 16:21, Admin gán 16:28, Driver lấy hàng 16:36 và giao 16:39.
+  Cả ba role đọc lại khớp trạng thái/lịch sử/ghi chú; Customer/Admin dừng
+  tracking khi kết thúc. API revision `backend-service-00036-f67`.
+  **W707 vẫn BLOCKED**: GPS sau khôi phục DB tạo 6 mẫu, accepted 0, pending 6;
+  log API lỗi publish và trả 503. Đã Stop và rời dashboard để dọn buffer.
+  Cần TV5 kiểm tra quyền hiệu lực publish trên topic `gps-events` cho
+  `cloud-run-backend@int3326e.iam.gserviceaccount.com`; chưa xem được topic
+  IAM, chưa có eventId 202 hoặc tài khoản SQL để đối chiếu đầu cuối.
+  DB được để chạy, không đổi IAM/secret/schema. Check toàn repo đạt trên
+  `8168a1a` (code `2ed8f04`): Worker/shared/load 166, API 454, web 584,
+  health e2e 2; 125 ca môi trường bị bỏ qua. [Bằng chứng Cloud](../evidence/driver-cloud-week8/report.md).
 
 Tích hợp ngày 15/11 theo yêu cầu người dùng: emitter `2585638` và k6 `930e59e`
 được kết hợp trên `merge/gps-week8`, base `develop@f28365d`. Chỉ có xung đột
