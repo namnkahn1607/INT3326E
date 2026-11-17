@@ -47,6 +47,7 @@
 - [Độ tin cậy](RELIABILITY.md): lệnh chuẩn, hai luồng chính phải luôn chạy được, tín hiệu runtime.
 - [Nợ kỹ thuật](tech-debt.md): việc cố ý để sau, kèm rủi ro.
 - [Triển khai](features/deploy.md): build, deploy, biến môi trường.
+- [Runbook DLQ](features/dlq-runbook.md) và [bàn giao Worker phục hồi lỗi](features/worker-recovery-handoff.md).
 
 ## Kiểm thử
 

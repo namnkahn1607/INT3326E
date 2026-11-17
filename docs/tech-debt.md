@@ -5,7 +5,7 @@ Việc đã biết nhưng cố ý để sau. Thêm dòng khi hoãn một việc;
 | Ngày | Khu vực | Nợ | Lý do để sau | Rủi ro | Xem lại khi |
 | --- | --- | --- | --- | --- | --- |
 | 14/11/2026 | API | Chưa có `GET /v1/shipments/{id}/tracking` (API09); web đã gọi, Cloud trả 404 | Việc tuần 8 của TV1 | Chặn checkpoint tuần 8 (AC05) và ETA (AC09) | Ngay trong tuần 8 |
-| 14/11/2026 | Worker | Sheet ghi push subscription, code dùng pull | Pull đang chạy được trên Cloud | Chi phí khi Worker luôn chạy; cấu hình scale khi thử tải | Trước load test tuần 9 |
+| 17/11/2026 | Worker | Worker NACK cả lỗi vĩnh viễn khi ghi DB (khóa ngoại `23503`, `driverId` không có trong `users`) | Phát hiện trên Cloud 16/11, chưa sửa | Message sai bị gửi lại liên tục, tốn tài nguyên Worker | Tuần 9 (TV2) |
 | 14/11/2026 | Triển khai | Image Cloud Build chỉ gắn tag `:latest` | Chưa cần rollback | Không rollback được về đúng bản cũ | Khi làm CI/CD tuần 9 |
 | 14/11/2026 | CI | Chưa có GitHub Actions chạy `npm run check` trên mỗi PR | Việc tuần 9 của TV5 | PR lỗi lọt vào `develop` | Tuần 9 |
 | 14/11/2026 | Cloud | Topic `int3326e_pubsub` và subscription `int3326e_subcription` thử nghiệm từ tuần 4 còn trên GCP | Cần quyền GCP, chờ nhóm xác nhận không dùng | Nhầm topic khi cấu hình | Khi TV5 dọn GCP |

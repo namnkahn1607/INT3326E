@@ -43,6 +43,20 @@ Tên cũ `PUBSUB_TOPIC` và `PUBSUB_SUBSCRIPTION` không còn được đọc. K
 
 `/healthz` trên Cloud Run bị Google chặn và trả 404 của Google; kiểm bằng `/health` (API và Worker đều có). Health chỉ xác nhận tiến trình HTTP đang chạy, không chứng minh pipeline GPS hoạt động.
 
+### Cơ chế nhận tin Pub/Sub của Worker (Chốt Streaming Pull)
+
+TV2 (Na) và TV5 (Minh Anh) đã chốt dùng **Streaming Pull** thay vì HTTP Push Webhook:
+
+- **Lý do**:
+  1. Kiểm soát ACK/NACK ở mức transaction database (quy tắc D08: chỉ ACK sau khi commit SQL thành công; lỗi thì NACK để Pub/Sub gửi lại).
+  2. Tích hợp Flow control (`@google-cloud/pubsub`) chống tràn bộ nhớ / quá tải Worker khi có burst GPS events.
+  3. Bảo mật: Worker không cần mở endpoint HTTP public nhận webhook từ bên ngoài.
+  4. Nhất quán với CLI Replay DLQ (`infra/pubsub/dlq-replay.mjs`).
+- **Cấu hình Cloud Run bắt buộc cho Worker** (TV5 xác nhận đã đặt trên Cloud):
+  - `Minimum instances = 1` (Worker phải luôn chạy để duy trì stream lắng nghe tin nhắn).
+  - `CPU allocation = Instance-based` (CPU luôn được cấp phát, không bị bóp nghẽn khi chạy ngầm).
+- Đã xóa mục nợ kỹ thuật tương ứng trong `docs/tech-debt.md`.
+
 ## Cloud SQL
 
 Chạy file trong `packages/database/sql/` theo thứ tự số. Mỗi file chỉ tạo bảng mới và lỗi nếu bảng đã tồn tại; với DB đang có dữ liệu, kiểm tra bảng nào đã có trước khi chạy, không chạy lại cả file.
