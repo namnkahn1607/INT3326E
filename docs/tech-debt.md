@@ -4,6 +4,7 @@ Việc đã biết nhưng cố ý để sau. Thêm dòng khi hoãn một việc;
 
 | Ngày | Khu vực | Nợ | Lý do để sau | Rủi ro | Xem lại khi |
 | --- | --- | --- | --- | --- | --- |
+| 17/11/2026 | API/Cloud | Sau khi bật lại Cloud SQL, API08 vẫn 503 tại publish GPS; catch chưa ghi lỗi Pub/Sub gốc | W713 nhận/giao đã đạt; W707 còn chặn. Cần TV5 xác minh `pubsub.topics.publish` của service account API trên `gps-events`; chưa xem được topic IAM, chưa kết luận thiếu quyền. Xem [bằng chứng TV4](evidence/driver-cloud-week8/report.md) | Không có eventId 202 để nghiệm thu Worker/SQL; chưa kiểm replay thành công trên Cloud | Trước khi đóng W707; kiểm quyền hiệu lực và lỗi gốc, sửa nguyên nhân rồi đối chiếu cùng eventId |
 | 14/11/2026 | API | Chưa có `GET /v1/shipments/{id}/tracking` (API09); web đã gọi, Cloud trả 404 | Việc tuần 8 của TV1 | Chặn checkpoint tuần 8 (AC05) và ETA (AC09) | Ngay trong tuần 8 |
 | 17/11/2026 | Worker | Worker NACK cả lỗi vĩnh viễn khi ghi DB (khóa ngoại `23503`, `driverId` không có trong `users`) | Phát hiện trên Cloud 16/11, chưa sửa | Message sai bị gửi lại liên tục, tốn tài nguyên Worker | Tuần 9 (TV2) |
 | 14/11/2026 | Triển khai | Image Cloud Build chỉ gắn tag `:latest` | Chưa cần rollback | Không rollback được về đúng bản cũ | Khi làm CI/CD tuần 9 |
