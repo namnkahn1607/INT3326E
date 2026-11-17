@@ -21,8 +21,10 @@
   cùng TV2/5/6, lưu revision/eventId và kết quả thật; không đóng bằng test mock.
   Kiểm lại 17/11: Hosting có emitter tuần 8 nhưng GPS trả 503, accepted 0;
   chưa có eventId đối chiếu. Xem [bằng chứng Cloud](../../evidence/driver-cloud-week8/report.md).
-  Blocker hiện tại: cần xác định và xử lý API 503 rồi đối chiếu cùng eventId
-  qua Worker/SQL. Không coi commit/push/deploy là bằng chứng đóng mục này.
+  Blocker hiện tại: Cloud SQL `int3326esql` Stopped; log connector có
+  `409 invalidState`, `users.lookup` có `ECONNREFUSED`. Người dùng chưa cho
+  bật DB. Sau khôi phục cần đối chiếu cùng eventId qua Worker/SQL.
+  Không coi commit/push/deploy là bằng chứng đóng mục này.
 - [x] W708 — R4/R6, finding converge: nhánh lỗi định vị cần xóa interval ngay,
   không chỉ chờ React effect cleanup. Thêm hồi quy lỗi native đồng bộ và nhiều
   tick được xử lý trong cùng lượt để bảo đảm không tự gọi định vị lại sau lỗi.

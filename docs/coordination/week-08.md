@@ -146,7 +146,10 @@ Bản đồ Leaflet, polling và panel tracking đã có trên web (`components/
   `POST /v1/locations` trả 503 `SERVICE_UNAVAILABLE`, preflight 204. Lượt GPS
   mô phỏng tạo 4 mẫu, accepted 0, pending 4; đã dừng và reload để dọn buffer.
   Chưa thể kiểm pickup/deliver hoặc đối chiếu accepted eventId qua Worker/SQL;
-  W707/W713 còn mở. Cần TV1/TV5 đọc log API để xác định nguyên nhân 503.
+  W707/W713 còn mở. Đã đọc log: Cloud SQL connector trả `409 invalidState`,
+  `users.lookup` ghi `ECONNREFUSED`; Overview xác nhận `int3326esql` Stopped.
+  Người dùng chọn chỉ đọc log, chưa bật database. Chờ được phép khởi động DB
+  và kiểm lại API trước khi nghiệm thu tiếp.
   Check toàn repo đạt trên `2ed8f04`: Worker/shared/load 166, API 454, web 584,
   health e2e 2; 125 ca môi trường bị bỏ qua. [Bằng chứng Cloud và tái hiện](../evidence/driver-cloud-week8/report.md).
 

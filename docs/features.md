@@ -58,4 +58,7 @@ Driver đăng nhập và `/auth/me` trả 200, nhưng danh sách đơn và GPS �
 503. Đã quan sát buffer giữ 4 mẫu (accepted 0), dừng phát và dọn khi reload.
 W707/W713 vẫn mở, chưa đối chiếu Worker/SQL hoặc nhận/giao. `npm run check`
 đạt trên `develop@2ed8f04` (125 ca phụ thuộc môi trường bị bỏ qua).
+Đã đọc log và Cloud SQL Overview: instance `int3326esql` đang Stopped;
+connector trả `409 invalidState`, `users.lookup` ghi `ECONNREFUSED`.
+Người dùng chọn chỉ đọc log, chưa bật database nên nghiệm thu vẫn bị chặn.
 Xem [bằng chứng và bước tái hiện](evidence/driver-cloud-week8/report.md).
