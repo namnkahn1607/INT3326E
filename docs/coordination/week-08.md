@@ -141,6 +141,15 @@ Bản đồ Leaflet, polling và panel tracking đã có trên web (`components/
 
 ## Thực tế từng người
 
+- **TV4 (17/11, nghiệm thu Cloud):** Hosting đã có buffer/retry tuần 8;
+  Firebase và `GET /v1/auth/me` trả 200. `GET /v1/shipments?limit=20` và
+  `POST /v1/locations` trả 503 `SERVICE_UNAVAILABLE`, preflight 204. Lượt GPS
+  mô phỏng tạo 4 mẫu, accepted 0, pending 4; đã dừng và reload để dọn buffer.
+  Chưa thể kiểm pickup/deliver hoặc đối chiếu accepted eventId qua Worker/SQL;
+  W707/W713 còn mở. Cần TV1/TV5 đọc log API để xác định nguyên nhân 503.
+  Check toàn repo đạt trên `2ed8f04`: Worker/shared/load 166, API 454, web 584,
+  health e2e 2; 125 ca môi trường bị bỏ qua. [Bằng chứng Cloud và tái hiện](../evidence/driver-cloud-week8/report.md).
+
 Tích hợp ngày 15/11 theo yêu cầu người dùng: emitter `2585638` và k6 `930e59e`
 được kết hợp trên `merge/gps-week8`, base `develop@f28365d`. Chỉ có xung đột
 ở file tuần này, đã giữ đủ hai báo cáo; code khớp hai nhánh gốc. Check toàn

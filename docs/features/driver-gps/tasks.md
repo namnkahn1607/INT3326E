@@ -19,8 +19,10 @@
   đã nghiệm thu GPS Cloud hoặc hoàn tất checkpoint chung tuần 7.
 - [ ] W707 — R7: nghiệm thu Driver thật → API → Pub/Sub → Worker → SQL trên Cloud
   cùng TV2/5/6, lưu revision/eventId và kết quả thật; không đóng bằng test mock.
-  Blocker: chưa có cấu hình/phiên Driver và record đối chiếu Cloud cho lượt này;
-  xem bàn giao Driver ngày 08/11/2026. Không tự commit/push/deploy để đóng mục này.
+  Kiểm lại 17/11: Hosting có emitter tuần 8 nhưng GPS trả 503, accepted 0;
+  chưa có eventId đối chiếu. Xem [bằng chứng Cloud](../../evidence/driver-cloud-week8/report.md).
+  Blocker hiện tại: cần xác định và xử lý API 503 rồi đối chiếu cùng eventId
+  qua Worker/SQL. Không coi commit/push/deploy là bằng chứng đóng mục này.
 - [x] W708 — R4/R6, finding converge: nhánh lỗi định vị cần xóa interval ngay,
   không chỉ chờ React effect cleanup. Thêm hồi quy lỗi native đồng bộ và nhiều
   tick được xử lý trong cùng lượt để bảo đảm không tự gọi định vị lại sau lỗi.
@@ -43,6 +45,8 @@
   commit/push/merge được người dùng cho phép riêng sau bàn giao, không deploy.
 - [ ] W713 — D5: cùng TV1/5/6 nghiệm thu list → pickup → deliver trên backend thật;
   cần handler TV1, revision/config và tài khoản có linkage. Không đóng bằng mock.
+  Kiểm lại 17/11: Driver đăng nhập được, `/auth/me` 200 nhưng list 503;
+  chưa thực hiện nhận/giao. Xem [bằng chứng Cloud](../../evidence/driver-cloud-week8/report.md).
 
 - [x] E801 — E1–E6: cập nhật spec/clarify/plan, review checklist riêng và analyze.
   Bằng chứng: phần bổ sung tuần 8, review C11–C14 trước implement và analyze

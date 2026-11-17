@@ -52,3 +52,10 @@ base của lượt k6 riêng chưa bao gồm emitter. Bản kết hợp ngày 15
 kiểm tra lại bằng check toàn repo và 5/5 smoke k6 (6/6 accepted); xem
 [bằng chứng tích hợp](evidence/gps-week8-merge/report.json). Code hai phần giữ
 nguyên, chỉ giải quyết xung đột tài liệu; chưa deploy/nghiệm thu Cloud.
+
+Nghiệm thu TV4 trên Cloud ngày 17/11/2026: Hosting đã có emitter tuần 8,
+Driver đăng nhập và `/auth/me` trả 200, nhưng danh sách đơn và GPS đều trả
+503. Đã quan sát buffer giữ 4 mẫu (accepted 0), dừng phát và dọn khi reload.
+W707/W713 vẫn mở, chưa đối chiếu Worker/SQL hoặc nhận/giao. `npm run check`
+đạt trên `develop@2ed8f04` (125 ca phụ thuộc môi trường bị bỏ qua).
+Xem [bằng chứng và bước tái hiện](evidence/driver-cloud-week8/report.md).

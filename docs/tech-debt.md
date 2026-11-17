@@ -4,6 +4,7 @@ Việc đã biết nhưng cố ý để sau. Thêm dòng khi hoãn một việc;
 
 | Ngày | Khu vực | Nợ | Lý do để sau | Rủi ro | Xem lại khi |
 | --- | --- | --- | --- | --- | --- |
+| 17/11/2026 | API/Cloud | Driver đăng nhập được nhưng list đơn và GPS trả 503 `SERVICE_UNAVAILABLE` | Cần log API để xác định nguyên nhân; xem [bằng chứng TV4](evidence/driver-cloud-week8/report.md) | Chặn W713 nhận/giao và W707 GPS đầu cuối; không thể nghiệm thu Cloud từ health 200 | Ngay khi TV1/TV5 có log API |
 | 14/11/2026 | API | Chưa có `GET /v1/shipments/{id}/tracking` (API09); web đã gọi, Cloud trả 404 | Việc tuần 8 của TV1 | Chặn checkpoint tuần 8 (AC05) và ETA (AC09) | Ngay trong tuần 8 |
 | 17/11/2026 | Worker | Worker NACK cả lỗi vĩnh viễn khi ghi DB (khóa ngoại `23503`, `driverId` không có trong `users`) | Phát hiện trên Cloud 16/11, chưa sửa | Message sai bị gửi lại liên tục, tốn tài nguyên Worker | Tuần 9 (TV2) |
 | 14/11/2026 | Triển khai | Image Cloud Build chỉ gắn tag `:latest` | Chưa cần rollback | Không rollback được về đúng bản cũ | Khi làm CI/CD tuần 9 |
