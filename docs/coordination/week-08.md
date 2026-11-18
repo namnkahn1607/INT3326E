@@ -141,6 +141,45 @@ Bản đồ Leaflet, polling và panel tracking đã có trên web (`components/
 
 ## Thực tế từng người
 
+- **TV4 (18/11, đóng W707):** Người dùng đã đăng nhập SQL Studio database
+  `parcelflow`. Ban đầu history chỉ có seq 1–7 và 17; 9 mẫu còn lại ở DLQ.
+  Console Worker thực tế min 0, Request-based, khác cấu hình Streaming Pull
+  đã bàn giao. Người dùng chỉ cho bật tạm min 1/Instance-based tối đa 20 phút:
+  Worker `00026-xkd` nhận 100% traffic từ 07:50:36. Phát lại nguyên payload
+  seq 8–16; history đủ 17 seq/eventId/timestamp riêng biệt, current đúng seq 11
+  `evt_448a87a7-8d70-4b87-a419-2bf4ec2092b1`, khớp API/Worker/history/current.
+  Các mẫu future giữ history-only; không sửa thời gian cho có vẻ mới.
+  Đã xác nhận hoàn nguyên min 0/Request-based trước 08:08:33, trong hạn; không
+  ACK/xóa DLQ, không đổi schema/IAM/secret. W707 đạt có phục hồi DLQ, checkpoint
+  marker Customer/Admin và quyết định vận hành nền lâu dài vẫn mở cho nhóm.
+  Check toàn repo đạt (166 Worker/shared/load, 465 API, 584 web, 2 health e2e;
+  125 ca môi trường bỏ qua). [Bằng chứng SQL/log/ảnh](../evidence/driver-cloud-week8/evening-report.md).
+
+- **TV4 (17/11, kiểm lại buổi tối):** Console xác nhận DB Runnable sau lần
+  Start 20:57:04 của người dùng. GPS mô phỏng hơn hai phút: 17/17 accepted,
+  pending 0; Offline khoảng 30 giây giữ buffer, online gửi hết. Đã lưu ảnh
+  390 CSS px và response 202. API `backend-service-00037-4c5` Broker Confirmed
+  cùng eventId `evt_3de4d199-19ac-444d-8779-5f93382eddaf` với Worker
+  `worker-service-00025-hnp`. Lỗi publish buổi chiều không tái hiện. Worker
+  từng timeout kết nối SQL và nhận lại message; mẫu cuối history-only do
+  lệch giờ. SQL Studio cần đăng nhập DB; đang chờ người dùng/TV5 cung cấp
+  phiên truy cập để đối chiếu hai bảng. W707 chưa đóng, chưa kiểm marker
+  Customer/Admin; không đổi IAM/schema/secret hoặc deploy trong lượt này.
+  [Bằng chứng và truy vấn chỉ đọc](../evidence/driver-cloud-week8/evening-report.md).
+
+- **TV4 (17/11, chẩn đoán tiếp W707):** nhánh `fix/gps-publish-diagnostics`
+  bổ sung log mã gRPC an toàn cho API08, giữ dòng `eventId`; không đổi contract,
+  quyền client hoặc điều kiện 202 sau broker confirm. Test API08/diagnostics
+  local 69/69 đạt, broker/Firebase/lookup mock. Check toàn repo đạt (166
+  Worker/shared/load, 465 API, 584 web, 2 health e2e; 125 ca môi trường bỏ qua),
+  chưa deploy. Đọc lại Console:
+  `gps-events`/`gps-events-sub` tồn tại, không gắn schema; API service account
+  chưa có role Publisher cấp project. Tài khoản Editor hiện tại không xem
+  được topic IAM, nút Grant access bị vô hiệu hóa và Policy Troubleshooter
+  báo thiếu quyền. Chưa kết luận quyền hiệu lực publish; cần TV5/người quản
+  lý IAM kiểm tra trước khi sửa quyền, rồi nghiệm thu lại cùng eventId.
+  Không bật DB hoặc thay cấu hình Cloud trong lượt chẩn đoán này.
+
 - **TV4 (17/11, nghiệm thu Cloud):** Đã khôi phục Cloud SQL `int3326esql`
   theo cho phép của người dùng (Start 15:51:41, hoàn tất 15:55:37, Runnable),
   giải quyết lỗi đọc đơn. **W713 đạt** với đơn mới `PF20261117CGDANJ`:

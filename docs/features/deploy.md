@@ -43,6 +43,35 @@ Tên cũ `PUBSUB_TOPIC` và `PUBSUB_SUBSCRIPTION` không còn được đọc. K
 
 `/healthz` trên Cloud Run bị Google chặn và trả 404 của Google; kiểm bằng `/health` (API và Worker đều có). Health chỉ xác nhận tiến trình HTTP đang chạy, không chứng minh pipeline GPS hoạt động.
 
+### API08 trả 503 khi publish GPS
+
+API ghi mã lỗi kỹ thuật trong log `dependency_failure`, stage `locations.publish`,
+kèm dòng lỗi chứa `eventId`. Không ghi message/details/metadata của SDK hoặc trả
+các chi tiết này cho client. Lọc Logs Explorer bằng:
+
+```text
+resource.type="cloud_run_revision"
+resource.labels.service_name="backend-service"
+"locations.publish"
+```
+
+- `GRPC_PERMISSION_DENIED`: kiểm tra project/topic đích và quyền hiệu lực
+  `pubsub.topics.publish` của runtime service account API. Chỉ thiếu role ở cấp
+  project chưa đủ kết luận vì topic có thể cấp quyền riêng. Nếu thực sự thiếu,
+  người quản lý IAM cấp `roles/pubsub.publisher` trên đúng topic `gps-events`.
+- `GRPC_NOT_FOUND`: đối chiếu `GCP_PROJECT_ID`/`PUBSUB_PROJECT_ID` và
+  `PUBSUB_TOPIC_GPS_EVENTS` với topic thực tế.
+- `GRPC_UNAUTHENTICATED`: kiểm tra ADC và runtime service account.
+- `GRPC_UNAVAILABLE`/`GRPC_DEADLINE_EXCEEDED`: kiểm tra kết nối/dịch vụ;
+  `GRPC_RESOURCE_EXHAUSTED`: kiểm tra quota.
+- `UNKNOWN`: chưa đủ mã lỗi để phân loại; không tự kết luận IAM.
+
+Các mã theo [tài liệu Pub/Sub](https://cloud.google.com/pubsub/docs/reference/error-codes).
+Phiên Console bị chặn xem topic IAM hoặc Policy Troubleshooter cần người có
+quyền hỗ trợ; không cấp quyền rộng ở project để thử. Sau khi sửa nguyên nhân,
+phải lấy `eventId` từ response 202 và đối chiếu Worker commit cùng hai bảng GPS
+trước khi đóng W707. Bộ test local dùng broker mock không chứng minh Cloud đã sửa.
+
 ### Cơ chế nhận tin Pub/Sub của Worker (Chốt Streaming Pull)
 
 TV2 (Na) và TV5 (Minh Anh) đã chốt dùng **Streaming Pull** thay vì HTTP Push Webhook:
@@ -52,10 +81,17 @@ TV2 (Na) và TV5 (Minh Anh) đã chốt dùng **Streaming Pull** thay vì HTTP P
   2. Tích hợp Flow control (`@google-cloud/pubsub`) chống tràn bộ nhớ / quá tải Worker khi có burst GPS events.
   3. Bảo mật: Worker không cần mở endpoint HTTP public nhận webhook từ bên ngoài.
   4. Nhất quán với CLI Replay DLQ (`infra/pubsub/dlq-replay.mjs`).
-- **Cấu hình Cloud Run bắt buộc cho Worker** (TV5 xác nhận đã đặt trên Cloud):
+- **Cấu hình Cloud Run cần cho Worker Streaming Pull chạy nền** (phải kiểm
+  giá trị thực tế sau mỗi lần deploy):
   - `Minimum instances = 1` (Worker phải luôn chạy để duy trì stream lắng nghe tin nhắn).
   - `CPU allocation = Instance-based` (CPU luôn được cấp phát, không bị bóp nghẽn khi chạy ngầm).
-- Đã xóa mục nợ kỹ thuật tương ứng trong `docs/tech-debt.md`.
+- Ngày 18/11, Console thực tế của Worker `00025-hnp` là min 0 và Request-based;
+  không dùng ghi nhận bàn giao cũ để kết luận đã cấu hình đúng. Lượt nghiệm thu
+  bật tạm min 1/Instance-based trên `00026-xkd` theo xác nhận của người dùng,
+  khôi phục đủ 17 mẫu trong SQL, rồi hoàn nguyên min 0/Request-based trước hạn
+  20 phút để tránh chạy tính phí liên tục. Xem [bằng chứng](../evidence/driver-cloud-week8/evening-report.md).
+  Vận hành GPS nền ổn định vẫn cần nhóm thống nhất cấu hình và chi phí; kết quả
+  nghiệm thu không có nghĩa cấu hình tiết kiệm hiện tại bảo đảm Streaming Pull.
 
 ## Cloud SQL
 

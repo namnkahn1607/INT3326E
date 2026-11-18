@@ -1,0 +1,66 @@
+[
+  {
+    "seq": "1",
+    "eventId": "evt_9f5de40a-c051-4df1-a86e-ac191080af78",
+    "clientTimestamp": "2026-11-17T14:51:22.709Z",
+    "receivedAt": "2026-11-17T14:51:18.821Z",
+    "persistedAt": "2026-11-17T14:51:26.694Z",
+    "clockSkewMs": "3888"
+  },
+  {
+    "seq": "2",
+    "eventId": "evt_4eb574c9-002d-4aa3-bf7a-7f860f767845",
+    "clientTimestamp": "2026-11-17T14:51:30.718Z",
+    "receivedAt": "2026-11-17T14:51:26.702Z",
+    "persistedAt": "2026-11-17T14:51:33.993Z",
+    "clockSkewMs": "4016"
+  },
+  {
+    "seq": "3",
+    "eventId": "evt_3c4813c6-187e-466d-9417-2fd433b2ad2a",
+    "clientTimestamp": "2026-11-17T14:51:38.719Z",
+    "receivedAt": "2026-11-17T14:51:34.691Z",
+    "persistedAt": "2026-11-17T14:51:35.993Z",
+    "clockSkewMs": "4028"
+  },
+  {
+    "seq": "4",
+    "eventId": "evt_48838813-873f-44a6-97d1-facc328aff3b",
+    "clientTimestamp": "2026-11-17T14:51:46.713Z",
+    "receivedAt": "2026-11-17T14:51:42.676Z",
+    "persistedAt": "2026-11-17T14:51:43.28Z",
+    "clockSkewMs": "4037"
+  },
+  {
+    "seq": "5",
+    "eventId": "evt_285c28d7-6ad3-46dc-8b0f-70fba75e151d",
+    "clientTimestamp": "2026-11-17T14:51:54.712Z",
+    "receivedAt": "2026-11-17T14:51:50.683Z",
+    "persistedAt": "2026-11-17T14:51:51.294Z",
+    "clockSkewMs": "4029"
+  },
+  {
+    "seq": "6",
+    "eventId": "evt_a346ba2a-6a8f-40da-b23c-f6bbe553ca1d",
+    "clientTimestamp": "2026-11-17T14:52:02.708Z",
+    "receivedAt": "2026-11-17T14:51:58.691Z",
+    "persistedAt": "2026-11-17T14:51:58.732Z",
+    "clockSkewMs": "4017"
+  },
+  {
+    "seq": "7",
+    "eventId": "evt_e3ffb9ca-d1c9-485f-8fa5-e2f72ef928fa",
+    "clientTimestamp": "2026-11-17T14:52:10.715Z",
+    "receivedAt": "2026-11-17T14:52:06.658Z",
+    "persistedAt": "2026-11-17T14:52:06.705Z",
+    "clockSkewMs": "4057"
+  },
+  {
+    "seq": "17",
+    "eventId": "evt_3de4d199-19ac-444d-8779-5f93382eddaf",
+    "clientTimestamp": "2026-11-17T14:53:30.708Z",
+    "receivedAt": "2026-11-17T14:53:26.684Z",
+    "persistedAt": "2026-11-17T14:54:09.4Z",
+    "clockSkewMs": "4024"
+  }
+]

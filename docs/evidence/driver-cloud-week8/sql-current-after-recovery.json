@@ -1,0 +1,13 @@
+[
+  {
+    "driverId": "usr_01M5SW7617KAKAMEE4G0W50HRX",
+    "lat": "21.029111",
+    "lng": "105.805417",
+    "clientTimestamp": "2026-11-17T14:52:42.71Z",
+    "receivedAt": "2026-11-17T14:52:44.258Z",
+    "eventId": "evt_448a87a7-8d70-4b87-a419-2bf4ec2092b1",
+    "sessionId": "",
+    "seq": "11",
+    "updatedAt": "2026-11-18T00:58:49.562Z"
+  }
+]
