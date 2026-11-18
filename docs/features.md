@@ -4,7 +4,15 @@ Mỗi dòng là một tiêu chí nghiệm thu (AC) của đặc tả v1.4. Chỉ
 
 Trạng thái: `chưa có` · `đang làm` · `local` (đạt trên máy, PostgreSQL thật hoặc mock như ghi chú) · `cloud` (đạt trên môi trường Cloud, kèm revision).
 
-TV3 kiểm lại ngày 18/11/2026 trên `feature/frontend` từ `develop@2fd3ec8`:
+TV3 kiểm tiếp buổi tối 18/11/2026 trên `f60de90`: sau khi người dùng sửa runtime
+Worker, Customer/Admin cùng nhận GPS mới và marker di chuyển trên đơn mô phỏng
+`PF2026111812SYSK`; khi người dùng giao thành công, marker bị ẩn và polling dừng.
+Có ảnh 390/1440px và response API09 thật. Chưa nâng toàn bộ AC05 lên Cloud:
+tile OSM lỗi kết nối, detail chưa tự đồng bộ với panel và chưa đủ negative
+cases/deployment record. Check toàn repo đạt (166/2/465/584; 125 bỏ qua),
+integration Nest/PGlite 12/12. Xem [báo cáo TV3 buổi tối](evidence/tv3-tracking-cloud-week8/report.md#kiểm-lại-buổi-tối--gps-mới-và-terminal).
+
+Lượt buổi sáng TV3 ngày 18/11/2026 trên `feature/frontend` từ `develop@2fd3ec8`:
 check toàn repo exit 0, integration Nest/PGlite 12/12. Cloud tạo/gán được đơn
 mô phỏng `PF2026111812SYSK`; Customer đọc ASSIGNED và GPS cũ có nhãn, chưa
 quan sát GPS mới/marker di chuyển. AC05 vẫn local; Admin marker, terminal

@@ -141,6 +141,17 @@ Bản đồ Leaflet, polling và panel tracking đã có trên web (`components/
 
 ## Thực tế từng người
 
+- **TV3 (18/11, buổi tối):** `develop@f60de90`, nhánh báo cáo
+  `test/frontend-week8-cloud-tracking`; không thay runtime. Người dùng tự bật DB,
+  sửa Worker và thao tác giao đơn mô phỏng `PF2026111812SYSK`. Customer/Admin
+  cùng nhận GPS mới, marker đổi vị trí; DELIVERED ẩn GPS và dừng polling được
+  đo trực tiếp, không reload trong khoảng đo. Ảnh panel 390/1440px đã lưu.
+  Check toàn repo 166 Worker/shared/load, 2 health, 465 API, 584 web đạt;
+  125 ca môi trường bỏ qua, integration Nest/PGlite 12/12. Chưa đóng nghiệm thu
+  giao diện/AC05: tile OSM lỗi kết nối và detail/header/history giữ snapshot
+  cũ khi panel nhận terminal; còn negative Cloud cases và deployment record.
+  Không tự đổi/tắt Cloud. [Bằng chứng và việc còn mở](../evidence/tv3-tracking-cloud-week8/report.md#kiểm-lại-buổi-tối--gps-mới-và-terminal).
+
 - **TV3 (18/11, kiểm Cloud chưa chốt checkpoint):** Chọn `feature/frontend`,
   fast-forward tới `develop@2fd3ec8`. Check toàn repo exit 0 (166 Worker/shared/load,
   465 API, 584 web, 2 health; 125 ca môi trường bỏ qua), integration Nest/PGlite

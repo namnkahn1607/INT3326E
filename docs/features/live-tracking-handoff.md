@@ -172,3 +172,26 @@ pickup/deliver và ảnh nghiệm thu 390/1440px vẫn mở. Đơn mô phỏng c
 GPS đã dừng; Worker đã hoàn nguyên min 0/Request-based trong hạn 20 phút;
 Console ghi SQL Stopped 09:12:30. Không nâng AC05 lên Cloud. Xem
 [báo cáo, ảnh lỗi 390/1440 và bước tiếp tục](../evidence/tv3-tracking-cloud-week8/report.md).
+
+## TV3 kiểm lại Cloud buổi tối — 18/11/2026
+
+Trên source local `f60de90`, giữ nguyên runtime và AGENTS.md. Người dùng tự
+bật DB, sửa runtime Worker và đăng nhập ba role; agent chỉ kiểm ParcelFlow
+bằng công cụ tab Chrome. Bản gốc PF SPEC 01 đã xác minh là v1.4.
+
+Đơn mô phỏng `PF2026111812SYSK`: Customer/Admin nhận API09 200, GPS mới và
+ít nhất ba tọa độ khác nhau. Quan sát cùng viewport xác nhận marker đổi vị
+trí. Khi người dùng giao thành công, hai panel tự ẩn marker Driver và dừng
+polling; response terminal có tọa độ/timestamp null. Có ảnh panel GPS cũ,
+GPS mới và terminal ở 390/1440px cho cả hai role.
+
+Check toàn repo đạt: 166 Worker/shared/load, 2 health, 465 API, 584 web;
+125 ca phụ thuộc môi trường bỏ qua. Integration Nest/PGlite 12/12 đạt sau
+một lần timeout khởi tạo; không sửa/nới test. Không kiểm SQL trực tiếp.
+
+**Chưa đóng toàn bộ UI/AC05:** nền tile OSM bị ERR_CONNECTION_REFUSED;
+header/detail/history chưa tự đồng bộ khi panel tracking thấy terminal,
+Admin còn form theo snapshot cũ tới khi đọc lại detail. Negative Cloud cases,
+reassign/failed và deployment record vẫn cần nhóm hoàn thiện. Không tự sửa
+Cloud hoặc suy ra revision deploy từ SHA local. Xem
+[báo cáo và ảnh buổi tối](../evidence/tv3-tracking-cloud-week8/report.md#kiểm-lại-buổi-tối--gps-mới-và-terminal).

@@ -1,8 +1,13 @@
 # TV3 — kiểm tracking Cloud ngày 18/11/2026
 
-**Checkpoint tuần 8 chưa đạt.** Customer đã đọc đúng đơn được gán và hiện GPS
-cũ có nhãn; chưa quan sát được marker di chuyển bằng GPS mới, marker Admin
-cùng đơn hoặc marker biến mất sau giao. Không nâng AC05 lên Cloud.
+**Cập nhật buổi tối:** đã kiểm chứng GPS mới và marker di chuyển trên Customer
+và Admin, ẩn marker và dừng polling khi Driver giao thành công. Chưa đóng toàn
+bộ nghiệm thu UI/AC05: nền OpenStreetMap lỗi kết nối và phần detail chưa tự
+đồng bộ trạng thái với panel tracking. Xem lượt buổi tối ở cuối tài liệu.
+
+**Kết luận lượt buổi sáng:** Customer đọc được đơn ASSIGNED và GPS cũ có nhãn;
+chưa quan sát marker di chuyển hoặc terminal. Các mục dưới đây, tới phần
+"Tiếp tục", giữ nguyên bằng chứng lịch sử của lượt buổi sáng.
 
 ## Nhánh và kiểm tra local
 
@@ -69,3 +74,85 @@ Không để DB hoặc Worker Instance-based tiếp tục chạy sau lượt ki�
    Customer và Admin, ghi timestamp/eventId/revision.
 3. Pickup/deliver đơn mô phỏng, xác nhận marker bị xóa và polling dừng ở cả hai
    role; lưu ảnh thật 390/1440px rồi mới chốt AC05/checkpoint.
+
+## Kiểm lại buổi tối — GPS mới và terminal
+
+Nguồn yêu cầu đã đọc trực tiếp: PF SPEC 01 **v1.4**, cập nhật 02/11/2026,
+D03/D08, V.SD03/SD09, API08/API09, VI.15 và FR05/AC05. Bản chỉ dẫn
+`docs/contracts/spec-baseline.md` vẫn ghi v1.3; không dùng dòng cũ để phủ định
+bản gốc. Source local `develop@f60de90`, báo cáo ở nhánh
+`test/frontend-week8-cloud-tracking`; không thay code runtime hoặc deploy.
+
+### Điều kiện và phạm vi
+
+- Người dùng tự đăng nhập ba phiên Driver, Customer và Admin; chỉ dùng công cụ
+  điều khiển tab Chrome, không điều khiển desktop toàn màn hình.
+- Lúc 20:04, Auth 200 nhưng detail 503; người dùng xác nhận DB chưa bật và tự
+  bật lại. Sau đó detail và API09 trả 200. Trước khi sửa runtime, API09 chỉ trả
+  mẫu ngày 17/11, trong khi Driver có POST GPS 202 mới.
+- Ảnh người dùng gửi lúc 20:19 cho thấy Worker min 0, max 20, Request-based.
+  Người dùng sau đó báo đã chỉnh Cloud theo yêu cầu. Agent không đổi Cloud,
+  IAM, secret, SQL hoặc subscription; chưa đọc lại đầy đủ revision/config sau
+  thay đổi, không suy ra SHA deploy từ HEAD local.
+- Cùng đơn mô phỏng `PF2026111812SYSK`, ID
+  `sh_01M7P68J2ESQ4HRA7WVVBSN4XD`; dữ liệu và tuyến GPS là mô phỏng,
+  HTTP tới Firebase/Cloud Run là thật. Không phải một ca giao hàng thực địa.
+
+### Kết quả trực tiếp
+
+| Tiêu chí | Quan sát Cloud |
+| --- | --- |
+| Driver gửi GPS | POST `/v1/locations` trả 202; mẫu cuối được lưu bằng chứng có `eventId=evt_0f656e20-e238-477f-9f9a-8577d11e638c`, `receivedAt=2026-11-18T13:38:31.790Z`. |
+| Customer nhận GPS mới | API09 200, PICKED_UP, `isLocationStale=false`. Các mẫu UTC 13:34:38.228, 13:34:46.226, 13:34:54.224 lần lượt có tọa độ `21.029111,105.805417`, `21.028811,105.805117`, `21.028511,105.804817`. |
+| Admin cùng đơn | API09 trả cùng driver và các mẫu mới tương ứng; nhãn GPS mới và tọa độ cập nhật trên UI. |
+| Marker thực sự đổi vị trí | Ở cùng viewport 1440px, Customer từ `translate3d(717px,246px,0px)` lúc 20:37:53 sang `(710px,254px,0px)` lúc 20:38:11; Admin từ `(705px,239px,0px)` lúc 20:37:56 sang `(691px,254px,0px)` lúc 20:38:14. Không kéo/zoom map giữa hai lần đọc. |
+| Polling nối tiếp | Resource Timing trước terminal: 21 request Customer, 17 Admin; không có request tracking chồng nhau trong chuỗi quan sát, khoảng nghỉ sau hoàn tất xấp xỉ 5 giây. |
+| Worker nhận mẫu | Ảnh log do người dùng cung cấp hiển thị `EVT01 GPS Event` liên tục khoảng 8 giây từ 20:35 tới 20:38. Log này nằm trước thao tác ghi SQL trong source, nên riêng ảnh không chứng minh commit/ACK. |
+| Driver giao xong | Người dùng tự xác nhận giao thành công đúng đơn mô phỏng; agent không thực hiện mutation Driver. API09 ở cả hai role trả DELIVERED, tọa độ/timestamp/stale/ETA đều null như SC05. |
+| Ẩn marker, dừng polling | Cả hai panel tự đổi sang terminal và còn hai pin lấy/giao, không còn pin Driver. Customer giữ 21 request từ 20:39:20 tới 20:39:49; Admin giữ 17 từ 20:39:23 tới 20:39:55. Không reload hoặc đổi viewport trong khoảng đo này. |
+| Responsive | Quan sát panel ở viewport 390 và 1440 CSS px, DPR 1; mobile documentWidth 390, không tràn ngang. Các ảnh dưới là ảnh cắt panel trong viewport tương ứng. |
+
+[Response API, vị trí DOM và số request đã lọc bỏ request headers](evening-observations.json).
+Không lưu Authorization, token, cookie hoặc credentials. Không đọc SQL trực tiếp
+trong lượt này; không dùng API09 làm bằng chứng đầy đủ về history/dedupe/recovery AC04.
+
+### Ảnh buổi tối
+
+| Trạng thái | Customer 390px | Customer 1440px | Admin 390px | Admin 1440px |
+| --- | --- | --- | --- | --- |
+| GPS cũ trước sửa runtime | [Ảnh](customer-stale-evening-390.webp) | [Ảnh](customer-stale-evening-1440.webp) | [Ảnh](admin-stale-evening-390.webp) | [Ảnh](admin-stale-evening-1440.webp) |
+| GPS mới sau sửa runtime | [Ảnh](customer-fresh-evening-390.webp) | [Ảnh](customer-fresh-evening-1440.webp) | [Ảnh](admin-fresh-evening-390.webp) | [Ảnh](admin-fresh-evening-1440.webp) |
+| Đơn kết thúc | [Ảnh](customer-terminal-evening-390.webp) | [Ảnh](customer-terminal-evening-1440.webp) | [Ảnh](admin-terminal-evening-390.webp) | [Ảnh](admin-terminal-evening-1440.webp) |
+
+Ảnh terminal desktop ghi panel tự kết thúc trong trang đang mở. Đổi chế độ
+mobile khiến trình duyệt tải lại và detail đọc DELIVERED, vì vậy ảnh mobile
+hiển thị nhánh "Đơn đã kết thúc" không dựng bản đồ; không dùng ảnh mobile để
+chứng minh tự dừng polling (đã đo riêng trước khi đổi viewport).
+
+### Kiểm tra local trong lượt tiếp tục
+
+- `npm.cmd run check` trên `f60de90`: exit 0; Worker/shared/load 166, health
+  e2e 2, API 465, web 584 đạt; 125 ca PostgreSQL/Firebase emulator bỏ qua.
+  Lượt đầu timeout Worker health; chạy riêng 1/1 rồi toàn repo đạt, không sửa test.
+  Log tại `%TEMP%/parcelflow-tv3-week8-20261118-check-retry.log`.
+- Integration web → Nest → PGlite: 12/12 đạt, exit 0. Lượt đầu timeout
+  khởi tạo fixture 30 giây; chạy lại đạt, không nới timeout hoặc bỏ test.
+  Firebase mock; kết quả này không phải kiểm tra PostgreSQL/Cloud thật.
+- Chỉ thêm tài liệu và ảnh sau kiểm tra, không đổi runtime. Giữ nguyên
+  `.env.example` local và `AGENTS.md`, không đưa dữ liệu bí mật vào báo cáo.
+
+### Việc còn mở
+
+1. Tile `https://tile.openstreetmap.org/...png` trả `net::ERR_CONNECTION_REFUSED`
+   trong trình duyệt nghiệm thu. Marker và tọa độ cập nhật nhưng nền trống;
+   chưa xác định lỗi mạng hay chính sách chặn dịch vụ, không kết luận do API GPS.
+2. Khi API09 tự thấy DELIVERED, header/detail/history vẫn giữ snapshot PICKED_UP
+   cho tới khi đọc lại detail; Admin còn form báo thất bại cũ. Chưa kiểm thao tác
+   submit form đó, không suy ra backend cho phép thay đổi đơn terminal.
+3. Chưa chạy lại Cloud negative cases (owner/driver khác), reassign, failed;
+   chưa có deployment record đầy đủ hoặc kiểm chi phí. Không nâng toàn bộ
+   AC04/AC05/AC09/AC10 hay toàn nhóm tuần 8 lên đạt từ ca mô phỏng này.
+
+Kết luận: **chuyển động marker và terminal/polling của TV3 đã có bằng chứng
+Cloud**. Nghiệm thu giao diện đầy đủ vẫn mở cho hai lỗi trên. Tài nguyên Cloud
+do người dùng quản lý trong lượt này; agent không bật/tắt hoặc hoàn nguyên.
