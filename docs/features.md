@@ -102,5 +102,6 @@ Current là seq 11 `evt_448a87a7-8d70-4b87-a419-2bf4ec2092b1`, có cùng eventId
 đổi timestamp khi replay. Đã xác nhận hoàn nguyên min 0, Request-based trước
 08:08:33; cấu hình này không bảo đảm Streaming Pull chạy nền. Không ACK/xóa
 bản gốc trong DLQ, không đổi schema/IAM/secret, không deploy code API. Check
-toàn repo đạt ngày 18/11 (166 Worker/shared/load, 465 API, 584 web, 2 health;
+toàn repo đạt ngày 18/11 trên `c344f50` đã tích hợp `develop@ef93b55`
+(166 Worker/shared/load, 465 API, 584 web, 2 health;
 125 ca môi trường bỏ qua). Marker Customer/Admin còn thuộc checkpoint nhóm.

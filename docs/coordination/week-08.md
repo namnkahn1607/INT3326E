@@ -152,8 +152,9 @@ Bản đồ Leaflet, polling và panel tracking đã có trên web (`components/
   Đã xác nhận hoàn nguyên min 0/Request-based trước 08:08:33, trong hạn; không
   ACK/xóa DLQ, không đổi schema/IAM/secret. W707 đạt có phục hồi DLQ, checkpoint
   marker Customer/Admin và quyết định vận hành nền lâu dài vẫn mở cho nhóm.
-  Check toàn repo đạt (166 Worker/shared/load, 465 API, 584 web, 2 health e2e;
-  125 ca môi trường bỏ qua). [Bằng chứng SQL/log/ảnh](../evidence/driver-cloud-week8/evening-report.md).
+  Check toàn repo đạt trên `c344f50` (tích hợp `develop@ef93b55`):
+  166 Worker/shared/load, 465 API, 584 web, 2 health e2e;
+  125 ca môi trường bỏ qua. [Bằng chứng SQL/log/ảnh](../evidence/driver-cloud-week8/evening-report.md).
 
 - **TV4 (17/11, kiểm lại buổi tối):** Console xác nhận DB Runnable sau lần
   Start 20:57:04 của người dùng. GPS mô phỏng hơn hai phút: 17/17 accepted,

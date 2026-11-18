@@ -139,8 +139,9 @@ emulator bỏ qua. Lint/typecheck/build đạt; cảnh báo chunk web 502.93 kB 
 làm build thất bại. Log local `.vitest/tv4-cloud-resume-check.log` không đưa vào Git.
 `git diff --check` đạt. Các test local không thay thế đối chiếu SQL Cloud.
 
-Đã chạy lại check ngày 18/11, exit 0 với cùng số test/skipped; log
-`.vitest/tv4-cloud-sql-check-20261118.log`. Các artifact JSON được đối chiếu
+Đã chạy lại check ngày 18/11, exit 0 với cùng số test/skipped. Lượt cuối trên
+`c344f50` đã tích hợp `develop@ef93b55`, log `.vitest/tv4-final-check-20261118.log`;
+lượt trước tích hợp ở `.vitest/tv4-cloud-sql-check-20261118.log`. Các artifact JSON được đối chiếu
 tự động về đủ seq/eventId/timestamp, payload replay không đổi và current là
 mẫu eligible mới nhất; việc này kiểm tính nhất quán bằng chứng đã xuất,
 không thay thế lượt SELECT thật trên Cloud.
