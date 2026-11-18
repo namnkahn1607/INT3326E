@@ -175,9 +175,9 @@ Console ghi SQL Stopped 09:12:30. Không nâng AC05 lên Cloud. Xem
 
 ## TV3 kiểm lại Cloud buổi tối — 18/11/2026
 
-Trên source local `f60de90`, giữ nguyên runtime và AGENTS.md. Người dùng tự
-bật DB, sửa runtime Worker và đăng nhập ba role; agent chỉ kiểm ParcelFlow
-bằng công cụ tab Chrome. Bản gốc PF SPEC 01 đã xác minh là v1.4.
+Trên source local `f60de90`, giữ nguyên runtime. Người dùng tự bật DB, sửa
+runtime Worker và đăng nhập ba role; TV3 kiểm ParcelFlow trên trình duyệt
+Chrome. Bản gốc PF SPEC 01 đã xác minh là v1.4.
 
 Đơn mô phỏng `PF2026111812SYSK`: Customer/Admin nhận API09 200, GPS mới và
 ít nhất ba tọa độ khác nhau. Quan sát cùng viewport xác nhận marker đổi vị

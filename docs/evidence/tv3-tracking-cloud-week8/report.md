@@ -85,13 +85,12 @@ bản gốc. Source local `develop@f60de90`, báo cáo ở nhánh
 
 ### Điều kiện và phạm vi
 
-- Người dùng tự đăng nhập ba phiên Driver, Customer và Admin; chỉ dùng công cụ
-  điều khiển tab Chrome, không điều khiển desktop toàn màn hình.
+- Đăng nhập ba phiên Driver, Customer và Admin trên trình duyệt Chrome.
 - Lúc 20:04, Auth 200 nhưng detail 503; người dùng xác nhận DB chưa bật và tự
   bật lại. Sau đó detail và API09 trả 200. Trước khi sửa runtime, API09 chỉ trả
   mẫu ngày 17/11, trong khi Driver có POST GPS 202 mới.
 - Ảnh người dùng gửi lúc 20:19 cho thấy Worker min 0, max 20, Request-based.
-  Người dùng sau đó báo đã chỉnh Cloud theo yêu cầu. Agent không đổi Cloud,
+  Người dùng sau đó báo đã chỉnh Cloud theo yêu cầu. TV3 không đổi Cloud,
   IAM, secret, SQL hoặc subscription; chưa đọc lại đầy đủ revision/config sau
   thay đổi, không suy ra SHA deploy từ HEAD local.
 - Cùng đơn mô phỏng `PF2026111812SYSK`, ID
@@ -108,7 +107,7 @@ bản gốc. Source local `develop@f60de90`, báo cáo ở nhánh
 | Marker thực sự đổi vị trí | Ở cùng viewport 1440px, Customer từ `translate3d(717px,246px,0px)` lúc 20:37:53 sang `(710px,254px,0px)` lúc 20:38:11; Admin từ `(705px,239px,0px)` lúc 20:37:56 sang `(691px,254px,0px)` lúc 20:38:14. Không kéo/zoom map giữa hai lần đọc. |
 | Polling nối tiếp | Resource Timing trước terminal: 21 request Customer, 17 Admin; không có request tracking chồng nhau trong chuỗi quan sát, khoảng nghỉ sau hoàn tất xấp xỉ 5 giây. |
 | Worker nhận mẫu | Ảnh log do người dùng cung cấp hiển thị `EVT01 GPS Event` liên tục khoảng 8 giây từ 20:35 tới 20:38. Log này nằm trước thao tác ghi SQL trong source, nên riêng ảnh không chứng minh commit/ACK. |
-| Driver giao xong | Người dùng tự xác nhận giao thành công đúng đơn mô phỏng; agent không thực hiện mutation Driver. API09 ở cả hai role trả DELIVERED, tọa độ/timestamp/stale/ETA đều null như SC05. |
+| Driver giao xong | Người dùng tự xác nhận giao thành công đúng đơn mô phỏng; TV3 không thao tác thay Driver. API09 ở cả hai role trả DELIVERED, tọa độ/timestamp/stale/ETA đều null như SC05. |
 | Ẩn marker, dừng polling | Cả hai panel tự đổi sang terminal và còn hai pin lấy/giao, không còn pin Driver. Customer giữ 21 request từ 20:39:20 tới 20:39:49; Admin giữ 17 từ 20:39:23 tới 20:39:55. Không reload hoặc đổi viewport trong khoảng đo này. |
 | Responsive | Quan sát panel ở viewport 390 và 1440 CSS px, DPR 1; mobile documentWidth 390, không tràn ngang. Các ảnh dưới là ảnh cắt panel trong viewport tương ứng. |
 
@@ -139,7 +138,7 @@ chứng minh tự dừng polling (đã đo riêng trước khi đổi viewport).
   khởi tạo fixture 30 giây; chạy lại đạt, không nới timeout hoặc bỏ test.
   Firebase mock; kết quả này không phải kiểm tra PostgreSQL/Cloud thật.
 - Chỉ thêm tài liệu và ảnh sau kiểm tra, không đổi runtime. Giữ nguyên
-  `.env.example` local và `AGENTS.md`, không đưa dữ liệu bí mật vào báo cáo.
+  `.env.example` local, không đưa dữ liệu bí mật vào báo cáo.
 
 ### Việc còn mở
 
@@ -155,4 +154,4 @@ chứng minh tự dừng polling (đã đo riêng trước khi đổi viewport).
 
 Kết luận: **chuyển động marker và terminal/polling của TV3 đã có bằng chứng
 Cloud**. Nghiệm thu giao diện đầy đủ vẫn mở cho hai lỗi trên. Tài nguyên Cloud
-do người dùng quản lý trong lượt này; agent không bật/tắt hoặc hoàn nguyên.
+do người dùng quản lý trong lượt này; TV3 không bật/tắt hoặc hoàn nguyên.
