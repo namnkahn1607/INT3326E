@@ -154,3 +154,21 @@ conflict ở phần nguồn đặc tả của `live-tracking.md`, không có con
 Phụ thuộc hiện tại là triển khai bản tích hợp và QA đầu cuối; không còn chờ viết
 handler API09 trong source develop. Không thay API, schema, auth hoặc dữ liệu khi
 giải quyết conflict. `.env.example` local được bảo toàn, không đưa vào commit merge.
+
+## TV3 kiểm Cloud — 18/11/2026
+
+Đã chọn `feature/frontend`, fast-forward tới `develop@2fd3ec8`. Check toàn repo
+exit 0 (166 Worker/shared/load, 465 API, 584 web, 2 health; 125 ca môi trường
+bỏ qua); integration Nest/PGlite đạt 12/12. Không thay code runtime.
+
+Cloud SQL ban đầu Stopped khiến Customer/Admin trả 503. Sau khi người dùng
+cho bật tạm SQL và Worker min 1/Instance-based, Customer tạo đơn mô phỏng
+`PF2026111812SYSK` (`sh_01M7P68J2ESQ4HRA7WVVBSN4XD`), Admin gán Driver demo.
+Customer đọc đúng đơn ASSIGNED và hiển thị GPS cũ có nhãn (mẫu ngày 17/11).
+Simulator tăng số mẫu nhưng accepted không tăng; chưa xác định nguyên nhân,
+chưa xác nhận GPS mới được gửi/lưu hoặc marker di chuyển. Admin marker,
+pickup/deliver và ảnh nghiệm thu 390/1440px vẫn mở. Đơn mô phỏng còn ASSIGNED.
+
+GPS đã dừng; Worker đã hoàn nguyên min 0/Request-based trong hạn 20 phút;
+Console ghi SQL Stopped 09:12:30. Không nâng AC05 lên Cloud. Xem
+[báo cáo, ảnh lỗi 390/1440 và bước tiếp tục](../evidence/tv3-tracking-cloud-week8/report.md).

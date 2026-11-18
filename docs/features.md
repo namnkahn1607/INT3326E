@@ -4,6 +4,13 @@ Mỗi dòng là một tiêu chí nghiệm thu (AC) của đặc tả v1.4. Chỉ
 
 Trạng thái: `chưa có` · `đang làm` · `local` (đạt trên máy, PostgreSQL thật hoặc mock như ghi chú) · `cloud` (đạt trên môi trường Cloud, kèm revision).
 
+TV3 kiểm lại ngày 18/11/2026 trên `feature/frontend` từ `develop@2fd3ec8`:
+check toàn repo exit 0, integration Nest/PGlite 12/12. Cloud tạo/gán được đơn
+mô phỏng `PF2026111812SYSK`; Customer đọc ASSIGNED và GPS cũ có nhãn, chưa
+quan sát GPS mới/marker di chuyển. AC05 vẫn local; Admin marker, terminal
+và ảnh nghiệm thu còn mở. Đã dừng GPS, hoàn nguyên Worker min 0/Request-based
+và xác nhận SQL Stopped 09:12:30. Xem [báo cáo TV3](evidence/tv3-tracking-cloud-week8/report.md).
+
 Ghi nhận mới nhất 18/11/2026: W707 đã đối chiếu GPS tới SQL, gồm khôi phục
 9 mẫu DLQ, history đủ 17 mẫu và current đúng mẫu hợp lệ mới nhất. Nghiệm thu
 chạy với Worker `00026-xkd` được bật tạm; đã hoàn nguyên min 0, Request-based
