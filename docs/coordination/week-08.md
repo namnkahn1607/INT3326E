@@ -141,6 +141,17 @@ Bản đồ Leaflet, polling và panel tracking đã có trên web (`components/
 
 ## Thực tế từng người
 
+- **TV3 (18/11, kiểm Cloud chưa chốt checkpoint):** Chọn `feature/frontend`,
+  fast-forward tới `develop@2fd3ec8`. Check toàn repo exit 0 (166 Worker/shared/load,
+  465 API, 584 web, 2 health; 125 ca môi trường bỏ qua), integration Nest/PGlite
+  12/12. Ban đầu SQL Stopped gây 503; người dùng cho bật tạm DB và Worker.
+  Đã tạo/gán đơn mô phỏng `PF2026111812SYSK`; Customer đọc đúng ASSIGNED và
+  GPS cũ có nhãn, chưa xác nhận marker di chuyển. Driver tạo thêm mẫu nhưng
+  accepted không tăng; chưa kết luận nguyên nhân. Admin marker, terminal và
+  ảnh nghiệm thu còn mở; đơn mới còn ASSIGNED. GPS đã dừng, Worker hoàn nguyên
+  min 0/Request-based trong hạn 20 phút, SQL Stopped 09:12:30. Không nâng AC05
+  lên Cloud. [Báo cáo và ảnh trạng thái 503 ở 390/1440px](../evidence/tv3-tracking-cloud-week8/report.md).
+
 - **TV4 (18/11, đóng W707):** Người dùng đã đăng nhập SQL Studio database
   `parcelflow`. Ban đầu history chỉ có seq 1–7 và 17; 9 mẫu còn lại ở DLQ.
   Console Worker thực tế min 0, Request-based, khác cấu hình Streaming Pull
