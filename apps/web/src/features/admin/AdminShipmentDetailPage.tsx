@@ -41,7 +41,7 @@ function Detail({ id }: { id: string }) {
   const reviewPanel = useRef<HTMLElement | null>(null)
   const refreshButton = useRef<HTMLButtonElement | null>(null)
   const previousPhase = useRef<Phase>('loading')
-  const onStateChange = useTrackingDetailSync(shipment, () => { void readLatest(undefined, '') })
+  const onStateChange = useTrackingDetailSync(shipment, () => { void readLatest(undefined, '', true) })
 
   useEffect(() => {
     mounted.current = true
@@ -60,7 +60,7 @@ function Detail({ id }: { id: string }) {
     previousPhase.current = phase
   }, [phase])
 
-  async function readLatest(confirmed?: ShipmentResponse, message = 'Đã đọc lại trạng thái hiện tại.') {
+  async function readLatest(confirmed?: ShipmentResponse, message = 'Đã đọc lại trạng thái hiện tại.', keepOnError = false) {
     reading.current?.abort()
     const controller = new AbortController()
     reading.current = controller
@@ -74,8 +74,11 @@ function Detail({ id }: { id: string }) {
       if (!controller.signal.aborted) { setShipment(value); setPhase('ready'); setNotice(resultMessage) }
     } catch (cause) {
       if (!controller.signal.aborted) {
-        setShipment(confirmedSnapshot ?? null); setError(cause); setPhase('blocked')
-        setNotice(confirmedSnapshot ? resultMessage : 'Chưa xác định được kết quả. Thao tác ghi đang bị khóa.')
+        // Tự đọc lại theo tracking mà lỗi thì giữ chi tiết cũ để Admin vẫn xem được, chỉ khóa thao tác ghi.
+        setShipment(current => confirmedSnapshot ?? (keepOnError ? current : null)); setError(cause); setPhase('blocked')
+        setNotice(confirmedSnapshot ? resultMessage : keepOnError
+          ? 'Chưa cập nhật được chi tiết đơn, thông tin dưới đây có thể đã cũ. Thao tác ghi đang bị khóa.'
+          : 'Chưa xác định được kết quả. Thao tác ghi đang bị khóa.')
       }
     }
   }

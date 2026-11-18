@@ -181,6 +181,8 @@ describe('Customer/Admin tracking journeys (HTTP responses mocked, real client a
     await act(async () => pendingDetail[0].resolve(Response.json({ code: 'SERVICE_UNAVAILABLE' }, { status: 503 })))
     expect(node.querySelector('[role="alert"]')).not.toBeNull()
     expect(node.querySelector('.shipment-failure-form')).toBeNull()
+    expect(node.textContent).toContain(shipmentFixture.trackingNumber)
+    expect(node.textContent).toContain('thông tin dưới đây có thể đã cũ')
     const total = reads.length
     await act(async () => vi.advanceTimersByTimeAsync(20_000))
     expect(reads).toHaveLength(total)
