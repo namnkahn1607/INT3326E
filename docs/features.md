@@ -4,20 +4,14 @@ Mỗi dòng là một tiêu chí nghiệm thu (AC) của đặc tả v1.4. Chỉ
 
 Trạng thái: `chưa có` · `đang làm` · `local` (đạt trên máy, PostgreSQL thật hoặc mock như ghi chú) · `cloud` (đạt trên môi trường Cloud, kèm revision).
 
-TV3 kiểm tiếp buổi tối 18/11/2026 trên `f60de90`: sau khi người dùng sửa runtime
-Worker, Customer/Admin cùng nhận GPS mới và marker di chuyển trên đơn mô phỏng
-`PF2026111812SYSK`; khi người dùng giao thành công, marker bị ẩn và polling dừng.
-Có ảnh 390/1440px và response API09 thật. Chưa nâng toàn bộ AC05 lên Cloud:
-tile OSM lỗi kết nối, detail chưa tự đồng bộ với panel và chưa đủ negative
-cases/deployment record. Check toàn repo đạt (166/2/465/584; 125 bỏ qua),
-integration Nest/PGlite 12/12. Xem [báo cáo TV3 buổi tối](evidence/tv3-tracking-cloud-week8/report.md#kiểm-lại-buổi-tối--gps-mới-và-terminal).
-
-Lượt buổi sáng TV3 ngày 18/11/2026 trên `feature/frontend` từ `develop@2fd3ec8`:
-check toàn repo exit 0, integration Nest/PGlite 12/12. Cloud tạo/gán được đơn
-mô phỏng `PF2026111812SYSK`; Customer đọc ASSIGNED và GPS cũ có nhãn, chưa
-quan sát GPS mới/marker di chuyển. AC05 vẫn local; Admin marker, terminal
-và ảnh nghiệm thu còn mở. Đã dừng GPS, hoàn nguyên Worker min 0/Request-based
-và xác nhận SQL Stopped 09:12:30. Xem [báo cáo TV3](evidence/tv3-tracking-cloud-week8/report.md).
+TV3 sửa hai lỗi tracking ngày 18/11/2026: Customer/Admin tự đọc lại detail khi
+status/driverId đổi, cập nhật lịch sử và khóa form theo snapshot cũ; GPS đổi
+tọa độ không tải lại detail. Bản build local dùng CARTO đã cấu hình và có tile
+thật; Hosting thêm predeploy build để không dùng dist cũ. Check toàn repo đạt
+(166 Worker/shared/load, 2 health, 465 API, 589 web; 125 ca môi trường bỏ qua),
+integration Nest/PGlite 12/12; Chrome 390/1440px cả hai role đạt, Auth/API mock.
+Chưa deploy hoặc nghiệm thu bản sửa trên Cloud; không nâng toàn bộ AC05.
+[Báo cáo và ảnh bản sửa](evidence/tv3-tracking-cloud-week8/report.md).
 
 Ghi nhận mới nhất 18/11/2026: W707 đã đối chiếu GPS tới SQL, gồm khôi phục
 9 mẫu DLQ, history đủ 17 mẫu và current đúng mẫu hợp lệ mới nhất. Nghiệm thu

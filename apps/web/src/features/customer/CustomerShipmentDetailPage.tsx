@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { getShipmentById } from '../../api/endpoints/shipments'
 import { StatusBadge } from '../../components/ui/StatusBadge'
 import { DataSkeleton } from '../../components/ui/DataSkeleton'
 import { ShipmentLifecycleDetails } from '../../components/shipment/ShipmentLifecycleDetails'
 import { ShipmentTracking } from '../../components/shipment/ShipmentTracking'
+import { useTrackingDetailSync } from '../../hooks/useTrackingDetailSync'
 import { formatDateTime, formatNumber } from '../../utils'
 import type { ShipmentDetail } from '../../types/shipment-api'
 import { useAuth } from '../auth/useAuth'
@@ -26,13 +27,17 @@ export function CustomerShipmentDetailPage() {
 function DetailData({ id, onRetry }: { id: string; onRetry: () => void }) {
   const [shipment, setShipment] = useState<ShipmentDetail | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [revision, setRevision] = useState(0)
+  const [updating, setUpdating] = useState(false)
+  const refresh = useCallback(() => { setUpdating(true); setRevision(value => value + 1) }, [])
+  const onStateChange = useTrackingDetailSync(shipment, refresh)
   useEffect(() => {
     const controller = new AbortController()
     getShipmentById(id, controller.signal).then(value => {
-      if (!controller.signal.aborted) setShipment(value)
-    }).catch(cause => { if (!controller.signal.aborted) setError(shipmentErrorMessage(cause)) })
+      if (!controller.signal.aborted) { setShipment(value); setUpdating(false) }
+    }).catch(cause => { if (!controller.signal.aborted) { setError(shipmentErrorMessage(cause)); setUpdating(false) } })
     return () => controller.abort()
-  }, [id])
+  }, [id, revision])
   if (error) return <div className="customer-error" role="alert"><h2>Chưa tải được đơn hàng</h2><p>{error}</p>
     <button type="button" className="btn btn-outline" onClick={onRetry}>Thử lại</button></div>
   if (!shipment) return <DataSkeleton label="Đang tải chi tiết đơn…" detail />
@@ -47,11 +52,13 @@ function DetailData({ id, onRetry }: { id: string; onRetry: () => void }) {
     ['Thời điểm tạo', formatDateTime(shipment.createdAt)],
     ['Cập nhật lần cuối', formatDateTime(shipment.updatedAt)],
   ]
-  return <section className="customer-result">
+  return <section className="customer-result" aria-busy={updating}>
+    {updating ? <DataSkeleton label="Đang cập nhật chi tiết đơn…" detail /> : <>
     <StatusBadge status={shipment.status} /><h2 className="customer-tracking-number">{shipment.trackingNumber}</h2>
     <dl className="customer-detail-grid">{rows.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
     <ShipmentLifecycleDetails shipment={shipment} />
-    <ShipmentTracking key={shipment.driverId + ':' + shipment.status} id={shipment.id} status={shipment.status}
+    </>}
+    <ShipmentTracking id={shipment.id} status={shipment.status} onStateChange={onStateChange}
       pickupLocation={shipment.pickupLocation} dropoffLocation={shipment.dropoffLocation} />
     <p className="customer-helper">“—” là thông tin chưa có. Hạn giao dự kiến không phải ETA hoặc cam kết giao đúng giờ.</p>
     <div className="form-actions"><button type="button" className="btn btn-outline" onClick={onRetry}>Tải lại thông tin</button>

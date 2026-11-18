@@ -2,6 +2,15 @@
 
 Project GCP `int3326e`, vùng `asia-southeast1`. Deploy một lần từ một SHA trên `develop` sau khi chốt code của tuần; ghi lại SHA và revision.
 
+## Frontend (Firebase Hosting)
+
+Frontend có cấu hình riêng ở `apps/web/firebase.json`. Hook Hosting predeploy
+chạy `npm run build --workspace=@parcelflow/web` trước khi tải `dist` lên.
+Máy build/CI phải có biến frontend phù hợp; `VITE_CARTO_API_KEY` trong
+`apps/web/.env.local` hoặc environment chọn nền CARTO. Thiếu key thì code
+chọn OSM; không coi việc API GPS trả 200 là bằng chứng tile đã tải được.
+Không commit file môi trường hoặc key. Xem [nghiệm thu frontend](../evidence/tv3-tracking-cloud-week8/report.md).
+
 ## API và Worker (Cloud Run)
 
 API và Worker có Dockerfile riêng. Context build là gốc repo vì cả hai dùng `packages/types`:

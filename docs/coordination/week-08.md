@@ -141,27 +141,15 @@ Bản đồ Leaflet, polling và panel tracking đã có trên web (`components/
 
 ## Thực tế từng người
 
-- **TV3 (18/11, buổi tối):** `develop@f60de90`, nhánh báo cáo
-  `test/frontend-week8-cloud-tracking`; không thay runtime. Người dùng tự bật DB,
-  sửa Worker và thao tác giao đơn mô phỏng `PF2026111812SYSK`. Customer/Admin
-  cùng nhận GPS mới, marker đổi vị trí; DELIVERED ẩn GPS và dừng polling được
-  đo trực tiếp, không reload trong khoảng đo. Ảnh panel 390/1440px đã lưu.
-  Check toàn repo 166 Worker/shared/load, 2 health, 465 API, 584 web đạt;
-  125 ca môi trường bỏ qua, integration Nest/PGlite 12/12. Chưa đóng nghiệm thu
-  giao diện/AC05: tile OSM lỗi kết nối và detail/header/history giữ snapshot
-  cũ khi panel nhận terminal; còn negative Cloud cases và deployment record.
-  Không tự đổi/tắt Cloud. [Bằng chứng và việc còn mở](../evidence/tv3-tracking-cloud-week8/report.md#kiểm-lại-buổi-tối--gps-mới-và-terminal).
-
-- **TV3 (18/11, kiểm Cloud chưa chốt checkpoint):** Chọn `feature/frontend`,
-  fast-forward tới `develop@2fd3ec8`. Check toàn repo exit 0 (166 Worker/shared/load,
-  465 API, 584 web, 2 health; 125 ca môi trường bỏ qua), integration Nest/PGlite
-  12/12. Ban đầu SQL Stopped gây 503; người dùng cho bật tạm DB và Worker.
-  Đã tạo/gán đơn mô phỏng `PF2026111812SYSK`; Customer đọc đúng ASSIGNED và
-  GPS cũ có nhãn, chưa xác nhận marker di chuyển. Driver tạo thêm mẫu nhưng
-  accepted không tăng; chưa kết luận nguyên nhân. Admin marker, terminal và
-  ảnh nghiệm thu còn mở; đơn mới còn ASSIGNED. GPS đã dừng, Worker hoàn nguyên
-  min 0/Request-based trong hạn 20 phút, SQL Stopped 09:12:30. Không nâng AC05
-  lên Cloud. [Báo cáo và ảnh trạng thái 503 ở 390/1440px](../evidence/tv3-tracking-cloud-week8/report.md).
+- **TV3 (18/11, sửa và nghiệm thu local trước commit):** đồng bộ detail theo
+  status/driverId API09, cập nhật lịch sử và khóa form cũ; không tải detail theo
+  mỗi GPS. CARTO key local tải tile HTTP 200, Hosting bổ sung predeploy build.
+  Check toàn repo đạt: 166 Worker/shared/load, 2 health, 465 API, 589 web;
+  125 ca môi trường bỏ qua. Integration Nest/PGlite 12/12, 50 test chuyên biệt;
+  Chrome 390/1440px Customer/Admin đạt với Leaflet/CARTO thật, Auth/API mock.
+  Báo cáo và ảnh TV3 cũ đã được thay bằng [bản mới](../evidence/tv3-tracking-cloud-week8/report.md).
+  Chưa deploy hoặc nghiệm thu bản sửa trên Cloud; phần runtime/chi phí và các
+  Cloud negative cases vẫn do nhóm kiểm riêng. Không tự đổi/tắt Cloud.
 
 - **TV4 (18/11, đóng W707):** Người dùng đã đăng nhập SQL Studio database
   `parcelflow`. Ban đầu history chỉ có seq 1–7 và 17; 9 mẫu còn lại ở DLQ.

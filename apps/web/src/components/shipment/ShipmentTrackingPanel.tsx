@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { ApiError } from '../../api/client'
 import { usePollingTracking } from '../../hooks/usePollingTracking'
 import { useAuth } from '../../features/auth/useAuth'
@@ -21,10 +21,14 @@ function trackingReadError(error: unknown) {
   return 'Chưa tải được vị trí. Dữ liệu GPS trước đó đã được ẩn.'
 }
 
-export default function ShipmentTrackingPanel({ id, pickupLocation, dropoffLocation }: Omit<ShipmentTrackingProps, 'status'>) {
+export default function ShipmentTrackingPanel({ id, pickupLocation, dropoffLocation, onStateChange }: Omit<ShipmentTrackingProps, 'status'>) {
   const { user } = useAuth(), now = useGpsClock()
   const tracking = usePollingTracking(id, undefined, 5000, user?.id)
   const data = tracking.data
+  const status = data?.status, driverId = data?.driverId
+  useEffect(() => {
+    if (status) onStateChange?.(status, driverId ?? null)
+  }, [status, driverId, onStateChange])
   const terminal = data?.status === 'DELIVERED' || data?.status === 'DELIVERY_FAILED'
   const freshness = gpsFreshness(data?.currentDriverLocation ?? null, data?.locationClientTimestamp ?? null,
     data?.isLocationStale ?? null, Math.max(now, tracking.updatedAt ?? 0))

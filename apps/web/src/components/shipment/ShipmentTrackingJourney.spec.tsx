@@ -18,8 +18,11 @@ const base = 'https://tracking-fixture.invalid/v1'
 let node: HTMLDivElement, root: Root
 let snapshot: ReturnType<typeof trackingFixture>, trackingStatus: number, detailStatus: number
 let hold: boolean, reads: { path: string; auth: string | null; signal?: AbortSignal | null }[]
+let holdDetail: boolean
+let pendingDetail: { resolve: (response: Response) => void; signal?: AbortSignal | null }[]
 let pending: { resolve: (response: Response) => void; signal?: AbortSignal | null }[]
-const detail = () => ({ ...shipmentFixture, status: 'ASSIGNED', driverId: snapshot.driverId, statusHistory: [] })
+const detail = () => ({ ...shipmentFixture, status: snapshot.status, driverId: snapshot.driverId, statusHistory: [],
+  proofOfDeliveryNotes: snapshot.status === 'DELIVERED' ? 'Đã bàn giao bưu kiện' : null })
 const count = () => reads.filter(read => read.path.endsWith('/tracking')).length
 function Navigation() {
   const navigate = useNavigate()
@@ -40,14 +43,17 @@ beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); vi.useFakeTimers()
   vi.setSystemTime(new Date('2026-11-14T03:00:00.000Z')); vi.stubEnv('VITE_API_URL', base)
   snapshot = trackingFixture({ status: 'ASSIGNED', etaUnavailableReason: 'NOT_PICKED_UP' })
-  trackingStatus = 200; detailStatus = 200; hold = false; reads = []; pending = []
+  trackingStatus = 200; detailStatus = 200; hold = false; holdDetail = false; reads = []; pending = []; pendingDetail = []
   session.actor = 'customer-a'; session.role = 'CUSTOMER'; session.token.mockReset().mockResolvedValue('fixture-token')
   vi.stubGlobal('fetch', vi.fn(async (input: string, init?: RequestInit) => {
     expect(String(input).startsWith(base + '/shipments/')).toBe(true)
     expect(init?.method ?? 'GET').toBe('GET')
     const path = new URL(input).pathname
     reads.push({ path, auth: new Headers(init?.headers).get('Authorization'), signal: init?.signal })
-    if (!path.endsWith('/tracking')) return Response.json(detailStatus === 200 ? detail() : { code: 'FORBIDDEN_RESOURCE' }, { status: detailStatus })
+    if (!path.endsWith('/tracking')) {
+      if (holdDetail) return new Promise<Response>(resolve => { pendingDetail.push({ resolve, signal: init?.signal }) })
+      return Response.json(detailStatus === 200 ? detail() : { code: 'FORBIDDEN_RESOURCE' }, { status: detailStatus })
+    }
     if (hold) return new Promise<Response>(resolve => { pending.push({ resolve, signal: init?.signal }) })
     return Response.json(trackingStatus === 200 ? snapshot : { code: 'FORBIDDEN_RESOURCE' }, { status: trackingStatus })
   }))
@@ -76,8 +82,10 @@ describe('Customer/Admin tracking journeys (HTTP responses mocked, real client a
       lastLocationUpdatedAt: null, locationClientTimestamp: null, isLocationStale: null, etaUnavailableReason: 'NOT_PICKED_UP' })
     await act(async () => vi.advanceTimersByTimeAsync(20_000))
     expect(count()).toBe(3)
-    expect(map!.querySelectorAll('[data-pin]')).toHaveLength(2)
-    expect(node.textContent).toContain('Ẩn vị trí tài xế')
+    expect(node.querySelector('[data-testid="map"]')).toBeNull()
+    expect(node.querySelector('[data-status="DELIVERED"]')).not.toBeNull()
+    expect(node.textContent).toContain('Đơn đã kết thúc')
+    expect(node.textContent).toContain('Đã bàn giao bưu kiện')
     expect([...node.querySelectorAll('button')].some(button => /nhận hàng|giao thành công/i.test(button.textContent ?? ''))).toBe(false)
   })
   it('shows missing/stale GPS and hides only the driver on a transient HTTP failure', async () => {
@@ -141,5 +149,53 @@ describe('Customer/Admin tracking journeys (HTTP responses mocked, real client a
     await act(async () => vi.advanceTimersByTimeAsync(20_000))
     expect(count()).toBe(1)
     expect(node.querySelector('[data-testid="map"]')).toBeNull()
+  })
+
+  it.each(['customer', 'admin'])('refreshes %s detail once per state change and not on GPS updates', async area => {
+    session.role = area === 'admin' ? 'ADMIN' : 'CUSTOMER'
+    await mount(area)
+    const detailReads = () => reads.filter(read => !read.path.endsWith('/tracking')).length
+    snapshot = { ...snapshot, currentDriverLocation: { lat: 21.04, lng: 105.81 } }
+    await act(async () => vi.advanceTimersByTimeAsync(5000))
+    expect(detailReads()).toBe(1)
+    snapshot = { ...snapshot, status: 'PICKED_UP', etaUnavailableReason: 'CONFIG_INVALID' }
+    await act(async () => vi.advanceTimersByTimeAsync(5000))
+    expect(detailReads()).toBe(2)
+    expect(node.querySelector('[data-status="PICKED_UP"]')).not.toBeNull()
+    expect(node.querySelector('[data-status="ASSIGNED"]')).toBeNull()
+    await act(async () => vi.advanceTimersByTimeAsync(15_000))
+    expect(detailReads()).toBe(2)
+  })
+
+  it('locks the Admin failure form as soon as tracking reports terminal, even if detail reload fails', async () => {
+    session.role = 'ADMIN'; snapshot = trackingFixture()
+    await mount('admin')
+    expect(node.querySelector('.shipment-failure-form')).not.toBeNull()
+    holdDetail = true
+    snapshot = trackingFixture({ status: 'DELIVERED', currentDriverLocation: null,
+      lastLocationUpdatedAt: null, locationClientTimestamp: null, isLocationStale: null, etaUnavailableReason: 'NOT_PICKED_UP' })
+    await act(async () => vi.advanceTimersByTimeAsync(5000))
+    expect(node.querySelector('.shipment-failure-form')).toBeNull()
+    expect(node.querySelector('[data-status="PICKED_UP"]')).toBeNull()
+    expect(pendingDetail).toHaveLength(1)
+    await act(async () => pendingDetail[0].resolve(Response.json({ code: 'SERVICE_UNAVAILABLE' }, { status: 503 })))
+    expect(node.querySelector('[role="alert"]')).not.toBeNull()
+    expect(node.querySelector('.shipment-failure-form')).toBeNull()
+    const total = reads.length
+    await act(async () => vi.advanceTimersByTimeAsync(20_000))
+    expect(reads).toHaveLength(total)
+  })
+
+  it.each(['customer', 'admin'])('aborts %s detail reconciliation on leaving and ignores its late result', async area => {
+    session.role = area === 'admin' ? 'ADMIN' : 'CUSTOMER'
+    await mount(area); holdDetail = true
+    snapshot = { ...snapshot, status: 'PICKED_UP', etaUnavailableReason: 'CONFIG_INVALID' }
+    await act(async () => vi.advanceTimersByTimeAsync(5000))
+    expect(pendingDetail).toHaveLength(1)
+    await act(async () => node.querySelector<HTMLButtonElement>('button')!.click())
+    expect(pendingDetail[0].signal?.aborted).toBe(true)
+    await act(async () => pendingDetail[0].resolve(Response.json(detail())))
+    expect(node.textContent).toContain('Đã rời chi tiết')
+    expect(node.textContent).not.toContain('Đã bàn giao bưu kiện')
   })
 })

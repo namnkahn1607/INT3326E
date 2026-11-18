@@ -8,12 +8,13 @@ export interface ShipmentTrackingProps {
   status: ShipmentStatus
   pickupLocation?: Coordinates
   dropoffLocation?: Coordinates
+  onStateChange?: (status: ShipmentStatus, driverId: string | null) => void
 }
-export function ShipmentTracking({ id, status, pickupLocation, dropoffLocation }: ShipmentTrackingProps) {
+export function ShipmentTracking({ id, status, pickupLocation, dropoffLocation, onStateChange }: ShipmentTrackingProps) {
   if (status === 'DELIVERED' || status === 'DELIVERY_FAILED') return <section className="shipment-tracking" aria-label="Theo dõi vị trí đơn hàng">
     <h2>Đơn đã kết thúc</h2><p role="status">Đã dừng theo dõi và ẩn vị trí tài xế.</p>
   </section>
   return <Suspense fallback={<p role="status">Đang mở theo dõi vị trí…</p>}>
-    <Panel id={id} pickupLocation={pickupLocation} dropoffLocation={dropoffLocation} />
+    <Panel id={id} pickupLocation={pickupLocation} dropoffLocation={dropoffLocation} onStateChange={onStateChange} />
   </Suspense>
 }

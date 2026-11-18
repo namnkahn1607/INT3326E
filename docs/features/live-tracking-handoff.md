@@ -155,43 +155,24 @@ Phụ thuộc hiện tại là triển khai bản tích hợp và QA đầu cu�
 handler API09 trong source develop. Không thay API, schema, auth hoặc dữ liệu khi
 giải quyết conflict. `.env.example` local được bảo toàn, không đưa vào commit merge.
 
-## TV3 kiểm Cloud — 18/11/2026
+## Hai bản sửa tracking — 18/11/2026
 
-Đã chọn `feature/frontend`, fast-forward tới `develop@2fd3ec8`. Check toàn repo
-exit 0 (166 Worker/shared/load, 465 API, 584 web, 2 health; 125 ca môi trường
-bỏ qua); integration Nest/PGlite đạt 12/12. Không thay code runtime.
+Customer/Admin nhận thay đổi status/driverId từ API09 và tải lại detail để
+đồng bộ badge, lịch sử, ghi chú từ server. Trong lúc tải, không hiển thị detail
+hoặc form theo snapshot cũ. Lỗi tải lại khóa thao tác và cho thử lại thủ công;
+không gửi lại mutation hoặc tải detail theo mỗi mẫu GPS. Đổi route/account hủy
+request và bỏ response đến muộn; map không dựng lại khi đồng bộ trạng thái.
 
-Cloud SQL ban đầu Stopped khiến Customer/Admin trả 503. Sau khi người dùng
-cho bật tạm SQL và Worker min 1/Instance-based, Customer tạo đơn mô phỏng
-`PF2026111812SYSK` (`sh_01M7P68J2ESQ4HRA7WVVBSN4XD`), Admin gán Driver demo.
-Customer đọc đúng đơn ASSIGNED và hiển thị GPS cũ có nhãn (mẫu ngày 17/11).
-Simulator tăng số mẫu nhưng accepted không tăng; chưa xác định nguyên nhân,
-chưa xác nhận GPS mới được gửi/lưu hoặc marker di chuyển. Admin marker,
-pickup/deliver và ảnh nghiệm thu 390/1440px vẫn mở. Đơn mô phỏng còn ASSIGNED.
+Map tiếp tục Leaflet raster. VITE_CARTO_API_KEY local hợp lệ trả tile HTTP 200;
+bản cũ trên Hosting gọi OSM và lỗi kết nối. Firebase Hosting nay build lại
+trước deploy, dùng cấu hình của máy build/CI; không hardcode key hoặc thay dịch
+vụ geocoding. Cần cấp key CARTO trên đúng máy build để dùng nền này.
 
-GPS đã dừng; Worker đã hoàn nguyên min 0/Request-based trong hạn 20 phút;
-Console ghi SQL Stopped 09:12:30. Không nâng AC05 lên Cloud. Xem
-[báo cáo, ảnh lỗi 390/1440 và bước tiếp tục](../evidence/tv3-tracking-cloud-week8/report.md).
+Nghiệm thu trước commit: npm run check exit 0 (166/2/465/589; 125 bỏ qua),
+integration Nest/PGlite 12/12, 50 test chuyên biệt. Chrome 390/1440px cả hai
+role tải tile CARTO thật, đồng bộ header/lịch sử và ẩn form/marker khi kết thúc;
+polling dừng. Auth/API trong lượt browser là fixture riêng, không phải Cloud.
 
-## TV3 kiểm lại Cloud buổi tối — 18/11/2026
-
-Trên source local `f60de90`, giữ nguyên runtime và AGENTS.md. Người dùng tự
-bật DB, sửa runtime Worker và đăng nhập ba role; agent chỉ kiểm ParcelFlow
-bằng công cụ tab Chrome. Bản gốc PF SPEC 01 đã xác minh là v1.4.
-
-Đơn mô phỏng `PF2026111812SYSK`: Customer/Admin nhận API09 200, GPS mới và
-ít nhất ba tọa độ khác nhau. Quan sát cùng viewport xác nhận marker đổi vị
-trí. Khi người dùng giao thành công, hai panel tự ẩn marker Driver và dừng
-polling; response terminal có tọa độ/timestamp null. Có ảnh panel GPS cũ,
-GPS mới và terminal ở 390/1440px cho cả hai role.
-
-Check toàn repo đạt: 166 Worker/shared/load, 2 health, 465 API, 584 web;
-125 ca phụ thuộc môi trường bỏ qua. Integration Nest/PGlite 12/12 đạt sau
-một lần timeout khởi tạo; không sửa/nới test. Không kiểm SQL trực tiếp.
-
-**Chưa đóng toàn bộ UI/AC05:** nền tile OSM bị ERR_CONNECTION_REFUSED;
-header/detail/history chưa tự đồng bộ khi panel tracking thấy terminal,
-Admin còn form theo snapshot cũ tới khi đọc lại detail. Negative Cloud cases,
-reassign/failed và deployment record vẫn cần nhóm hoàn thiện. Không tự sửa
-Cloud hoặc suy ra revision deploy từ SHA local. Xem
-[báo cáo và ảnh buổi tối](../evidence/tv3-tracking-cloud-week8/report.md#kiểm-lại-buổi-tối--gps-mới-và-terminal).
+Đã thay báo cáo/ảnh TV3 cũ bằng [bản nghiệm thu mới](../evidence/tv3-tracking-cloud-week8/report.md).
+Chưa deploy frontend hoặc kiểm lại bản sửa trên Hosting; không đổi backend,
+Worker, schema, Cloud runtime, AGENTS.md hoặc file môi trường local.
