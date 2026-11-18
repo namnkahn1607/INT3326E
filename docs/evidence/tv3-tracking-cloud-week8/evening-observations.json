@@ -1,0 +1,406 @@
+{
+  "checkedAt": "2026-11-18",
+  "environment": "Cloud Firebase Hosting and Cloud Run",
+  "sourceHead": "f60de90",
+  "shipmentId": "sh_01M7P68J2ESQ4HRA7WVVBSN4XD",
+  "trackingNumber": "PF2026111812SYSK",
+  "dataKind": "simulated GPS and synthetic shipment; real Cloud APIs",
+  "freshResponses": [
+    {
+      "role": "CUSTOMER",
+      "requestId": 778,
+      "data": {
+        "shipmentId": "sh_01M7P68J2ESQ4HRA7WVVBSN4XD",
+        "status": "PICKED_UP",
+        "driverId": "usr_01M5SW7617KAKAMEE4G0W50HRX",
+        "pickupLocation": {
+          "lat": 21.03677,
+          "lng": 105.7898
+        },
+        "dropoffLocation": {
+          "lat": 21.026275,
+          "lng": 105.807138
+        },
+        "currentDriverLocation": {
+          "lat": 21.029111,
+          "lng": 105.805417
+        },
+        "lastLocationUpdatedAt": "2026-11-18T13:34:39.743Z",
+        "locationClientTimestamp": "2026-11-18T13:34:38.228Z",
+        "isLocationStale": false,
+        "eta": {
+          "distanceMeters": 362.42376531092344,
+          "estimatedSeconds": 66,
+          "estimatedArrivalAt": "2026-11-18T13:35:46.283Z"
+        },
+        "etaUnavailableReason": null,
+        "expectedDeliveryAt": null,
+        "isLate": null
+      }
+    },
+    {
+      "role": "CUSTOMER",
+      "requestId": 780,
+      "data": {
+        "shipmentId": "sh_01M7P68J2ESQ4HRA7WVVBSN4XD",
+        "status": "PICKED_UP",
+        "driverId": "usr_01M5SW7617KAKAMEE4G0W50HRX",
+        "pickupLocation": {
+          "lat": 21.03677,
+          "lng": 105.7898
+        },
+        "dropoffLocation": {
+          "lat": 21.026275,
+          "lng": 105.807138
+        },
+        "currentDriverLocation": {
+          "lat": 21.029111,
+          "lng": 105.805417
+        },
+        "lastLocationUpdatedAt": "2026-11-18T13:34:39.743Z",
+        "locationClientTimestamp": "2026-11-18T13:34:38.228Z",
+        "isLocationStale": false,
+        "eta": {
+          "distanceMeters": 362.42376531092344,
+          "estimatedSeconds": 66,
+          "estimatedArrivalAt": "2026-11-18T13:35:51.963Z"
+        },
+        "etaUnavailableReason": null,
+        "expectedDeliveryAt": null,
+        "isLate": null
+      }
+    },
+    {
+      "role": "CUSTOMER",
+      "requestId": 782,
+      "data": {
+        "shipmentId": "sh_01M7P68J2ESQ4HRA7WVVBSN4XD",
+        "status": "PICKED_UP",
+        "driverId": "usr_01M5SW7617KAKAMEE4G0W50HRX",
+        "pickupLocation": {
+          "lat": 21.03677,
+          "lng": 105.7898
+        },
+        "dropoffLocation": {
+          "lat": 21.026275,
+          "lng": 105.807138
+        },
+        "currentDriverLocation": {
+          "lat": 21.028811,
+          "lng": 105.805117
+        },
+        "lastLocationUpdatedAt": "2026-11-18T13:34:47.731Z",
+        "locationClientTimestamp": "2026-11-18T13:34:46.226Z",
+        "isLocationStale": false,
+        "eta": {
+          "distanceMeters": 351.4510446606311,
+          "estimatedSeconds": 64,
+          "estimatedArrivalAt": "2026-11-18T13:35:55.652Z"
+        },
+        "etaUnavailableReason": null,
+        "expectedDeliveryAt": null,
+        "isLate": null
+      }
+    },
+    {
+      "role": "CUSTOMER",
+      "requestId": 784,
+      "data": {
+        "shipmentId": "sh_01M7P68J2ESQ4HRA7WVVBSN4XD",
+        "status": "PICKED_UP",
+        "driverId": "usr_01M5SW7617KAKAMEE4G0W50HRX",
+        "pickupLocation": {
+          "lat": 21.03677,
+          "lng": 105.7898
+        },
+        "dropoffLocation": {
+          "lat": 21.026275,
+          "lng": 105.807138
+        },
+        "currentDriverLocation": {
+          "lat": 21.028511,
+          "lng": 105.804817
+        },
+        "lastLocationUpdatedAt": "2026-11-18T13:34:55.822Z",
+        "locationClientTimestamp": "2026-11-18T13:34:54.224Z",
+        "isLocationStale": false,
+        "eta": {
+          "distanceMeters": 346.19265025353116,
+          "estimatedSeconds": 63,
+          "estimatedArrivalAt": "2026-11-18T13:36:00.336Z"
+        },
+        "etaUnavailableReason": null,
+        "expectedDeliveryAt": null,
+        "isLate": null
+      }
+    },
+    {
+      "role": "ADMIN",
+      "requestId": 624,
+      "data": {
+        "shipmentId": "sh_01M7P68J2ESQ4HRA7WVVBSN4XD",
+        "status": "PICKED_UP",
+        "driverId": "usr_01M5SW7617KAKAMEE4G0W50HRX",
+        "pickupLocation": {
+          "lat": 21.03677,
+          "lng": 105.7898
+        },
+        "dropoffLocation": {
+          "lat": 21.026275,
+          "lng": 105.807138
+        },
+        "currentDriverLocation": {
+          "lat": 21.028811,
+          "lng": 105.805117
+        },
+        "lastLocationUpdatedAt": "2026-11-18T13:34:31.730Z",
+        "locationClientTimestamp": "2026-11-18T13:34:30.231Z",
+        "isLocationStale": false,
+        "eta": {
+          "distanceMeters": 351.4510446606311,
+          "estimatedSeconds": 64,
+          "estimatedArrivalAt": "2026-11-18T13:35:42.213Z"
+        },
+        "etaUnavailableReason": null,
+        "expectedDeliveryAt": null,
+        "isLate": null
+      }
+    },
+    {
+      "role": "ADMIN",
+      "requestId": 626,
+      "data": {
+        "shipmentId": "sh_01M7P68J2ESQ4HRA7WVVBSN4XD",
+        "status": "PICKED_UP",
+        "driverId": "usr_01M5SW7617KAKAMEE4G0W50HRX",
+        "pickupLocation": {
+          "lat": 21.03677,
+          "lng": 105.7898
+        },
+        "dropoffLocation": {
+          "lat": 21.026275,
+          "lng": 105.807138
+        },
+        "currentDriverLocation": {
+          "lat": 21.029111,
+          "lng": 105.805417
+        },
+        "lastLocationUpdatedAt": "2026-11-18T13:34:39.743Z",
+        "locationClientTimestamp": "2026-11-18T13:34:38.228Z",
+        "isLocationStale": false,
+        "eta": {
+          "distanceMeters": 362.42376531092344,
+          "estimatedSeconds": 66,
+          "estimatedArrivalAt": "2026-11-18T13:35:49.871Z"
+        },
+        "etaUnavailableReason": null,
+        "expectedDeliveryAt": null,
+        "isLate": null
+      }
+    },
+    {
+      "role": "ADMIN",
+      "requestId": 628,
+      "data": {
+        "shipmentId": "sh_01M7P68J2ESQ4HRA7WVVBSN4XD",
+        "status": "PICKED_UP",
+        "driverId": "usr_01M5SW7617KAKAMEE4G0W50HRX",
+        "pickupLocation": {
+          "lat": 21.03677,
+          "lng": 105.7898
+        },
+        "dropoffLocation": {
+          "lat": 21.026275,
+          "lng": 105.807138
+        },
+        "currentDriverLocation": {
+          "lat": 21.028811,
+          "lng": 105.805117
+        },
+        "lastLocationUpdatedAt": "2026-11-18T13:34:47.731Z",
+        "locationClientTimestamp": "2026-11-18T13:34:46.226Z",
+        "isLocationStale": false,
+        "eta": {
+          "distanceMeters": 351.4510446606311,
+          "estimatedSeconds": 64,
+          "estimatedArrivalAt": "2026-11-18T13:35:53.542Z"
+        },
+        "etaUnavailableReason": null,
+        "expectedDeliveryAt": null,
+        "isLate": null
+      }
+    },
+    {
+      "role": "ADMIN",
+      "requestId": 630,
+      "data": {
+        "shipmentId": "sh_01M7P68J2ESQ4HRA7WVVBSN4XD",
+        "status": "PICKED_UP",
+        "driverId": "usr_01M5SW7617KAKAMEE4G0W50HRX",
+        "pickupLocation": {
+          "lat": 21.03677,
+          "lng": 105.7898
+        },
+        "dropoffLocation": {
+          "lat": 21.026275,
+          "lng": 105.807138
+        },
+        "currentDriverLocation": {
+          "lat": 21.028811,
+          "lng": 105.805117
+        },
+        "lastLocationUpdatedAt": "2026-11-18T13:34:47.731Z",
+        "locationClientTimestamp": "2026-11-18T13:34:46.226Z",
+        "isLocationStale": false,
+        "eta": {
+          "distanceMeters": 351.4510446606311,
+          "estimatedSeconds": 64,
+          "estimatedArrivalAt": "2026-11-18T13:35:59.180Z"
+        },
+        "etaUnavailableReason": null,
+        "expectedDeliveryAt": null,
+        "isLate": null
+      }
+    }
+  ],
+  "driverAcceptedResponse": "{\"status\":\"ACCEPTED\",\"eventId\":\"evt_0f656e20-e238-477f-9f9a-8577d11e638c\",\"receivedAt\":\"2026-11-18T13:38:31.790Z\"}",
+  "movementBefore": {
+    "customer": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Script ran on page and returned:\n```json\n{\"observedAt\":\"2026-11-18T13:37:53.871Z\",\"width\":1440,\"tracking\":\"Theo dõi giao hàng\\nTải lại vị trí\\nĐang giao hàng\\nGPS mới\\nThời điểm mẫu: 20:37 18/11/2026\\nĐọc lúc 20:37 18/11/2026\\n+\\n−\\n Leaflet | © OpenStreetMap contributors\\nChưa tải được đầy đủ bản đồ.\\nThử tải lại\\nĐiểm lấy hàng\\n21.03677, 105.7898\\nĐiểm giao hàng\\n21.026275, 105.807138\\nVị trí tài xế\\n21.028811, 105.805117\",\"markers\":[{\"title\":\"Điểm lấy hàng\",\"transform\":\"translate3d(360px, 48px, 0px)\"},{\"title\":\"Điểm giao hàng\",\"transform\":\"translate3d(764px, 310px, 0px)\"},{\"title\":\"Vị trí tài xế\",\"transform\":\"translate3d(717px, 246px, 0px)\"}]}\n```"
+        }
+      ]
+    },
+    "admin": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Script ran on page and returned:\n```json\n{\"observedAt\":\"2026-11-18T13:37:56.693Z\",\"width\":1440,\"tracking\":\"Theo dõi giao hàng\\nTải lại vị trí\\nĐang giao hàng\\nGPS mới\\nThời điểm mẫu: 20:37 18/11/2026\\nĐọc lúc 20:37 18/11/2026\\n+\\n−\\n Leaflet | © OpenStreetMap contributors\\nChưa tải được đầy đủ bản đồ.\\nThử tải lại\\nĐiểm lấy hàng\\n21.03677, 105.7898\\nĐiểm giao hàng\\n21.026275, 105.807138\\nVị trí tài xế\\n21.029111, 105.805417\",\"markers\":[{\"title\":\"Điểm lấy hàng\",\"transform\":\"translate3d(341px, 48px, 0px)\"},{\"title\":\"Điểm giao hàng\",\"transform\":\"translate3d(745px, 310px, 0px)\"},{\"title\":\"Vị trí tài xế\",\"transform\":\"translate3d(705px, 239px, 0px)\"}]}\n```"
+        }
+      ]
+    }
+  },
+  "movementAfter": {
+    "customer": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Script ran on page and returned:\n```json\n{\"observedAt\":\"2026-11-18T13:38:11.426Z\",\"width\":1440,\"tracking\":\"Theo dõi giao hàng\\nTải lại vị trí\\nĐang giao hàng\\nGPS mới\\nThời điểm mẫu: 20:38 18/11/2026\\nĐọc lúc 20:38 18/11/2026\\n+\\n−\\n Leaflet | © OpenStreetMap contributors\\nChưa tải được đầy đủ bản đồ.\\nThử tải lại\\nĐiểm lấy hàng\\n21.03677, 105.7898\\nĐiểm giao hàng\\n21.026275, 105.807138\\nVị trí tài xế\\n21.028511, 105.804817\",\"markers\":[{\"title\":\"Điểm lấy hàng\",\"transform\":\"translate3d(360px, 48px, 0px)\"},{\"title\":\"Điểm giao hàng\",\"transform\":\"translate3d(764px, 310px, 0px)\"},{\"title\":\"Vị trí tài xế\",\"transform\":\"translate3d(710px, 254px, 0px)\"}]}\n```"
+        }
+      ]
+    },
+    "admin": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Script ran on page and returned:\n```json\n{\"observedAt\":\"2026-11-18T13:38:14.152Z\",\"width\":1440,\"tracking\":\"Theo dõi giao hàng\\nTải lại vị trí\\nĐang giao hàng\\nGPS mới\\nThời điểm mẫu: 20:38 18/11/2026\\nĐọc lúc 20:38 18/11/2026\\n+\\n−\\n Leaflet | © OpenStreetMap contributors\\nChưa tải được đầy đủ bản đồ.\\nThử tải lại\\nĐiểm lấy hàng\\n21.03677, 105.7898\\nĐiểm giao hàng\\n21.026275, 105.807138\\nVị trí tài xế\\n21.028511, 105.804817\",\"markers\":[{\"title\":\"Điểm lấy hàng\",\"transform\":\"translate3d(341px, 48px, 0px)\"},{\"title\":\"Điểm giao hàng\",\"transform\":\"translate3d(745px, 310px, 0px)\"},{\"title\":\"Vị trí tài xế\",\"transform\":\"translate3d(691px, 254px, 0px)\"}]}\n```"
+        }
+      ]
+    }
+  },
+  "pollingBefore": {
+    "customer": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Script ran on page and returned:\n```json\n{\"observedAt\":\"2026-11-18T13:38:47.809Z\",\"trackingRequestCount\":21,\"lastRequests\":[{\"startTime\":89200.09999999963,\"duration\":663.3000000002794,\"endTime\":89863.3999999999},{\"startTime\":94915.8999999999,\"duration\":657.2999999998137,\"endTime\":95573.19999999972},{\"startTime\":100582.09999999963,\"duration\":655.5,\"endTime\":101237.59999999963},{\"startTime\":106246.69999999972,\"duration\":659.5,\"endTime\":106906.19999999972},{\"startTime\":111909.5,\"duration\":685.0999999996275,\"endTime\":112594.59999999963},{\"startTime\":117608,\"duration\":687.3999999999069,\"endTime\":118295.3999999999}],\"overlaps\":0}\n```"
+        }
+      ]
+    },
+    "admin": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Script ran on page and returned:\n```json\n{\"observedAt\":\"2026-11-18T13:38:51.432Z\",\"trackingRequestCount\":17,\"lastRequests\":[{\"startTime\":67228.1000000001,\"duration\":621.8999999999069,\"endTime\":67850},{\"startTime\":72862.30000000028,\"duration\":640.1999999997206,\"endTime\":73502.5},{\"startTime\":78509.8999999999,\"duration\":620.5,\"endTime\":79130.3999999999},{\"startTime\":84141.20000000019,\"duration\":649.2999999998137,\"endTime\":84790.5},{\"startTime\":89800.3999999999,\"duration\":641,\"endTime\":90441.3999999999},{\"startTime\":95921.5,\"duration\":628.2000000001863,\"endTime\":96549.70000000019}],\"overlaps\":0}\n```"
+        }
+      ]
+    }
+  },
+  "terminalFirst": {
+    "customer": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Script ran on page and returned:\n```json\n{\"observedAt\":\"2026-11-18T13:39:20.432Z\",\"width\":1440,\"tracking\":\"Theo dõi giao hàng\\nTải lại vị trí\\nGiao thành công\\nĐã kết thúc · Ẩn vị trí tài xế\\nĐọc lúc 20:38 18/11/2026\\n+\\n−\\n Leaflet | © OpenStreetMap contributors\\nChưa tải được đầy đủ bản đồ.\\nThử tải lại\\nĐiểm lấy hàng\\n21.03677, 105.7898\\nĐiểm giao hàng\\n21.026275, 105.807138\",\"markers\":[{\"title\":\"Điểm lấy hàng\",\"transform\":\"translate3d(360px, 48px, 0px)\"},{\"title\":\"Điểm giao hàng\",\"transform\":\"translate3d(764px, 310px, 0px)\"}],\"requestCount\":21}\n```"
+        }
+      ]
+    },
+    "admin": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Script ran on page and returned:\n```json\n{\"observedAt\":\"2026-11-18T13:39:23.639Z\",\"width\":1440,\"tracking\":\"Theo dõi giao hàng\\nTải lại vị trí\\nGiao thành công\\nĐã kết thúc · Ẩn vị trí tài xế\\nĐọc lúc 20:38 18/11/2026\\n+\\n−\\n Leaflet | © OpenStreetMap contributors\\nChưa tải được đầy đủ bản đồ.\\nThử tải lại\\nĐiểm lấy hàng\\n21.03677, 105.7898\\nĐiểm giao hàng\\n21.026275, 105.807138\",\"markers\":[{\"title\":\"Điểm lấy hàng\",\"transform\":\"translate3d(341px, 48px, 0px)\"},{\"title\":\"Điểm giao hàng\",\"transform\":\"translate3d(745px, 310px, 0px)\"}],\"requestCount\":17}\n```"
+        }
+      ]
+    }
+  },
+  "terminalSecond": {
+    "customer": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Script ran on page and returned:\n```json\n{\"observedAt\":\"2026-11-18T13:39:49.551Z\",\"tracking\":\"Theo dõi giao hàng\\nTải lại vị trí\\nGiao thành công\\nĐã kết thúc · Ẩn vị trí tài xế\\nĐọc lúc 20:38 18/11/2026\\n+\\n−\\n Leaflet | © OpenStreetMap contributors\\nChưa tải được đầy đủ bản đồ.\\nThử tải lại\\nĐiểm lấy hàng\\n21.03677, 105.7898\\nĐiểm giao hàng\\n21.026275, 105.807138\",\"markers\":0,\"requestCount\":21,\"mainStatuses\":[\"Đang giao hàng\",\"Giao thành công\"]}\n```"
+        }
+      ]
+    },
+    "admin": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Script ran on page and returned:\n```json\n{\"observedAt\":\"2026-11-18T13:39:55.570Z\",\"tracking\":\"Theo dõi giao hàng\\nTải lại vị trí\\nGiao thành công\\nĐã kết thúc · Ẩn vị trí tài xế\\nĐọc lúc 20:38 18/11/2026\\n+\\n−\\n Leaflet | © OpenStreetMap contributors\\nChưa tải được đầy đủ bản đồ.\\nThử tải lại\\nĐiểm lấy hàng\\n21.03677, 105.7898\\nĐiểm giao hàng\\n21.026275, 105.807138\",\"markers\":0,\"requestCount\":17,\"mainStatuses\":[\"Đang giao hàng\",\"Giao thành công\"]}\n```"
+        }
+      ]
+    }
+  },
+  "terminalResponses": {
+    "customer": {
+      "shipmentId": "sh_01M7P68J2ESQ4HRA7WVVBSN4XD",
+      "status": "DELIVERED",
+      "driverId": "usr_01M5SW7617KAKAMEE4G0W50HRX",
+      "pickupLocation": {
+        "lat": 21.03677,
+        "lng": 105.7898
+      },
+      "dropoffLocation": {
+        "lat": 21.026275,
+        "lng": 105.807138
+      },
+      "currentDriverLocation": null,
+      "lastLocationUpdatedAt": null,
+      "locationClientTimestamp": null,
+      "isLocationStale": null,
+      "eta": null,
+      "etaUnavailableReason": "NOT_PICKED_UP",
+      "expectedDeliveryAt": null,
+      "isLate": null
+    },
+    "admin": {
+      "shipmentId": "sh_01M7P68J2ESQ4HRA7WVVBSN4XD",
+      "status": "DELIVERED",
+      "driverId": "usr_01M5SW7617KAKAMEE4G0W50HRX",
+      "pickupLocation": {
+        "lat": 21.03677,
+        "lng": 105.7898
+      },
+      "dropoffLocation": {
+        "lat": 21.026275,
+        "lng": 105.807138
+      },
+      "currentDriverLocation": null,
+      "lastLocationUpdatedAt": null,
+      "locationClientTimestamp": null,
+      "isLocationStale": null,
+      "eta": null,
+      "etaUnavailableReason": "NOT_PICKED_UP",
+      "expectedDeliveryAt": null,
+      "isLate": null
+    }
+  },
+  "limitations": [
+    "OSM tile requests ERR_CONNECTION_REFUSED in test browser",
+    "Detail header/history remain at snapshot until manual refresh; tracking panel updates terminal automatically",
+    "No direct SQL inspection or full Worker log/revision readback this run"
+  ]
+}
