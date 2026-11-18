@@ -1,0 +1,11 @@
+[
+  {"lat":21.028811,"lng":105.805117,"clientTimestamp":"2026-11-17T14:52:18.719Z","seq":8,"eventId":"evt_e8009e0c-1feb-4c6f-b57c-ded6c8e82424","driverId":"usr_01M5SW7617KAKAMEE4G0W50HRX","receivedAt":"2026-11-17T14:52:42.212Z"},
+  {"lat":21.028511,"lng":105.804817,"clientTimestamp":"2026-11-17T14:52:26.719Z","seq":9,"eventId":"evt_8de43e8f-11a9-4cf6-ab7b-1e06e86fd34c","driverId":"usr_01M5SW7617KAKAMEE4G0W50HRX","receivedAt":"2026-11-17T14:52:42.894Z"},
+  {"lat":21.028811,"lng":105.805117,"clientTimestamp":"2026-11-17T14:52:34.717Z","seq":10,"eventId":"evt_d375574a-c9fa-4dca-8665-c55d09338d28","driverId":"usr_01M5SW7617KAKAMEE4G0W50HRX","receivedAt":"2026-11-17T14:52:43.576Z"},
+  {"lat":21.029111,"lng":105.805417,"clientTimestamp":"2026-11-17T14:52:42.710Z","seq":11,"eventId":"evt_448a87a7-8d70-4b87-a419-2bf4ec2092b1","driverId":"usr_01M5SW7617KAKAMEE4G0W50HRX","receivedAt":"2026-11-17T14:52:44.258Z"},
+  {"lat":21.028811,"lng":105.805117,"clientTimestamp":"2026-11-17T14:52:50.717Z","seq":12,"eventId":"evt_eba59124-c5d6-414b-b7ae-a29331962193","driverId":"usr_01M5SW7617KAKAMEE4G0W50HRX","receivedAt":"2026-11-17T14:52:46.583Z"},
+  {"lat":21.028511,"lng":105.804817,"clientTimestamp":"2026-11-17T14:52:58.713Z","seq":13,"eventId":"evt_412d2746-9253-42c2-ad07-ad08b1bc3051","driverId":"usr_01M5SW7617KAKAMEE4G0W50HRX","receivedAt":"2026-11-17T14:52:54.684Z"},
+  {"lat":21.028811,"lng":105.805117,"clientTimestamp":"2026-11-17T14:53:06.707Z","seq":14,"eventId":"evt_4a0a6e48-95cf-4f06-b30e-5d737a9f4781","driverId":"usr_01M5SW7617KAKAMEE4G0W50HRX","receivedAt":"2026-11-17T14:53:02.699Z"},
+  {"lat":21.029111,"lng":105.805417,"clientTimestamp":"2026-11-17T14:53:14.708Z","seq":15,"eventId":"evt_c98faed3-aa41-4568-8313-a4d85a33cd84","driverId":"usr_01M5SW7617KAKAMEE4G0W50HRX","receivedAt":"2026-11-17T14:53:10.659Z"},
+  {"lat":21.028811,"lng":105.805117,"clientTimestamp":"2026-11-17T14:53:22.717Z","seq":16,"eventId":"evt_c975e9f3-7ce5-47f0-9c89-e7de55268801","driverId":"usr_01M5SW7617KAKAMEE4G0W50HRX","receivedAt":"2026-11-17T14:53:18.666Z"}
+]

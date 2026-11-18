@@ -1,0 +1,44 @@
+﻿[
+    {
+        "timestamp":  "2026-11-17T14:52:44.311108Z",
+        "service":  "backend-service",
+        "revision":  "backend-service-00037-4c5",
+        "message":  "[Nest] 1  - 11/17/2026, 2:52:44 PM     LOG [LocationService] [API08 Broker Confirmed] eventId: evt_448a87a7-8d70-4b87-a419-2bf4ec2092b1 | driver: usr_01M5SW7617KAKAMEE4G0W50HRX"
+    },
+    {
+        "timestamp":  "2026-11-17T14:52:45.292894Z",
+        "service":  "worker-service",
+        "revision":  "worker-service-00025-hnp",
+        "message":  "[Nest] 1  - 11/17/2026, 2:52:45 PM     LOG [GpsSubscriber] [EVT01 GPS Event] ID: 23343761458077690 | eventId: evt_448a87a7-8d70-4b87-a419-2bf4ec2092b1 | driverId: usr_01M5SW7617KAKAMEE4G0W50HRX | coords: (21.029111, 105.805417) | time: 2026-11-17T14:52:42.710Z"
+    },
+    {
+        "timestamp":  "2026-11-17T14:52:57.792476Z",
+        "service":  "worker-service",
+        "revision":  "worker-service-00025-hnp",
+        "message":  "[Nest] 1  - 11/17/2026, 2:52:57 PM     LOG [GpsSubscriber] [EVT01 GPS Event] ID: 23343761458077690 | eventId: evt_448a87a7-8d70-4b87-a419-2bf4ec2092b1 | driverId: usr_01M5SW7617KAKAMEE4G0W50HRX | coords: (21.029111, 105.805417) | time: 2026-11-17T14:52:42.710Z"
+    },
+    {
+        "timestamp":  "2026-11-17T14:53:07.106265Z",
+        "service":  "worker-service",
+        "revision":  "worker-service-00025-hnp",
+        "message":  "[Nest] 1  - 11/17/2026, 2:53:06 PM     LOG [GpsSubscriber] [EVT01 GPS Event] ID: 23343761458077690 | eventId: evt_448a87a7-8d70-4b87-a419-2bf4ec2092b1 | driverId: usr_01M5SW7617KAKAMEE4G0W50HRX | coords: (21.029111, 105.805417) | time: 2026-11-17T14:52:42.710Z"
+    },
+    {
+        "timestamp":  "2026-11-17T14:53:16.591700Z",
+        "service":  "worker-service",
+        "revision":  "worker-service-00025-hnp",
+        "message":  "[Nest] 1  - 11/17/2026, 2:53:16 PM     LOG [GpsSubscriber] [EVT01 GPS Event] ID: 23343761458077690 | eventId: evt_448a87a7-8d70-4b87-a419-2bf4ec2092b1 | driverId: usr_01M5SW7617KAKAMEE4G0W50HRX | coords: (21.029111, 105.805417) | time: 2026-11-17T14:52:42.710Z"
+    },
+    {
+        "timestamp":  "2026-11-17T14:53:28.992512Z",
+        "service":  "worker-service",
+        "revision":  "worker-service-00025-hnp",
+        "message":  "[Nest] 1  - 11/17/2026, 2:53:28 PM     LOG [GpsSubscriber] [EVT01 GPS Event] ID: 23343761458077690 | eventId: evt_448a87a7-8d70-4b87-a419-2bf4ec2092b1 | driverId: usr_01M5SW7617KAKAMEE4G0W50HRX | coords: (21.029111, 105.805417) | time: 2026-11-17T14:52:42.710Z"
+    },
+    {
+        "timestamp":  "2026-11-18T00:58:49.532635Z",
+        "service":  "worker-service",
+        "revision":  "worker-service-00026-xkd",
+        "message":  "[Nest] 1  - 11/18/2026, 12:58:49 AM     LOG [GpsSubscriber] [EVT01 GPS Event] ID: 20358141893121952 | eventId: evt_448a87a7-8d70-4b87-a419-2bf4ec2092b1 | driverId: usr_01M5SW7617KAKAMEE4G0W50HRX | coords: (21.029111, 105.805417) | time: 2026-11-17T14:52:42.710Z"
+    }
+]

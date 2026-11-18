@@ -15,16 +15,25 @@
 - [x] W706 — R7: cập nhật bàn giao, review/converge theo spec và bằng chứng.
   Bằng chứng: mục TV4 tuần 7 trong `docs/features/driver-dashboard-gps.md`, report/ảnh tại
   `docs/evidence/driver-gps-week7/`; SHA-256 trong report khớp source hiện tại.
-  Converge cuối không còn thiếu sót local sau W708; W707 vẫn mở, không tuyên bố
-  đã nghiệm thu GPS Cloud hoặc hoàn tất checkpoint chung tuần 7.
-- [ ] W707 — R7: nghiệm thu Driver thật → API → Pub/Sub → Worker → SQL trên Cloud
+  Converge cuối không còn thiếu sót local sau W708; nghiệm thu GPS Cloud
+  được kiểm riêng ở W707, không suy rộng sang checkpoint chung tuần 7.
+- [x] W707 — R7: nghiệm thu Driver thật → API → Pub/Sub → Worker → SQL trên Cloud
   cùng TV2/5/6, lưu revision/eventId và kết quả thật; không đóng bằng test mock.
-  Kiểm lại 17/11: Hosting có emitter tuần 8 nhưng GPS trả 503, accepted 0;
-  chưa có eventId đối chiếu. Xem [bằng chứng Cloud](../../evidence/driver-cloud-week8/report.md).
-  Đã bật lại DB theo cho phép của người dùng; sau khôi phục GPS vẫn 503 tại
-  publish (6 mẫu, 0 accepted). Cần TV5 kiểm tra quyền hiệu lực publish của
-  service account API trên `gps-events`; chưa xem được topic IAM và chưa có
-  tài khoản SQL. Cần đối chiếu cùng eventId được chấp nhận qua Worker/SQL.
+  Lượt chiều 17/11 bị 503 publish (6 mẫu, 0 accepted); xem
+  [bằng chứng Cloud ban đầu](../../evidence/driver-cloud-week8/report.md).
+  Kiểm lại buổi tối sau khi người dùng bật DB: 17/17 accepted, buffer offline
+  gửi hết sau khôi phục mạng, ảnh 390px và response 202 đã lưu. Cùng eventId
+  `evt_3de4d199-19ac-444d-8779-5f93382eddaf` có API Broker Confirmed và log
+  Worker nhận; mẫu cuối chỉ vào history do lệch giờ. Ngày 18/11 đã đối chiếu
+  SQL: ban đầu 8/17 mẫu, tìm đủ 9 mẫu còn thiếu trong DLQ và phát lại nguyên
+  payload qua Worker `00026-xkd` (min 1, Instance-based, được phép bật tạm).
+  History đủ 17 seq/timestamp/eventId riêng biệt. Current đúng seq 11,
+  `evt_448a87a7-8d70-4b87-a419-2bf4ec2092b1`, khớp API Broker Confirmed,
+  Worker và history; các mẫu mới hơn là future theo receivedAt gốc nên không
+  chiếm current. Worker đã hoàn nguyên min 0, Request-based trước hạn 20 phút.
+  Kết quả nghiệm thu có khôi phục DLQ; không cam kết runtime hiện tại chạy
+  GPS nền ổn định hoặc đóng checkpoint marker Customer/Admin.
+  Xem [bằng chứng buổi tối và truy vấn bàn giao](../../evidence/driver-cloud-week8/evening-report.md).
   Không coi commit/push/deploy là bằng chứng đóng mục này.
 - [x] W708 — R4/R6, finding converge: nhánh lỗi định vị cần xóa interval ngay,
   không chỉ chờ React effect cleanup. Thêm hồi quy lỗi native đồng bộ và nhiều

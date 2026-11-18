@@ -1,0 +1,75 @@
+{
+  "observedDateLocal": "2026-11-18",
+  "environment": "Cloud SQL Studio; int3326e/int3326esql; database parcelflow",
+  "beforeRecovery": {
+    "lastAcceptedEvent": {
+      "id": "1208",
+      "driverId": "usr_01M5SW7617KAKAMEE4G0W50HRX",
+      "lat": 21.028511,
+      "lng": 105.804817,
+      "clientTimestamp": "2026-11-17T14:53:30.708Z",
+      "receivedAt": "2026-11-17T14:53:26.684Z",
+      "eventId": "evt_3de4d199-19ac-444d-8779-5f93382eddaf",
+      "sessionId": null,
+      "seq": 17,
+      "persistedAt": "2026-11-17T14:54:09.400Z"
+    },
+    "runTotals": {
+      "historyRows": 8,
+      "distinctTimestamps": 8,
+      "firstSeq": 1,
+      "lastSeq": 17,
+      "historyOnlySamples": 8,
+      "presentSequences": [1, 2, 3, 4, 5, 6, 7, 17],
+      "missingSequences": [8, 9, 10, 11, 12, 13, 14, 15, 16]
+    },
+    "currentLocation": {
+      "driverId": "usr_01M5SW7617KAKAMEE4G0W50HRX",
+      "lat": 21.028511,
+      "lng": 105.854167,
+      "clientTimestamp": "2026-11-16T17:15:00.000Z",
+      "receivedAt": "2026-11-16T17:19:04.194Z",
+      "eventId": "evt_na_live_test_01",
+      "sessionId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "seq": 1,
+      "updatedAt": "2026-11-16T17:19:04.595Z"
+    }
+  },
+  "workerConfigurationBeforeRecovery": {
+    "revision": "worker-service-00025-hnp",
+    "trafficPercent": 100,
+    "minimumInstances": 0,
+    "maximumInstances": 20,
+    "billing": "Request-based",
+    "cpu": 1,
+    "requestTimeoutSeconds": 300,
+    "requestConcurrency": 80
+  },
+  "temporaryConfiguration": {
+    "minimumInstances": 1,
+    "billing": "Instance-based",
+    "revision": "worker-service-00026-xkd",
+    "trafficPercent": 100,
+    "deployedAt": "2026-11-18T00:50:36Z",
+    "userApprovedMaximumMinutes": 20,
+    "deadline": "2026-11-18T01:10:07Z"
+  },
+  "afterRecovery": {
+    "historyRows": 17,
+    "distinctEventIds": 17,
+    "distinctTimestamps": 17,
+    "presentSequences": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
+    "currentEventId": "evt_448a87a7-8d70-4b87-a419-2bf4ec2092b1",
+    "currentSequence": 11,
+    "currentUpdatedAt": "2026-11-18T00:58:49.562Z",
+    "originalDlqMessagesAcknowledged": false
+  },
+  "finalWorkerConfiguration": {
+    "minimumInstances": 0,
+    "maximumInstances": 20,
+    "billing": "Request-based",
+    "rolloutCompleted": true,
+    "confirmedBy": "2026-11-18T01:08:33Z",
+    "cloudSqlInstanceStoppedByAgent": false
+  }
+}

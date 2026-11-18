@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleDestroy, BadRequestException, ServiceUnavailableException } from '@nestjs/common';
 import { PubSub, Topic } from '@google-cloud/pubsub';
 import { randomUUID } from 'node:crypto';
+import { logDependencyFailure } from '../../common/dependency-diagnostics';
 import { normalizeLocation } from './dto/ingest-location.dto';
 
 export interface AsyncAcceptedResponse {
@@ -48,7 +49,8 @@ export class LocationService implements OnModuleDestroy {
       const dataBuffer = Buffer.from(JSON.stringify(eventPayload), 'utf-8');
       await this.topic.publishMessage({ data: dataBuffer });
       this.logger.log(`[API08 Broker Confirmed] eventId: ${eventId} | driver: ${authenticatedDriverId}`);
-    } catch {
+    } catch (error) {
+      logDependencyFailure(this.logger, 'locations.publish', error);
       this.logger.error(`Không publish được sự kiện GPS ${eventId}`);
       throw new ServiceUnavailableException('Dịch vụ gửi GPS tạm thời không khả dụng');
     }

@@ -1,5 +1,8 @@
 # TV4 — nghiệm thu Driver trên Cloud, 17/11/2026
 
+Ghi nhận mới nhất: [W707 được đối chiếu SQL và đóng ngày 18/11, có khôi phục
+DLQ](evening-report.md). Báo cáo bên dưới giữ nguyên mốc nghiệm thu buổi chiều.
+
 Kết quả: **W713 đạt luồng list → pickup → deliver trên Cloud; W707 còn BLOCKED**.
 Kiểm tra trực tiếp bằng Customer, Admin và Driver do người dùng đăng nhập,
 không dùng Auth/API mock. Nguồn repo: `develop@2ed8f04`; nhánh bằng chứng:

@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { INestApplication } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppModule } from '../../app.module';
@@ -135,13 +136,25 @@ describe('Tích hợp GPS của Na với develop (HTTP local)', () => {
     expect(publish).toHaveBeenCalledOnce();
   });
 
-  it('Broker lỗi trả 503, không báo nhận thành công hoặc tự publish lại', async () => {
-    publish.mockRejectedValueOnce(new Error('private Google credentials'));
-    const response = await post();
-    expect(response.status).toBe(503);
-    const problem = await response.json();
-    expect(problem.code).toBe('SERVICE_UNAVAILABLE');
-    expect(JSON.stringify(problem)).not.toContain('private Google credentials');
-    expect(publish).toHaveBeenCalledOnce();
-  });
+  it.each([[7, 'GRPC_PERMISSION_DENIED'], [5, 'GRPC_NOT_FOUND'], [14, 'GRPC_UNAVAILABLE']])(
+    'Broker lỗi %s ghi mã chẩn đoán, trả 503 và không tự publish lại', async (code, expected) => {
+      const log = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+      try {
+        publish.mockRejectedValueOnce(Object.assign(new Error('private Google credentials'), {
+          code, details: 'private provider details', metadata: { token: 'private token' },
+        }));
+        const response = await post();
+        expect(response.status).toBe(503);
+        const problem = await response.json();
+        expect(problem.code).toBe('SERVICE_UNAVAILABLE');
+        expect(JSON.stringify(problem)).not.toContain('private');
+        expect(log).toHaveBeenCalledWith(JSON.stringify({
+          event: 'dependency_failure', stage: 'locations.publish', code: expected,
+        }));
+        expect(JSON.stringify(log.mock.calls)).not.toContain('private');
+        expect(log).toHaveBeenCalledWith(expect.stringMatching(/^Không publish được sự kiện GPS evt_/));
+        expect(publish).toHaveBeenCalledOnce();
+      } finally { log.mockRestore(); }
+    },
+  );
 });
