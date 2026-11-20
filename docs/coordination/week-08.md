@@ -240,3 +240,29 @@ yêu cầu commit/push nhánh; chưa merge hoặc deploy.
 
 - **TV1** (14/11): đã triển khai `API09` (`GET /v1/shipments/:id/tracking`, `Cache-Control: no-store`), ẩn/hiện vị trí tài xế theo trạng thái và nhãn quá cũ (`> 30s` theo `statement_timestamp()`), tính ETA Haversine `20 km/h` khi `PICKED_UP` và GPS còn mới trong một snapshot SQL (`LEFT JOIN current_locations`), đồng bộ `docs/openapi.json` (`SC05` + `EtaDetails`) và thêm test SQL/HTTP/web integration (`assignments.postgres.spec.ts`, `shipment-flow.spec.tsx`). Kiểm tra mức local (PGlite / mock Firebase); PostgreSQL thật (`SHIPMENT_TEST_DATABASE_URL`) và Cloud chưa xác nhận.
 - **TV3** (15/11): tích hợp frontend `f270154` với `develop` `ba230a3`, giữ tracking Leaflet/polling Customer/Admin, map không dựng lại khi refresh/lỗi tạm thời và không giữ GPS cũ khi lỗi. Giải quyết một conflict ở tài liệu tracking, giữ cấu trúc `docs/features/`. `npm run check` đạt (frontend 538, API 454, Worker/shared 122, health e2e 2 test); 116 ca PostgreSQL/emulator bị bỏ qua do chưa cấu hình môi trường. Bộ tích hợp web/Nest/PGlite đạt 12/12, có API09 lifecycle/reassign. Bản đồ và tương tác UI đã kiểm bằng Auth/API mock riêng, không phải bằng chứng Cloud. Chờ deploy và đối chiếu mẫu GPS qua Worker để chốt checkpoint.
+
+## Chốt tuần
+
+Chốt ngày 20/11/2026 bằng PR `week/08` → `main`.
+
+**Checkpoint đạt:** Customer và Admin thấy marker tài xế di chuyển trên Cloud, marker ẩn và polling dừng khi đơn kết thúc ([báo cáo TV3](../evidence/tv3-tracking-cloud-week8/report.md)). GPS đi đủ API → Pub/Sub → Worker → SQL, khớp `eventId` (W707, [báo cáo TV4](../evidence/driver-cloud-week8/evening-report.md)).
+
+**Đã xong trong tuần:**
+- TV1: API09 tracking và ETA; sửa BUG-W8-01 Deliver đồng thời (PR #38).
+- TV2: runbook DLQ, chốt Streaming Pull, báo cáo phục hồi Worker (PR #36, #37).
+- TV3: tracking Customer/Admin, đồng bộ chi tiết đơn theo tracking, nghiệm thu Cloud (PR #42, #43).
+- TV4: chẩn đoán publish GPS, nghiệm thu Driver và W707 trên Cloud (PR #40, #41).
+- TV5: deploy API, Worker, Hosting; ghim `DATABASE_URL` theo version. Web Hosting bản `index-BLeSH4fI.js` (20/11 08:46).
+- TV6: QA tracking (PR #34), sửa giữ chi tiết Admin khi đọc lại lỗi (PR #44), regression AC01–AC10 trên Cloud (PR #45, [kết quả](../tv6/week-08.md)).
+
+**Kiểm trên Cloud 20/11:** AC01–AC06 và AC10 (tài xế không được gán, không token) đạt. Đơn `PF20261109XXX46X`: Admin tự chuyển Đang giao hàng, marker đổi vị trí, sau khi giao 6 giây tự chuyển Giao thành công, ẩn marker, khóa form báo thất bại, dừng polling.
+
+**Chốt khi còn lỗi:** nhóm quyết định chốt tuần trước khi sửa BUG-W8-02 để chuyển sang tuần 9. Hai lỗi còn mở và các ca chưa chạy được chuyển sang tuần 9 bên dưới, ghi trong [nợ kỹ thuật](../tech-debt.md).
+
+## Chuyển sang tuần 9
+
+- **TV5 (làm ngay):** BUG-W8-02, nền bản đồ báo "API KEY REQUIRED" vì `VITE_CARTO_API_KEY` đang là API Access Token, không phải key basemap. Lấy key tại carto.com/basemaps/apikey, giới hạn `int3326e.web.app` và `localhost`, build và deploy lại Hosting. Xóa API Access Token cũ vì token có quyền SQL API đã nằm trong bundle công khai.
+- **TV5:** ghi revision API và Worker đang nhận traffic, cấu hình Worker chạy nền và chi phí.
+- **TV3:** BUG-W8-03, trang Thông báo của Customer còn dữ liệu minh họa, chưa gọi `GET /v1/notifications` (AC08).
+- **TV6:** chạy các ca còn thiếu khi có thêm tài khoản: Customer khác mở đơn, tài xế khác sau gán lại, giao trễ (AC07), ETA trên giao diện (AC09).
+- Việc đã lên kế hoạch: Worker NACK lỗi khóa ngoại `23503` (TV2), CI GitHub Actions (TV5), load test thật (TV4), API07 (TV1).
