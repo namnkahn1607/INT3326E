@@ -4,7 +4,8 @@ Việc đã biết nhưng cố ý để sau. Thêm dòng khi hoãn một việc;
 
 | Ngày | Khu vực | Nợ | Lý do để sau | Rủi ro | Xem lại khi |
 | --- | --- | --- | --- | --- | --- |
-| 18/11/2026 | Triển khai frontend | Chưa deploy và kiểm Cloud hai bản sửa tracking | Local đã đạt check/integration/browser: tile CARTO thật tải được, detail đồng bộ status/driver và khóa action cũ. [Báo cáo mới](evidence/tv3-tracking-cloud-week8/report.md) | Hosting còn bản cũ tới khi deploy; máy build cần cấu hình CARTO key | TV3/TV5 deploy FE được cho phép, kiểm lại Customer/Admin trên Hosting trước khi đóng lỗi Cloud |
+| 20/11/2026 | Triển khai frontend | BUG-W8-02: `VITE_CARTO_API_KEY` trên Hosting là API Access Token, không phải key basemap; nền bản đồ báo "API KEY REQUIRED" | Nhóm chốt tuần 8 trước khi sửa | Bản đồ trống khi demo; token có quyền SQL API nằm trong bundle công khai | Ngay đầu tuần 9 (TV5): key basemap, deploy lại Hosting, xóa token cũ |
+| 20/11/2026 | Web | BUG-W8-03: trang Thông báo của Customer còn dữ liệu minh họa, chưa gọi `GET /v1/notifications` | Không thuộc checkpoint tuần 8 | AC08 không đạt trên giao diện dù API đã có | Tuần 9 (TV3) |
 | 18/11/2026 | Worker/Cloud | Chưa đủ deployment record và kiểm chi phí cho cấu hình chạy nền ổn định | Người dùng báo đã cấu hình lại và GPS mới đã tới Customer/Admin; chưa đọc lại revision/config đầy đủ | Không suy rộng ca kiểm sang vận hành liên tục hoặc NF11; 9 bản gốc DLQ trước đó chưa xác minh dọn | TV5/TV2 ghi billing/CPU/min/max, revision/source và chi phí thực; dọn bản DLQ đã xác minh theo quy trình nhóm |
 | 17/11/2026 | Worker | Worker NACK cả lỗi vĩnh viễn khi ghi DB (khóa ngoại `23503`, `driverId` không có trong `users`) | Phát hiện trên Cloud 16/11, chưa sửa | Message sai bị gửi lại liên tục, tốn tài nguyên Worker | Tuần 9 (TV2) |
 | 14/11/2026 | Triển khai | Image Cloud Build chỉ gắn tag `:latest` | Chưa cần rollback | Không rollback được về đúng bản cũ | Khi làm CI/CD tuần 9 |
