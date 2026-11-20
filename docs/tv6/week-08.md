@@ -21,9 +21,62 @@ Trạng thái sheet: FALSE. Checkpoint nhóm: Customer thấy vị trí tài x�
 | W8-TV6-02 | Review PR API09 `GET /v1/shipments/{id}/tracking` | PR của TV1 | Nhận xét trên PR | FR05, AC05, SC05 | Đã review 15/11 (TV1 đẩy thẳng vào `develop`, không có PR): đạt yêu cầu, có ghi chú bên dưới |
 | W8-TV6-03 | QA tracking: chủ đơn 200; Customer khác, tài xế khác 403; chưa có GPS; stale; reassign; terminal | API09 trên `develop` | Bảng kết quả TC05.1–05.3 | AC05, NF09 | Đã chạy local 15/11 (PASS 8/8); chưa chạy Cloud vì Cloud chưa có API09 |
 | W8-TV6-04 | GPS trùng và sai thứ tự đi qua Worker, đối chiếu SQL | Worker trên `develop`, file SQL 001 và 002 | Manifest, bảng đối chiếu SQL | AC04, NF08, TC04.3–04.5, LT06 | Đã chạy local 14/11 (PASS); chưa chạy Cloud |
-| W8-TV6-05 | Regression AC01–AC10 trên Cloud | Đợt deploy của TV5, tài khoản demo ba role | Bảng lỗi: ca test, dữ liệu tái hiện, mức ảnh hưởng, người sửa | AC01–AC10 | Chưa chạy: Cloud chưa có API09, chưa có tài khoản demo cho TV6. Đã phát hiện 1 lỗi ở local (TC03.4), xem bảng lỗi |
+| W8-TV6-05 | Regression AC01–AC10 trên Cloud | Đợt deploy của TV5, tài khoản demo ba role | Bảng lỗi: ca test, dữ liệu tái hiện, mức ảnh hưởng, người sửa | AC01–AC10 | Đã chạy trên Cloud 20/11: luồng chính AC01–AC06 và AC10 (tài xế không được gán) đạt; AC07, AC09 chưa kiểm được qua giao diện; AC08 lỗi UI; ca Customer khác chưa chạy vì chỉ có một tài khoản Customer |
 
 ## Đã làm được
+
+### W8-TV6-05: regression trên Cloud (20/11/2026, 13:20–13:35 giờ Việt Nam)
+
+Môi trường: Hosting `https://int3326e.web.app` (bundle `index-BLeSH4fI.js`, last-modified 20/11/2026 01:46 GMT), API `https://backend-service-wcvss3dnxa-as.a.run.app`, Cloud SQL `int3326esql` vừa được bật lại trước lượt chạy. Source `develop` lúc chạy: `888e9e8`. Chưa đọc được revision API và Worker đang nhận traffic (tài khoản dùng để kiểm không có quyền xem Cloud Run và Cloud SQL); bản ghi gần nhất trong `docs/coordination/week-08.md` là API `backend-service-00037-4c5`, Worker `worker-service-00026-xkd`. Cần TV5 xác nhận lại revision.
+
+Cách chạy: thao tác giao diện thật bằng ba tài khoản demo (Customer, Admin, Driver), mỗi tài khoản một tab riêng; người dùng tự đăng nhập, TV6 không nhập mật khẩu. Mã HTTP đọc từ trình duyệt. GPS dùng chế độ Mô phỏng, dữ liệu đơn là dữ liệu giả có ghi "TV6 W8".
+
+Đơn kiểm thử: `PF202611200DAG40`, ID `sh_01M7VSVBWM562CD2ZBHHYJHM0H`. Customer `usr_01M5SW7618CWKRAADEJZ7FAJX8`, Admin `usr_01M5SW7612Q3QZDNAY0AE7SWY9`, Driver `usr_01M5SW7617KAKAMEE4G0W50HRX`.
+
+| AC | Ca | Tài khoản | Kết quả trên Cloud | Kết luận |
+| --- | --- | --- | --- | --- |
+| Trước khi bật DB | Danh sách đơn | Customer | `/v1/auth/me` 200, `/v1/shipments` 503 | Cloud SQL đang dừng thì mọi API cần DB trả 503 |
+| AC01 | Tạo đơn qua form | Customer | `POST /v1/shipments` 201 lúc 13:21; tìm địa chỉ VIETMAP trả 5 kết quả | PASS |
+| AC02 | Gán tài xế | Admin | `POST /v1/shipments/{id}/assign` 200 lúc 13:24; màn hình báo máy chủ đã xác nhận phân công | PASS |
+| AC03 | Lấy hàng, giao hàng | Driver | `POST /pickup` 200 lúc 13:26 (Đang giao hàng); `POST /deliver` 200 lúc 13:31 (Giao thành công) | PASS |
+| AC04 | Gửi GPS mô phỏng | Driver | 33 lần `POST /v1/locations`, cả 33 trả 202; màn hình: chấp nhận 33, chờ gửi 0 | PASS |
+| AC05 | Tracking khi đang giao | Customer | `/tracking` 200, nhãn "GPS mới", vị trí tài xế đổi từ `21.028811, 105.805117` sang `21.028511, 105.804817` sau một chu kỳ polling | PASS. Vị trí đi được từ API qua Pub/Sub, Worker, SQL tới tracking |
+| AC05 | Tracking khi đã giao | Customer | Trang ghi "Đơn đã kết thúc. Đã dừng theo dõi và ẩn vị trí tài xế", không còn vị trí tài xế | PASS |
+| AC06 | Lịch sử đơn | Customer, Driver, Admin | Đủ 4 bước: tạo (Customer, 13:21), phân công (Admin, 13:24), lấy hàng (Driver, 13:26), giao (Driver, 13:31), đúng người thực hiện và tài xế | PASS |
+| AC07 | Giao trễ | | Đơn kiểm thử không đặt hạn giao nên chưa kiểm được cờ giao trễ | NOT RUN |
+| AC08 | Thông báo Customer | Customer | Trang Thông báo hiện "Dữ liệu minh họa", không gọi `GET /v1/notifications` | FAIL (UI chưa nối API, xem BUG-W8-03) |
+| AC09 | ETA | Customer | Trang tracking không hiển thị ETA, chỉ ghi "Hạn giao dự kiến không phải ETA" | NOT RUN qua giao diện; API có trả ETA theo review 15/11 |
+| AC10 | Tài xế không được gán mở đơn | Driver | Mở đơn `PF20261101R3YNHE` (chưa gán ai): `GET /v1/shipments/sh_01M6C3A0S47QRFKXF31TFFW6HF` trả 403, giao diện báo không còn quyền | PASS |
+| AC10 | Customer khác mở đơn | | Cả 11 đơn trên Cloud thuộc cùng một Customer; không có tài khoản Customer thứ hai | NOT RUN |
+| AC10 | Tài xế khác (sau gán lại) | | Hệ thống chỉ có một tài xế (`/v1/drivers` trả 1 dòng) nên không gán lại được | NOT RUN |
+| AC10 | Không token | | `GET /v1/auth/me`, `/v1/shipments/{id}/tracking` trả 401 (thăm dò 17/11 và 20/11) | PASS |
+
+### W8-TV6-05: regression local (17/11/2026)
+
+Source `develop` tại `7a41c55`, PostgreSQL thật trên máy (loopback, cụm tạm đã xóa sau khi chạy), Firebase giả lập.
+
+| Phần | Lệnh | Kết quả |
+| --- | --- | --- |
+| API, gồm các bộ SQL (`SHIPMENT_TEST_DATABASE_URL`, `TV6_ADMIN_TEST_DATABASE_URL`) | `npx vitest run` trong `apps/api` | 571 test: 561 đạt, 10 skip (7 ca Firebase Emulator chưa bật, 3 ca chỉ chạy ở chế độ khác), 0 lỗi |
+| Worker, `packages/types`, `infra/pubsub` (`WORKER_TEST_DATABASE_URL`) | `npx vitest run` ở gốc repo | 174/174 đạt |
+| Web | `npm test --workspace=@parcelflow/web` | 584/584 đạt |
+| Tích hợp UI → Nest → PGlite | `npm run test:integration --workspace=@parcelflow/web` | 12/12 đạt |
+| Typecheck API | `npm run typecheck --workspace=@parcelflow/api` | Đạt |
+
+Bộ API phủ AC01–AC10 ở mức local: tạo đơn và idempotency (AC01), gán và gán lại (AC02), pickup và deliver (AC03), ingest GPS (AC04), tracking theo quyền (AC05), lịch sử (AC06), giao trễ (AC07), thông báo (AC08), ETA trong response tracking (AC09, chưa có ca riêng của TV6), xác thực và phân quyền (AC10). Chạy Web cần `NODE_OPTIONS=--no-experimental-webstorage` với Node 26.
+
+Lượt chạy trên `7a41c55` vẫn còn BUG-W8-01. Ngay sau đó TV1 merge PR #38 (`fe02ad5`): ở nhánh no-op, đọc lại đơn bằng một câu SELECT mới sau khi có khóa, và gỡ `it.fails` ở TC03.4. Kiểm lại trên `ef93b55`: ca Deliver đồng thời (10 vòng mỗi lượt) đạt 3/3 lượt; toàn bộ API 561 đạt, 10 skip, 0 lỗi.
+
+### W8-TV6-01: thăm dò Cloud lần 3 (17/11/2026 20:53 giờ Việt Nam)
+
+| Kiểm tra | Kết quả | Kết luận |
+| --- | --- | --- |
+| API `GET /health` | 200 | Đã có route `/health` (PR #31) |
+| API `GET /v1/shipments/{id}/tracking` không token | 401 | Đã có API09 trên Cloud (trước là 404) |
+| Worker `GET /health` | 200 | Worker đang chạy |
+| Cloud SQL `int3326esql` | Stopped từ 16:48 ngày 17/11 theo [báo cáo nghiệm thu Driver của TV4](../evidence/driver-cloud-week8/report.md) | Mọi API cần DB sẽ trả 503 cho đến khi bật lại |
+
+Theo báo cáo của TV4: revision API `backend-service-00036-f67` (deploy 10:02 ngày 17/11), Worker `worker-service-00020-kht` (SHA `286f6db` theo bàn giao TV2), Hosting bundle `index-BIrSjnkZ.js`. Chưa có biên bản deploy của TV5 ghi SHA của image API.
 
 ### W8-TV6-02: review API09 (15/11/2026)
 
@@ -62,8 +115,10 @@ Toàn bộ API trên PostgreSQL thật: 571 test, 561 đạt, 10 skip, 0 lỗi, 
 
 | Mã | Ca test | Dữ liệu tái hiện | Mức ảnh hưởng | Người sửa | Trạng thái |
 | --- | --- | --- | --- | --- | --- |
-| BUG-W8-01 | TC03.4: hai `POST /v1/shipments/{id}/deliver` đồng thời của cùng tài xế hiện hành | Đơn PICKED_UP; gửi hai Deliver cùng lúc. Chạy dồn 60 vòng thì 59 vòng có một request trả 503 `SERVICE_UNAVAILABLE` thay vì 200 no-op | Trung bình. Dữ liệu vẫn đúng (chỉ một event DELIVERED, một thông báo, trạng thái không đổi) nhưng tài xế bấm lặp hoặc mạng gửi lại sẽ thấy lỗi giả | TV1 | Đã báo, chưa sửa |
+| BUG-W8-01 | TC03.4: hai `POST /v1/shipments/{id}/deliver` đồng thời của cùng tài xế hiện hành | Đơn PICKED_UP; gửi hai Deliver cùng lúc. Chạy dồn 60 vòng thì 59 vòng có một request trả 503 `SERVICE_UNAVAILABLE` thay vì 200 no-op | Trung bình. Dữ liệu vẫn đúng (chỉ một event DELIVERED, một thông báo, trạng thái không đổi) nhưng tài xế bấm lặp hoặc mạng gửi lại sẽ thấy lỗi giả | TV1 | Đã sửa 17/11 (PR #38, `fe02ad5`); TV6 kiểm lại đạt |
 
+| BUG-W8-02 | Mọi bản đồ trên web Cloud (chọn địa chỉ, tracking) | Mở form tạo đơn hoặc trang chi tiết trên `int3326e.web.app`: nền bản đồ chỉ hiện "API KEY REQUIRED" của CARTO | Trung bình. Vẫn chọn được điểm và hiện marker, nhưng người dùng không thấy bản đồ | TV3 (cấu hình key CARTO), TV5 (build Hosting) | Mới, 20/11 |
+| BUG-W8-03 | AC08: trang Thông báo của Customer | Mở `/customer/notifications`: trang ghi "Dữ liệu minh họa", hiện thông báo mẫu `#PF-89021`, không gọi `GET /v1/notifications` | Trung bình. Customer không thấy thông báo thật dù API đã có | TV3 | Mới, 20/11 |
 Nguyên nhân: request thứ hai chờ khóa `FOR UPDATE`. Ở mức READ COMMITTED, khi request đầu commit, PostgreSQL đọc lại dòng `shipments` mới (DELIVERED) nhưng subquery `terminalAt` trong `SHIPMENT_PROJECTION` vẫn dùng snapshot cũ nên không thấy event DELIVERED, `terminalAt` ra null và `validateShipmentRow` ném 503 ở nhánh no-op (`shipments.repository.ts`, `transitionByDriver`). Hướng sửa gợi ý: ở nhánh no-op, đọc lại đơn bằng một câu SELECT mới (snapshot mới) trước khi dựng response. Pickup đồng thời có cùng nhánh no-op nhưng không bị vì PICKED_UP không cần `terminalAt`.
 
 Test: trong `apps/api/src/qa/shipment-flow.postgres.spec.ts`, ca TC03.4 tách làm hai: kiểm tính toàn vẹn dữ liệu (PASS) và ca tái hiện lỗi đánh dấu `it.fails`. Khi TV1 sửa xong, ca `it.fails` sẽ báo lỗi để nhắc gỡ đánh dấu. Trước đó ca này chạy một vòng nên chỉ lộ lỗi khoảng 1/3 lượt chạy toàn bộ.
@@ -115,8 +170,8 @@ Chỉ gửi GET và POST không token, không tạo hay sửa dữ liệu.
 
 ## Còn thiếu và rủi ro
 
-- **Regression AC01–AC10 trên Cloud (W8-TV6-05) chưa chạy.** Cần TV5 deploy lại API từ `a9df87b` (để có API09 và `/health`), gửi SHA và revision, và có ba tài khoản demo DRIVER, CUSTOMER, ADMIN gửi cho TV6 qua kênh riêng (không đưa vào Git).
-- **BUG-W8-01** chờ TV1 sửa; sau khi sửa, gỡ `it.fails` ở ca TC03.4 và chạy lại.
-- QA tracking và GPS trùng, sai thứ tự mới chạy local; trên Cloud cần chạy lại sau đợt deploy và khi Worker có `DATABASE_URL` trỏ vào Cloud SQL.
-- ETA của TV1 chưa được TV6 kiểm (TC09.x thuộc tuần 10).
+- Regression trên Cloud còn thiếu ba ca: Customer khác mở đơn (cần thêm một tài khoản Customer có row trong `users`), tài xế khác sau gán lại (cần thêm một tài khoản Driver), giao trễ (cần đơn có hạn giao). AC09 chỉ kiểm được khi giao diện hiển thị ETA.
+- Chưa có revision API và Worker đọc trực tiếp cho lượt chạy 20/11; cần TV5 xác nhận.
+- BUG-W8-02 và BUG-W8-03 chờ TV3, TV5 sửa rồi chạy lại.
+- Cloud SQL đang bật sau lượt kiểm 20/11; người bật cần tắt lại nếu không dùng tiếp để tránh tốn phí.
 - Muốn chạy test Worker, cần build `@parcelflow/types` trước (`npm run build --workspace=@parcelflow/types`), nếu không vitest báo `Failed to resolve entry for package "@parcelflow/types"`.
