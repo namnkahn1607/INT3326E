@@ -2,6 +2,26 @@ import { describe, expect, it, vi } from 'vitest';
 import { logDependencyFailure } from './dependency-diagnostics';
 
 describe('Safe dependency diagnostics', () => {
+  it.each([
+    [4, 'GRPC_DEADLINE_EXCEEDED'], [5, 'GRPC_NOT_FOUND'], [7, 'GRPC_PERMISSION_DENIED'],
+    [8, 'GRPC_RESOURCE_EXHAUSTED'], [14, 'GRPC_UNAVAILABLE'], [16, 'GRPC_UNAUTHENTICATED'],
+    [99, 'UNKNOWN'], ['7', 'UNKNOWN'],
+  ])('maps Pub/Sub status %s without forwarding provider details', (code, expected) => {
+    const logger = { error: vi.fn() };
+    logDependencyFailure(logger, 'locations.publish', {
+      code, message: 'private credentials', details: 'private provider details', metadata: { token: 'private token' },
+    });
+    expect(logger.error).toHaveBeenCalledExactlyOnceWith(JSON.stringify({
+      event: 'dependency_failure', stage: 'locations.publish', code: expected,
+    }));
+  });
+
+  it('does not interpret numeric database codes as Pub/Sub statuses', () => {
+    const logger = { error: vi.fn() };
+    logDependencyFailure(logger, 'users.lookup', { code: 7 });
+    expect(JSON.parse(logger.error.mock.calls[0][0]).code).toBe('UNKNOWN');
+  });
+
   it.each(['28P01', '42501', '42P01', '42703', '42P10', '42804', '23503', 'ECONNREFUSED', 'ENOENT', 'auth/insufficient-permission'])(
     'logs allowlisted technical code %s without serializing the error', code => {
       const logger = { error: vi.fn() };

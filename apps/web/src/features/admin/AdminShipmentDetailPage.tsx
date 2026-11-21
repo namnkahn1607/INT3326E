@@ -8,6 +8,7 @@ import { useAuth } from '../auth/useAuth'
 import { adminErrorMessage } from './admin-errors'
 import { AdminShipmentDetail } from './AdminShipmentDetail'
 import { ShipmentTracking } from '../../components/shipment/ShipmentTracking'
+import { useTrackingDetailSync } from '../../hooks/useTrackingDetailSync'
 import './admin-api.css'
 
 type Phase = 'loading' | 'ready' | 'review' | 'submitting' | 'reconciling' | 'blocked'
@@ -40,6 +41,7 @@ function Detail({ id }: { id: string }) {
   const reviewPanel = useRef<HTMLElement | null>(null)
   const refreshButton = useRef<HTMLButtonElement | null>(null)
   const previousPhase = useRef<Phase>('loading')
+  const onStateChange = useTrackingDetailSync(shipment, () => { void readLatest(undefined, '', true) })
 
   useEffect(() => {
     mounted.current = true
@@ -58,7 +60,7 @@ function Detail({ id }: { id: string }) {
     previousPhase.current = phase
   }, [phase])
 
-  async function readLatest(confirmed?: ShipmentResponse, message = 'Đã đọc lại trạng thái hiện tại.') {
+  async function readLatest(confirmed?: ShipmentResponse, message = 'Đã đọc lại trạng thái hiện tại.', keepOnError = false) {
     reading.current?.abort()
     const controller = new AbortController()
     reading.current = controller
@@ -72,8 +74,11 @@ function Detail({ id }: { id: string }) {
       if (!controller.signal.aborted) { setShipment(value); setPhase('ready'); setNotice(resultMessage) }
     } catch (cause) {
       if (!controller.signal.aborted) {
-        setShipment(confirmedSnapshot ?? null); setError(cause); setPhase('blocked')
-        setNotice(confirmedSnapshot ? resultMessage : 'Chưa xác định được kết quả. Thao tác ghi đang bị khóa.')
+        // Tự đọc lại theo tracking mà lỗi thì giữ chi tiết cũ để Admin vẫn xem được, chỉ khóa thao tác ghi.
+        setShipment(current => confirmedSnapshot ?? (keepOnError ? current : null)); setError(cause); setPhase('blocked')
+        setNotice(confirmedSnapshot ? resultMessage : keepOnError
+          ? 'Chưa cập nhật được chi tiết đơn, thông tin dưới đây có thể đã cũ. Thao tác ghi đang bị khóa.'
+          : 'Chưa xác định được kết quả. Thao tác ghi đang bị khóa.')
       }
     }
   }
@@ -103,11 +108,13 @@ function Detail({ id }: { id: string }) {
   }
 
   const busy = phase === 'loading' || phase === 'submitting' || phase === 'reconciling'
-  const canFail = shipment?.status === 'PICKED_UP' && phase !== 'blocked'
+  const canFail = shipment?.status === 'PICKED_UP' && phase !== 'blocked' && phase !== 'reconciling'
   return <section className="admin-detail-panel" aria-busy={busy}>
     {phase === 'loading' && <DataSkeleton label="Đang tải chi tiết đơn…" detail />}
-    {shipment && <AdminShipmentDetail shipment={shipment} />}
-    {shipment && <ShipmentTracking key={shipment.driverId + ':' + shipment.status} id={shipment.id} status={shipment.status} />}
+    {phase === 'reconciling' && <DataSkeleton label="Đang cập nhật chi tiết đơn…" detail />}
+    {shipment && phase !== 'reconciling' && <AdminShipmentDetail shipment={shipment} />}
+    {shipment && <ShipmentTracking id={shipment.id} status={shipment.status} onStateChange={onStateChange}
+      pickupLocation={shipment.pickupLocation} dropoffLocation={shipment.dropoffLocation} />}
     {notice && <p className="shipment-action-notice" role="status">{notice}</p>}
     {!!error && <p className="shipment-action-error" role="alert">{error instanceof ApiError && error.status === 400
       ? 'Thông tin không hợp lệ. Kiểm tra mã đơn và lý do.' : adminErrorMessage(error)}</p>}

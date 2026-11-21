@@ -143,14 +143,15 @@ async function reviewPage({ width = 390, height = 844, query = '', mode = 'accep
     assert.deepEqual(Object.keys(payload).sort(), ['clientTimestamp', 'lat', 'lng', 'seq'])
     sent.push(payload)
     if (mode === 'pending') return
-    if (mode === 'network') { await route.abort('failed'); return }
+    if (mode === 'network' || mode === 'network-once' && sent.length === 1) { await route.abort('failed'); return }
     const body = mode === 'invalid' ? { status: 'OK' } : typeof mode === 'number'
       ? { code: 'REVIEW_REJECTED', detail: 'private server details' }
       : { status: 'ACCEPTED', eventId: 'gps-browser-review', receivedAt: new Date().toISOString() }
     await route.fulfill({ status: typeof mode === 'number' ? mode : 202, contentType: 'application/json', body: JSON.stringify(body) })
   })
-  await page.clock.install({ time: new Date('2026-11-02T01:00:00.000Z') })
-  await page.clock.pauseAt(new Date('2026-11-02T01:00:01.000Z'))
+  const clockStart = new Date()
+  await page.clock.install({ time: clockStart })
+  await page.clock.pauseAt(new Date(clockStart.getTime() + 1000))
   await page.goto(`${origin}/.vitest/driver-dashboard-review/index.html${query}`)
   await page.locator('h1').first().waitFor()
   return { page, sent, context, aborted, shipmentRequests, shipmentAborted }
@@ -231,6 +232,7 @@ try {
       await page.getByLabel('Chọn nguồn vị trí').selectOption('browser')
       await page.clock.runFor(16000)
       assert.equal(sent.length, 0)
+      await page.clock.setSystemTime(new Date())
       await start(page)
       assert.equal(await page.getByLabel('Chọn nguồn vị trí').isDisabled(), true)
       await page.clock.runFor(8000)
@@ -239,6 +241,7 @@ try {
       const measuredAt = await page.evaluate(() => window.driverReviewMeasuredAt)
       assert.equal(sent[0].clientTimestamp, new Date(measuredAt).toISOString())
       await context.setGeolocation({ latitude: 10.763, longitude: 106.661 })
+      await page.clock.setSystemTime(new Date())
       await page.clock.runFor(8000)
       await contains(page, 'Số mẫu được API chấp nhận: 2')
       assert.deepEqual([sent[1].lat, sent[1].lng], [10.763, 106.661])
@@ -317,7 +320,7 @@ try {
       } finally { await context.close() }
     })
   }
-  await check('seven-second timeout without automatic retry', async () => {
+  await check('seven-second timeout retains the sample but Stop pauses retry', async () => {
     const { page, context, sent, aborted } = await reviewPage({ mode: 'pending' })
     try {
       await start(page)
@@ -325,12 +328,100 @@ try {
       await eventually(() => assert.equal(sent.length, 1))
       await stop(page)
       await page.clock.runFor(7000)
-      await contains(page, 'Không tự gửi lại')
+      await contains(page, 'giữ để gửi lại')
       await eventually(() => assert.deepEqual(aborted, ['net::ERR_ABORTED']))
       await page.clock.runFor(16000)
       assert.equal(sent.length, 1)
     } finally { await context.close() }
   })
+  await check('network retry preserves the exact measured sample', async () => {
+    const { page, context, sent } = await reviewPage({ mode: 'network-once' })
+    try {
+      await start(page)
+      await page.clock.runFor(8000)
+      await contains(page, 'Không kết nối được')
+      await contains(page, 'Số mẫu chờ gửi: 1')
+      await page.clock.runFor(1000)
+      await contains(page, 'Số mẫu được API chấp nhận: 1')
+      assert.equal(sent.length, 2)
+      assert.deepEqual(sent[0], sent[1])
+      await stop(page)
+    } finally { await context.close() }
+  })
+  for (const scenario of ['accuracy', 'stale', 'invalid']) {
+    await check(`browser acquisition skips ${scenario} and recovers`, async () => {
+      const { page, context, sent } = await reviewPage()
+      try {
+        await page.evaluate(scenario => {
+          window.driverReviewBadSample = true
+          navigator.geolocation.getCurrentPosition = success => success({
+            coords: { latitude: scenario === 'invalid' && window.driverReviewBadSample ? 91 : 21,
+              longitude: 105, accuracy: scenario === 'accuracy' && window.driverReviewBadSample ? 500 : 10 },
+            timestamp: Date.now() - (scenario === 'stale' && window.driverReviewBadSample ? 30001 : 0),
+          })
+        }, scenario)
+        await page.getByLabel('Chọn nguồn vị trí').selectOption('browser')
+        await start(page)
+        await page.clock.runFor(8000)
+        await contains(page, 'Đã bỏ qua')
+        assert.equal(sent.length, 0)
+        await contains(page, 'Đang phát mẫu')
+        await page.evaluate(() => { window.driverReviewBadSample = false })
+        await page.clock.runFor(8000)
+        await contains(page, 'Số mẫu được API chấp nhận: 1')
+        assert.equal(sent[0].seq, 1)
+        await stop(page)
+      } finally { await context.close() }
+    })
+  }
+  await check('offline buffer survives Stop and replays unchanged only after Start', async () => {
+    const { page, context, sent } = await reviewPage()
+    try {
+      await context.setOffline(true)
+      await start(page)
+      await page.clock.runFor(16000)
+      await contains(page, 'Số mẫu chờ gửi: 2')
+      await contains(page, 'Đang mất mạng')
+      assert.equal(sent.length, 0)
+      const lastSample = JSON.parse(await page.locator('pre code').textContent())
+      await stop(page)
+      await context.setOffline(false)
+      await page.clock.runFor(1000)
+      assert.equal(sent.length, 0)
+      await page.screenshot({ path: path.join(output, 'buffer-paused.png'), fullPage: true })
+      await start(page)
+      await contains(page, 'Số mẫu được API chấp nhận: 2')
+      await contains(page, 'Số mẫu chờ gửi: 0')
+      assert.deepEqual(sent[1], lastSample)
+      assert.deepEqual(sent.map(event => event.seq), [1, 2])
+      await stop(page)
+      await noOverflow(page)
+    } finally { await context.close() }
+  })
+  for (const action of ['Rời trang thử', 'Đăng xuất', 'Đổi tài khoản thử']) {
+    await check(`offline buffer cleanup: ${action}`, async () => {
+      const { page, context, sent } = await reviewPage()
+      try {
+        await context.setOffline(true)
+        await start(page)
+        await page.clock.runFor(16000)
+        await contains(page, 'Số mẫu chờ gửi: 2')
+        await page.getByRole(action === 'Rời trang thử' ? 'link' : 'button', { name: action, exact: true }).click()
+        await context.setOffline(false)
+        await page.clock.runFor(16000)
+        assert.equal(sent.length, 0)
+        if (action === 'Đổi tài khoản thử') {
+          await contains(page, 'Số mẫu chờ gửi: 0')
+          await start(page)
+          await page.clock.runFor(8000)
+          await contains(page, 'Số mẫu được API chấp nhận: 1')
+          assert.equal(sent.length, 1)
+          assert.equal(sent[0].seq, 1)
+          await stop(page)
+        }
+      } finally { await context.close() }
+    })
+  }
   for (const action of ['Rời trang thử', 'Đăng xuất', 'Đổi tài khoản thử']) {
     await check(`pending request cleanup: ${action}`, async () => {
       const { page, context, sent, aborted } = await reviewPage({ mode: 'pending' })
@@ -429,6 +520,7 @@ try {
   assert.deepEqual(externalRequests, [], 'unexpected external requests')
   const sourceRevision = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repo, encoding: 'utf8' }).trim()
   const sourceFiles = ['apps/web/src/features/driver/DriverPlaceholderPage.tsx', 'apps/web/src/features/driver/GpsEmitter.tsx',
+    'apps/web/src/features/driver/gps-delivery.ts', 'apps/web/src/features/driver/gps-sample.ts',
     'apps/web/src/features/driver/driver.css', 'apps/web/src/layouts/DriverLayout.tsx',
     'apps/web/src/api/client.ts', 'apps/web/src/api/endpoints/locations.ts', 'apps/web/scripts/verify-driver-dashboard.mjs',
     'apps/web/src/features/driver/DriverShipments.tsx', 'apps/web/src/features/driver/DriverShipmentDetailPage.tsx',

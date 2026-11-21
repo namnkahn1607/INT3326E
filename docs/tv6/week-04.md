@@ -21,7 +21,7 @@ Scaffold Auth module (Firebase Auth), phác thảo module Admin.
 
 - Code Auth: `691ae07`, `649a4f5`, `d82e0b9`, `a409693` (05/10). Scaffold Admin: `1883408`.
 - Quyết định ADMIN: `73b998c`, `d266269`, `b09462a` cùng PR #4 và #11 (09/10), gồm cả test từ chối claim DISPATCHER.
-- Tất cả đã vào `develop`. Môi trường kiểm: local, mock. Hợp đồng ở [auth-rbac.md](../auth-rbac.md).
+- Tất cả đã vào `develop`. Môi trường kiểm: local, mock. Hợp đồng ở [auth-rbac.md](../contracts/auth-rbac.md).
 
 ## Còn thiếu và rủi ro
 

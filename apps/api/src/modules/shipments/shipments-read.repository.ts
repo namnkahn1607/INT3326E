@@ -1,11 +1,12 @@
 import { HttpException, Inject, Injectable, ServiceUnavailableException } from '@nestjs/common';
 import type { Pool } from 'pg';
 import { ApiProblem } from '../../common/api-problem';
+import type { ShipmentTrackingResponse } from '../location/dto/tracking-response.dto';
 import type { BusinessUser } from '../users/entities/user.entity';
 import { USER_DATABASE } from '../users/user-database.provider';
 import { encodeShipmentCursor, shipmentScope, type ShipmentListQuery } from './dto/shipment-list-query';
 import type { ShipmentDetailDto } from './dto/shipment-response.dto';
-import { SHIPMENT_PROJECTION, shipmentResponse, type ShipmentRow } from './shipment-response.mapper';
+import { SHIPMENT_PROJECTION, shipmentResponse, shipmentTrackingResponse, type ShipmentRow, type ShipmentTrackingRow } from './shipment-response.mapper';
 
 @Injectable()
 export class ShipmentsReadRepository {
@@ -55,6 +56,32 @@ export class ShipmentsReadRepository {
       if (!row) throw new ApiProblem(404, 'RESOURCE_NOT_FOUND', 'Không tìm thấy đơn hàng');
       if (!row.allowed) throw new ApiProblem(403, 'FORBIDDEN_RESOURCE', 'Không có quyền truy cập');
       return { ...shipmentResponse(row), statusHistory: row.statusHistory };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      throw new ServiceUnavailableException();
+    }
+  }
+
+  async tracking(actor: BusinessUser, id: string): Promise<ShipmentTrackingResponse> {
+    if (!this.pool) throw new ServiceUnavailableException();
+    try {
+      // Đọc đơn, quyền xem và vị trí hiện hành trong cùng một câu SQL (MVCC snapshot) để không lộ vị trí tài xế cũ sau khi gán lại.
+      const { rows } = await this.pool.query<ShipmentTrackingRow & { allowed: boolean }>(`
+        SELECT ${SHIPMENT_PROJECTION},
+          ($2::text = 'ADMIN' OR ($2 = 'CUSTOMER' AND s."senderId" = $3)
+            OR ($2 = 'DRIVER' AND s."driverId" = $3)) AS allowed,
+          c."driverId" AS "locationDriverId",
+          c.lat AS "currentLat",
+          c.lng AS "currentLng",
+          c."clientTimestamp" AS "locationClientTimestamp",
+          c."receivedAt" AS "lastLocationUpdatedAt"
+        FROM shipments s
+        LEFT JOIN current_locations c ON c."driverId" = s."driverId"
+        WHERE s.id = $1`, [id, ...shipmentScope(actor)]);
+      const row = rows[0];
+      if (!row) throw new ApiProblem(404, 'RESOURCE_NOT_FOUND', 'Không tìm thấy đơn hàng');
+      if (!row.allowed) throw new ApiProblem(403, 'FORBIDDEN_RESOURCE', 'Không có quyền truy cập');
+      return shipmentTrackingResponse(row);
     } catch (error) {
       if (error instanceof HttpException) throw error;
       throw new ServiceUnavailableException();

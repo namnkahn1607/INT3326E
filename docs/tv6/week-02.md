@@ -19,9 +19,9 @@ Soạn Auth/RBAC, liên kết người dùng, thông báo và ma trận QA.
 
 ## Đã làm được
 
-- [`../auth-rbac.md`](../auth-rbac.md): hợp đồng Auth/RBAC, 337 dòng sau khi tách.
+- [`../auth-rbac.md`](../contracts/auth-rbac.md): hợp đồng Auth/RBAC, 337 dòng sau khi tách.
 - [Bàn giao Auth và RBAC](auth-rbac-handoff.md): tích hợp, cấp claims, kết quả local.
-- [`../qa-test-plan.md`](../qa-test-plan.md): bản nháp ma trận ADM01–ADM17 và bảng checkpoint nghiệp vụ.
+- [`../qa-test-plan.md`](../qa/test-plan.md): bản nháp ma trận ADM01–ADM17 và bảng checkpoint nghiệp vụ.
 
 ## Còn thiếu và rủi ro
 

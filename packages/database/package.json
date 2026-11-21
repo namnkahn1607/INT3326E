@@ -2,5 +2,5 @@
   "name": "@parcelflow/database",
   "version": "0.1.0",
   "private": true,
-  "description": "Week 1 Prisma schema draft; migrations and client generation are deferred"
+  "description": "SQL tạo bảng PostgreSQL cho API và Worker"
 }

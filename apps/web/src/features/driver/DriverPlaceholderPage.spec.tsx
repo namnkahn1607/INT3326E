@@ -38,8 +38,8 @@ afterEach(async () => {
   vi.unstubAllGlobals()
 })
 
-async function render(user: UserProfile | null = driver, loading = false) {
-  const auth: AuthContextType = { user, token: 'token', loading, error: null, login: vi.fn(), logout: vi.fn(), refresh: vi.fn() }
+async function render(user: UserProfile | null = driver, loading = false, token = 'token') {
+  const auth: AuthContextType = { user, token, loading, error: null, login: vi.fn(), logout: vi.fn(), refresh: vi.fn() }
   await act(async () => root.render(<StrictMode><AuthContext.Provider value={auth}>
     <MemoryRouter initialEntries={['/driver']}><Routes>
       <Route path="/login" element={<p>LOGIN</p>} />
@@ -104,7 +104,7 @@ describe('Driver dashboard and GPS integration', () => {
     expect(send.mock.calls[1][0].seq).toBe(2)
   })
 
-  it('does not queue or overlap samples while a previous request is pending', async () => {
+  it('buffers without overlapping requests and pauses replay until Start after Stop', async () => {
     const request = deferred()
     send.mockReturnValueOnce(request.promise)
     await render()
@@ -113,21 +113,24 @@ describe('Driver dashboard and GPS integration', () => {
     expect(node.textContent).toContain('Đang gửi mẫu GPS')
     await tick(8000)
     expect(send).toHaveBeenCalledTimes(1)
-    expect(node.textContent).toContain('Đã bỏ qua 1 mẫu')
+    expect(node.textContent).toContain('Số mẫu chờ gửi: 2')
     await click('Dừng')
     await act(async () => request.resolve(accepted))
     expect(node.textContent).toContain('Số mẫu được API chấp nhận: 1')
     await tick(8000)
     expect(send).toHaveBeenCalledTimes(1)
+    await click('Bắt đầu phát mẫu')
+    expect(send).toHaveBeenCalledTimes(2)
+    expect(send.mock.calls[1][0].seq).toBe(2)
   })
 
   it.each([
-    [401, 'UNAUTHENTICATED', 'đăng nhập lại'], [403, 'FORBIDDEN', 'không có quyền'],
-    [409, 'USER_NOT_PROVISIONED', 'chưa được liên kết'], [404, 'HTTP_ERROR', 'chưa sẵn sàng'],
-    [400, 'VALIDATION_ERROR', 'từ chối dữ liệu'], [503, 'UNAVAILABLE', 'kiểm tra dịch vụ'],
-    [0, 'REQUEST_TIMEOUT', 'Không tự gửi lại'], [0, 'NETWORK_ERROR', 'Không kết nối được'],
-    [202, 'INVALID_RESPONSE', 'chưa đúng định dạng'],
-  ])('reports %s/%s without counting a failure or exposing server details', async (status, code, message) => {
+    [401, 'UNAUTHENTICATED', 'đăng nhập lại', 0], [403, 'FORBIDDEN', 'không có quyền', 0],
+    [409, 'USER_NOT_PROVISIONED', 'chưa được liên kết', 0], [404, 'HTTP_ERROR', 'chưa sẵn sàng', 1],
+    [400, 'VALIDATION_ERROR', 'từ chối dữ liệu', 1], [503, 'UNAVAILABLE', 'kiểm tra dịch vụ', 2],
+    [0, 'REQUEST_TIMEOUT', 'giữ để gửi lại', 2], [0, 'NETWORK_ERROR', 'Không kết nối được', 2],
+    [202, 'INVALID_RESPONSE', 'chưa đúng định dạng', 1],
+  ] as const)('reports %s/%s without counting a failure or exposing server details', async (status, code, message, successes) => {
     send.mockRejectedValueOnce(new ApiError(status, code))
     await render()
     await click('Bắt đầu phát mẫu')
@@ -136,8 +139,10 @@ describe('Driver dashboard and GPS integration', () => {
     expect(node.textContent).toContain('Số mẫu được API chấp nhận: 0')
     expect(send).toHaveBeenCalledTimes(1)
     await tick(8000)
-    expect(node.querySelector('[role="alert"]')).toBeNull()
-    expect(node.textContent).toContain('Số mẫu được API chấp nhận: 1')
+    if (successes === 0) expect(node.querySelector('[role="alert"]')?.textContent).toContain(message)
+    else expect(node.querySelector('[role="alert"]')).toBeNull()
+    expect(node.textContent).toContain(`Số mẫu được API chấp nhận: ${successes}`)
+    expect(send).toHaveBeenCalledTimes(successes === 0 ? 1 : successes + 1)
   })
 
   it('aborts on unmount and does not send further samples', async () => {
@@ -203,7 +208,7 @@ describe('Driver dashboard and GPS integration', () => {
     expect(locate).not.toHaveBeenCalled()
     await click('Bắt đầu phát mẫu')
     await tick(8000)
-    await act(async () => locate.mock.calls[0][0]({ coords: { latitude: 10.76, longitude: 106.66 },
+    await act(async () => locate.mock.calls[0][0]({ coords: { latitude: 10.76, longitude: 106.66, accuracy: 10 },
       timestamp: Date.parse('2026-10-26T03:00:07.500Z') } as GeolocationPosition))
     expect(send).toHaveBeenCalledTimes(1)
     expect(send.mock.calls[0][0]).toEqual({ lat: 10.76, lng: 106.66, seq: 1,
@@ -233,9 +238,98 @@ describe('Driver dashboard and GPS integration', () => {
     if (action === 'account') await render({ ...driver, id: 'second-driver', displayName: 'Bình' })
     if (action === 'logout') await render(null)
     if (action === 'unmount') await act(async () => root.render(<p>Other route</p>))
-    await act(async () => success({ coords: { latitude: 10.76, longitude: 106.66 }, timestamp: Date.now() } as GeolocationPosition))
+    await act(async () => success({ coords: { latitude: 10.76, longitude: 106.66, accuracy: 10 }, timestamp: Date.now() } as GeolocationPosition))
     await tick(16000)
     expect(send).not.toHaveBeenCalled()
     expect(locate).toHaveBeenCalledTimes(1)
+  })
+
+  it('holds samples offline and replays on reconnect without acquiring a new sample', async () => {
+    vi.stubGlobal('navigator', { onLine: false })
+    await render()
+    await click('Bắt đầu phát mẫu')
+    await tick(16000)
+    expect(send).not.toHaveBeenCalled()
+    expect(node.textContent).toContain('Số mẫu chờ gửi: 2')
+    expect(node.textContent).toContain('Đang mất mạng')
+    await act(async () => {
+      vi.stubGlobal('navigator', { onLine: true })
+      window.dispatchEvent(new Event('online'))
+    })
+    expect(send.mock.calls.map(([event]) => event.seq)).toEqual([1, 2])
+    expect(send.mock.calls.map(([event]) => event.clientTimestamp)).toEqual([
+      '2026-10-26T03:00:08.000Z', '2026-10-26T03:00:16.000Z',
+    ])
+    expect(node.textContent).toContain('Số mẫu chờ gửi: 0')
+    expect(node.textContent).toContain('Số mẫu được API chấp nhận: 2')
+  })
+
+  it.each(['account', 'logout', 'unmount'])('never replays an offline account buffer after %s', async action => {
+    vi.stubGlobal('navigator', { onLine: false })
+    await render()
+    await click('Bắt đầu phát mẫu')
+    await tick(16000)
+    expect(node.textContent).toContain('Số mẫu chờ gửi: 2')
+    if (action === 'account') await render({ ...driver, id: 'second-driver', displayName: 'Bình' })
+    if (action === 'logout') await render(null)
+    if (action === 'unmount') await act(async () => root.render(<p>Other route</p>))
+    await act(async () => {
+      vi.stubGlobal('navigator', { onLine: true })
+      window.dispatchEvent(new Event('online'))
+    })
+    await tick(8000)
+    expect(send).not.toHaveBeenCalled()
+    if (action === 'account') {
+      expect(node.textContent).toContain('Số mẫu chờ gửi: 0')
+      await click('Bắt đầu phát mẫu')
+      await tick(8000)
+      expect(send).toHaveBeenCalledTimes(1)
+      expect(send.mock.calls[0][0]).toMatchObject({ seq: 1, clientTimestamp: '2026-10-26T03:00:32.000Z' })
+    }
+  })
+
+  it('cleans up backoff on logout and does not retry using a later account', async () => {
+    send.mockRejectedValueOnce(new ApiError(0, 'NETWORK_ERROR'))
+    await render()
+    await click('Bắt đầu phát mẫu')
+    await tick(8000)
+    expect(node.textContent).toContain('Số mẫu chờ gửi: 1')
+    await render(null)
+    await tick(60_000)
+    expect(send).toHaveBeenCalledTimes(1)
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('pauses replay synchronously when Stop and the previous response happen in one turn', async () => {
+    const request = deferred()
+    send.mockReturnValueOnce(request.promise)
+    await render()
+    await click('Bắt đầu phát mẫu')
+    await tick(16000)
+    await act(async () => {
+      const stop = [...node.querySelectorAll('button')].find(item => item.textContent === 'Dừng')!
+      stop.click()
+      request.resolve(accepted)
+    })
+    expect(send).toHaveBeenCalledTimes(1)
+    expect(node.textContent).toContain('Số mẫu chờ gửi: 1')
+  })
+
+  it('uses the account token and refreshes it without dropping that account buffer', async () => {
+    vi.stubGlobal('navigator', { onLine: false })
+    await render(driver, false, 'first-account-token')
+    await click('Bắt đầu phát mẫu')
+    await tick(8000)
+    await render(driver, false, 'refreshed-account-token')
+    expect(node.textContent).toContain('Số mẫu chờ gửi: 1')
+    await act(async () => {
+      vi.stubGlobal('navigator', { onLine: true })
+      window.dispatchEvent(new Event('online'))
+    })
+    expect(send.mock.calls[0][2]).toBe('refreshed-account-token')
+    await render({ ...driver, id: 'second-driver' }, false, 'second-account-token')
+    await click('Bắt đầu phát mẫu')
+    await tick(8000)
+    expect(send.mock.calls[1][2]).toBe('second-account-token')
   })
 })

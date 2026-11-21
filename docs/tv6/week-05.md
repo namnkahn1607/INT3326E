@@ -16,7 +16,7 @@ Tích hợp Firebase Auth đầy đủ (custom claims 3 role), auth guard middle
 | W5-TV6-02 | Công cụ cấp/đổi role cho operator (`auth:set-role`, mặc định chỉ preview) | W5-TV6-01 | `tools/set-role.ts` | AC10 | Đã có, chưa chạy trên project thật |
 | W5-TV6-03 | Nối đăng nhập Firebase ở frontend, `/auth/me`, route theo role | W5-TV6-01 | `features/auth` trong `apps/web` | AC10 | Đã có, 29 test frontend |
 | W5-TV6-04 | Liên kết user nghiệp vụ: `UsersRepository`, `BusinessUserGuard`, lỗi 409/503 dạng ProblemDetails | W5-TV6-01 | Guard và exception filter | AC10, AC01 | Đã có, SQL mock |
-| W5-TV6-05 | Bàn giao cấu hình frontend cho TV5 | W5-TV6-03 | [frontend-config-handoff.md](../frontend-config-handoff.md) | NF12 | Đã có |
+| W5-TV6-05 | Bàn giao cấu hình frontend cho TV5 | W5-TV6-03 | [frontend-config-handoff.md](../features/frontend-config-handoff.md) | NF12 | Đã có |
 
 ## Đã làm được
 

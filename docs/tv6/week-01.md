@@ -17,7 +17,7 @@ Tổng hợp vai trò, quyền, tiêu chí nghiệm thu, danh mục tài liệu.
 
 ## Đã làm được
 
-- `docs/auth-rbac.md` (commit `bf93103`, 05/10): định nghĩa hợp đồng Firebase Auth và RBAC, 345 dòng ở bản đầu.
+- `docs/contracts/auth-rbac.md` (commit `bf93103`, 05/10): định nghĩa hợp đồng Firebase Auth và RBAC, 345 dòng ở bản đầu.
 - Quyết định 09/10: giữ ba role, gộp điều phối vào ADMIN, không có role Dispatcher riêng.
 
 ## Còn thiếu và rủi ro

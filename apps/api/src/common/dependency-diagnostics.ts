@@ -1,7 +1,7 @@
 import type { Logger } from '@nestjs/common';
 
 export type DependencyStage =
-  | 'auth.verify-token' | 'auth.lookup-user' | 'database.idle' | 'users.lookup' | 'notifications.list'
+  | 'auth.verify-token' | 'auth.lookup-user' | 'database.idle' | 'users.lookup' | 'notifications.list' | 'locations.publish'
   | 'shipments.connect' | 'shipments.begin' | 'shipments.idempotency.claim' | 'shipments.clock'
   | 'shipments.idempotency.read' | 'shipments.idempotency.refresh' | 'shipments.build'
   | 'shipments.insert' | 'shipments.event.insert' | 'shipments.notification.insert'
@@ -26,11 +26,20 @@ const driverTimeouts = new Map([
   ['Query read timeout', 'QUERY_TIMEOUT'],
 ]);
 
+const pubsubCodes = new Map([
+  [1, 'GRPC_CANCELLED'], [2, 'GRPC_UNKNOWN'], [3, 'GRPC_INVALID_ARGUMENT'],
+  [4, 'GRPC_DEADLINE_EXCEEDED'], [5, 'GRPC_NOT_FOUND'], [6, 'GRPC_ALREADY_EXISTS'],
+  [7, 'GRPC_PERMISSION_DENIED'], [8, 'GRPC_RESOURCE_EXHAUSTED'], [9, 'GRPC_FAILED_PRECONDITION'],
+  [10, 'GRPC_ABORTED'], [11, 'GRPC_OUT_OF_RANGE'], [12, 'GRPC_UNIMPLEMENTED'],
+  [13, 'GRPC_INTERNAL'], [14, 'GRPC_UNAVAILABLE'], [15, 'GRPC_DATA_LOSS'], [16, 'GRPC_UNAUTHENTICATED'],
+]);
+
 export function logDependencyFailure(logger: Pick<Logger, 'error'>, stage: DependencyStage, error?: unknown): void {
   let code = 'UNKNOWN';
   try {
     const candidate = error && typeof error === 'object' && 'code' in error ? error.code : undefined;
-    if (typeof candidate === 'string' && safeCodes.has(candidate)) code = candidate;
+    if (stage === 'locations.publish' && typeof candidate === 'number') code = pubsubCodes.get(candidate) ?? 'UNKNOWN';
+    else if (typeof candidate === 'string' && safeCodes.has(candidate)) code = candidate;
     else if (error instanceof Error) code = driverTimeouts.get(error.message) ?? 'UNKNOWN';
   } catch { /* Diagnostic accessors must not replace the original failure. */ }
   try {

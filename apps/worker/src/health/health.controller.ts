@@ -2,7 +2,8 @@ import { Controller, Get } from '@nestjs/common';
 
 @Controller()
 export class HealthController {
-  @Get('healthz')
+  // Cloud Run chặn /healthz ở tầng Google, nên mở thêm /health.
+  @Get(['healthz', 'health'])
   check() {
     return { status: 'ok' };
   }

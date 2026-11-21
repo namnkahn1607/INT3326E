@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { assertGpsLocationRequest, MAX_GPS_SEQUENCE } from '@parcelflow/types'
 import type { GpsLocationRequest } from '@parcelflow/types'
+import { isGpsTimestampInWindow, MAX_GPS_ACCURACY_METERS, MAX_GPS_SAMPLE_AGE_MS } from './gps-sample'
 
 export type GpsEmitterDraftEvent = GpsLocationRequest
 
 interface GpsEmitterProps {
   driverId: string
   onEmit?: (event: GpsEmitterDraftEvent) => void
+  onRunningChange?: (running: boolean) => void
   description?: string
 }
 
@@ -26,7 +28,7 @@ function positionError(code: number): string {
   return 'Không lấy được vị trí từ trình duyệt. Hãy thử lại hoặc chọn Mô phỏng.'
 }
 
-export function GpsEmitter({ driverId, onEmit, description }: GpsEmitterProps) {
+export function GpsEmitter({ driverId, onEmit, onRunningChange, description }: GpsEmitterProps) {
   const [source, setSource] = useState<'simulator' | 'browser'>('simulator')
   const [running, setRunning] = useState(false)
   const [acquiring, setAcquiring] = useState(false)
@@ -34,11 +36,16 @@ export function GpsEmitter({ driverId, onEmit, description }: GpsEmitterProps) {
   const [lastEvent, setLastEvent] = useState<GpsEmitterDraftEvent | null>(null)
   const [eventCount, setEventCount] = useState(0)
   const sequence = useRef(0)
+  const lastTimestamp = useRef(-Infinity)
   const emitCallback = useRef(onEmit)
+  const runningCallback = useRef(onRunningChange)
 
   useEffect(() => {
     emitCallback.current = onEmit
   }, [onEmit])
+
+  useEffect(() => { runningCallback.current = onRunningChange }, [onRunningChange])
+  useEffect(() => { runningCallback.current?.(running && !!driverId.trim()) }, [running, driverId])
 
   useEffect(() => {
     if (!running || !driverId.trim()) return
@@ -65,11 +72,18 @@ export function GpsEmitter({ driverId, onEmit, description }: GpsEmitterProps) {
         event = { lat, lng, clientTimestamp: new Date(timestamp).toISOString(), seq: sequence.current + 1 }
         assertGpsLocationRequest(event)
       } catch {
-        fail('Dữ liệu vị trí không hợp lệ. Hãy kiểm tra định vị rồi bắt đầu lại, hoặc chọn Mô phỏng.')
+        setError('Đã bỏ qua dữ liệu vị trí không hợp lệ. Đang chờ mẫu tiếp theo.')
+        return
+      }
+
+      if (!isGpsTimestampInWindow(timestamp, MAX_GPS_SAMPLE_AGE_MS) || timestamp <= lastTimestamp.current) {
+        setError('Đã bỏ qua mẫu vị trí cũ, trùng hoặc sai thời gian. Đang chờ mẫu tiếp theo.')
         return
       }
 
       sequence.current++
+      lastTimestamp.current = timestamp
+      setError(null)
       setLastEvent(event)
       setEventCount(sequence.current)
       if (sequence.current === MAX_GPS_SEQUENCE) {
@@ -96,6 +110,10 @@ export function GpsEmitter({ driverId, onEmit, description }: GpsEmitterProps) {
           pendingPosition = false
           window.clearTimeout(positionTimeout)
           setAcquiring(false)
+          if (!Number.isFinite(position.coords.accuracy) || position.coords.accuracy < 0 || position.coords.accuracy > MAX_GPS_ACCURACY_METERS) {
+            setError('Đã bỏ qua mẫu có độ chính xác không đạt (cần sai số tối đa 100 m). Đang chờ mẫu tiếp theo.')
+            return
+          }
           emit(position.coords.latitude, position.coords.longitude, position.timestamp)
         }, cause => {
           if (pendingPosition) fail(positionError(cause.code))
@@ -149,6 +167,7 @@ export function GpsEmitter({ driverId, onEmit, description }: GpsEmitterProps) {
       <p id="gps-source-note">{source === 'simulator'
         ? 'Mô phỏng: tọa độ di chuyển theo tuyến mẫu, không phải vị trí thật của thiết bị.'
         : 'Vị trí trình duyệt: cần cấp quyền định vị. Mỗi 8 giây lấy một vị trí mới, chờ tối đa 7 giây.'}</p>
+      <p>Định vị cần quyền vị trí và HTTPS hoặc localhost. Tab chạy nền có thể bị trình duyệt làm chậm hoặc tạm dừng; nhịp 8 giây không được đảm bảo.</p>
       <p style={{ marginTop: '12px' }}>Tài khoản: {driverId}</p>
       <p role="status">
         Trạng thái: {running && driverId.trim() ? 'Đang phát mẫu' : 'Đã dừng'} · Số mẫu: {eventCount}

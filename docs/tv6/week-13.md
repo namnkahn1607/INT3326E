@@ -12,7 +12,7 @@ Cả nhóm: dự phòng sửa bug, mỗi người hoàn thiện báo cáo và AD
 
 | Mã | Bước | Đầu vào / phụ thuộc | Đầu ra | Tiêu chí | Tình trạng |
 | --- | --- | --- | --- | --- | --- |
-| W13-TV6-01 | Báo cáo và ADR Auth/RBAC: quyết định ba role, claims làm nguồn role, tra UserRecord mỗi request | Tài liệu tuần 4–5 | ADR và báo cáo module Auth | FR10, AC10 | Nội dung có sẵn trong [auth-rbac.md](../auth-rbac.md) và [bàn giao](auth-rbac-handoff.md) |
+| W13-TV6-01 | Báo cáo và ADR Auth/RBAC: quyết định ba role, claims làm nguồn role, tra UserRecord mỗi request | Tài liệu tuần 4–5 | ADR và báo cáo module Auth | FR10, AC10 | Nội dung có sẵn trong [auth-rbac.md](../contracts/auth-rbac.md) và [bàn giao](auth-rbac-handoff.md) |
 | W13-TV6-02 | Báo cáo Admin directory và notification | Tuần 6, 9 | Báo cáo module | FR08, FR10 | Admin directory có sẵn; notification chưa |
 | W13-TV6-03 | Báo cáo QA tổng hợp | W11-TV6-01c, W12-TV6-01b | Báo cáo QA kèm bằng chứng | AC01–AC10, NFR | Chưa bắt đầu |
 | W13-TV6-04 | Chuẩn bị trả lời câu 6 và câu 11 bằng số liệu tuần 12 | W12-TV6-01b | Phần trả lời có số liệu | NF02, NF11 | Chưa bắt đầu |

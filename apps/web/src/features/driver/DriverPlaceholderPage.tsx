@@ -1,54 +1,24 @@
 import { useEffect, useRef, useState } from 'react'
-import { ApiError } from '../../api/client'
-import { sendLocation, type LocationAccepted } from '../../api/endpoints/locations'
+import { sendLocation } from '../../api/endpoints/locations'
 import { useAuth } from '../auth/useAuth'
-import { GpsEmitter, type GpsEmitterDraftEvent } from './GpsEmitter'
+import { GpsEmitter } from './GpsEmitter'
+import { GpsDeliveryQueue, INITIAL_GPS_DELIVERY } from './gps-delivery'
 import { DriverShipments } from './DriverShipments'
 import './driver.css'
 
-function sendError(error: unknown): string {
-  if (!(error instanceof ApiError)) return 'Chưa gửi được mẫu GPS. Hãy kiểm tra kết nối và thử lại.'
-  if (error.status === 401) return 'Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Hãy đăng nhập lại.'
-  if (error.status === 403) return 'Tài khoản không có quyền gửi vị trí Driver.'
-  if (error.code === 'USER_NOT_PROVISIONED') return 'Tài khoản chưa được liên kết với tài xế. Liên hệ quản trị viên.'
-  if (error.status === 404) return 'API nhận GPS chưa sẵn sàng. Cần phối hợp với nhóm backend.'
-  if (error.code === 'REQUEST_TIMEOUT') return 'Chưa xác nhận được kết quả gửi trong 7 giây. Không tự gửi lại mẫu này.'
-  if (error.code === 'NETWORK_ERROR') return 'Không kết nối được API. Hãy kiểm tra mạng và cấu hình máy chủ.'
-  if (error.code === 'INVALID_RESPONSE') return 'Phản hồi API chưa đúng định dạng chấp nhận GPS.'
-  if (error.status === 400 || error.status === 422) return 'API từ chối dữ liệu GPS. Cần kiểm tra contract với backend.'
-  return 'API chưa nhận được mẫu GPS. Hãy kiểm tra dịch vụ và thử lại.'
-}
+function DriverDashboard({ accountId, displayName, email, token }: { accountId: string; displayName: string; email: string; token: string | null }) {
+  const [deliveryState, setDeliveryState] = useState(INITIAL_GPS_DELIVERY)
+  const delivery = useRef<GpsDeliveryQueue | null>(null)
+  const accountToken = useRef(token)
+  const { sending, acceptedCount, lastAccepted, error, queuedCount, discardedCount, online } = deliveryState
 
-function DriverDashboard({ accountId, displayName, email }: { accountId: string; displayName: string; email: string }) {
-  const [sending, setSending] = useState(false)
-  const [acceptedCount, setAcceptedCount] = useState(0)
-  const [lastAccepted, setLastAccepted] = useState<LocationAccepted | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [skippedCount, setSkippedCount] = useState(0)
-  const pending = useRef<AbortController | null>(null)
-
-  useEffect(() => () => {
-    pending.current?.abort()
-    pending.current = null
+  useEffect(() => { accountToken.current = token }, [token])
+  useEffect(() => {
+    // A buffered sample must never read the global token of a newly signed-in account.
+    const queue = new GpsDeliveryQueue(setDeliveryState, (event, signal) => sendLocation(event, signal, accountToken.current))
+    delivery.current = queue
+    return () => { queue.dispose(); delivery.current = null }
   }, [])
-
-  async function publish(event: GpsEmitterDraftEvent) {
-    if (pending.current) { setSkippedCount(count => count + 1); return }
-    const controller = new AbortController()
-    pending.current = controller
-    setSending(true)
-    setError(null)
-    try {
-      const response = await sendLocation(event, controller.signal)
-      if (controller.signal.aborted) return
-      setLastAccepted(response)
-      setAcceptedCount(count => count + 1)
-    } catch (cause) {
-      if (!controller.signal.aborted) setError(sendError(cause))
-    } finally {
-      if (!controller.signal.aborted) { pending.current = null; setSending(false) }
-    }
-  }
 
   return <div className="driver-dashboard">
     <section className="driver-welcome" aria-labelledby="driver-title">
@@ -62,26 +32,30 @@ function DriverDashboard({ accountId, displayName, email }: { accountId: string;
     <section className="driver-panel" aria-labelledby="driver-gps-title">
       <h2 id="driver-gps-title">Gửi vị trí GPS</h2>
       <p>Chọn vị trí trình duyệt để gửi vị trí thiết bị, hoặc Mô phỏng để thử theo tuyến mẫu.</p>
-      <GpsEmitter driverId={accountId} onEmit={publish}
-        description="Sau khi bắt đầu, mỗi 8 giây tạo hoặc lấy một mẫu rồi gửi. Dừng để ngừng lấy và gửi mẫu mới; yêu cầu đã gửi có thể hoàn tất." />
+      <GpsEmitter driverId={accountId} onEmit={event => delivery.current?.enqueue(event)}
+        onRunningChange={running => delivery.current?.setRunning(running)}
+        description="Sau khi bắt đầu, mỗi 8 giây tạo hoặc lấy một mẫu rồi gửi. Dừng để ngừng lấy mẫu và tạm dừng gửi bù; yêu cầu đã gửi có thể hoàn tất." />
       <div className="driver-send-status" role="status" aria-live="polite" aria-busy={sending}>
         <p>{sending ? 'Đang gửi mẫu GPS…' : 'Không có yêu cầu đang gửi.'}</p>
         <p>Số mẫu được API chấp nhận: <strong>{acceptedCount}</strong></p>
+        <p>Số mẫu chờ gửi: <strong>{queuedCount}</strong></p>
+        {discardedCount > 0 && <p>Đã bỏ {discardedCount} mẫu hết hạn, vượt giới hạn hoặc bị từ chối.</p>}
+        {!online && <p>Đang mất mạng. Mẫu được giữ tạm để gửi bù khi kết nối phục hồi.</p>}
         {lastAccepted && <dl>
           <dt>Mã sự kiện gần nhất</dt><dd>{lastAccepted.eventId}</dd>
           <dt>Thời điểm API tiếp nhận</dt><dd><time dateTime={lastAccepted.receivedAt}>{lastAccepted.receivedAt}</time></dd>
         </dl>}
       </div>
       {error && <p className="driver-send-error" role="alert">{error}</p>}
-      {skippedCount > 0 && <p>Đã bỏ qua {skippedCount} mẫu vì yêu cầu trước vẫn đang chờ. Không lưu hàng đợi.</p>}
+      <p>Giữ tạm tối đa 100 mẫu trong 5 phút. Rời trang hoặc đổi tài khoản sẽ xóa các mẫu chưa gửi.</p>
       <p className="driver-note">API chấp nhận chưa xác nhận vị trí đã lưu hoặc hiển thị trên bản đồ.</p>
     </section>
   </div>
 }
 
 export function DriverPlaceholderPage() {
-  const { user, loading } = useAuth()
+  const { user, token, loading } = useAuth()
   if (loading) return <p role="status">Đang kiểm tra phiên tài xế…</p>
   if (!user || user.role !== 'DRIVER') return <p role="alert">Cần đăng nhập bằng tài khoản Driver.</p>
-  return <DriverDashboard key={user.id} accountId={user.id} displayName={user.displayName} email={user.email} />
+  return <DriverDashboard key={user.id} accountId={user.id} displayName={user.displayName} email={user.email} token={token} />
 }

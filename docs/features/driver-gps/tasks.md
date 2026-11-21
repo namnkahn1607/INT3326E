@@ -1,0 +1,89 @@
+# Tasks TV4 tuần 7
+
+- [x] W701 — R1–R7: spec, clarify kỹ thuật, plan, review checklist và analyze.
+  Bằng chứng: spec.md, plan.md và checklist.md đã review riêng ngày 08/11/2026.
+- [x] W702 — R1/R3: chọn nguồn, tuyến simulator có nhãn, giữ seq và cadence.
+  Bằng chứng: GpsEmitter.spec.tsx và browser check cadence/đổi tọa độ.
+- [x] W703 — R2/R4/R6: định vị browser, timestamp đo, lỗi/quyền/deadline/cleanup.
+  Bằng chứng: component/dashboard tests; native Geolocation, quyền và cleanup
+  trong báo cáo browser local ngày 08/11/2026.
+- [x] W704 — R5: nối dashboard hiện hành và kiểm chứng contract/phiên/202.
+  Bằng chứng: locations.spec.ts, DriverPlaceholderPage.spec.tsx và harness dùng
+  adapter thật, Bearer token/API mock; không tính là đăng nhập Firebase thật.
+- [x] W705 — R1–R6: test component/dashboard và browser local; lint/build/frontend.
+  Bằng chứng: 462/462 frontend test, 26/26 browser check; lint/build exit 0.
+- [x] W706 — R7: cập nhật bàn giao, review/converge theo spec và bằng chứng.
+  Bằng chứng: mục TV4 tuần 7 trong `docs/features/driver-dashboard-gps.md`, report/ảnh tại
+  `docs/evidence/driver-gps-week7/`; SHA-256 trong report khớp source hiện tại.
+  Converge cuối không còn thiếu sót local sau W708; nghiệm thu GPS Cloud
+  được kiểm riêng ở W707, không suy rộng sang checkpoint chung tuần 7.
+- [x] W707 — R7: nghiệm thu Driver thật → API → Pub/Sub → Worker → SQL trên Cloud
+  cùng TV2/5/6, lưu revision/eventId và kết quả thật; không đóng bằng test mock.
+  Lượt chiều 17/11 bị 503 publish (6 mẫu, 0 accepted); xem
+  [bằng chứng Cloud ban đầu](../../evidence/driver-cloud-week8/report.md).
+  Kiểm lại buổi tối sau khi người dùng bật DB: 17/17 accepted, buffer offline
+  gửi hết sau khôi phục mạng, ảnh 390px và response 202 đã lưu. Cùng eventId
+  `evt_3de4d199-19ac-444d-8779-5f93382eddaf` có API Broker Confirmed và log
+  Worker nhận; mẫu cuối chỉ vào history do lệch giờ. Ngày 18/11 đã đối chiếu
+  SQL: ban đầu 8/17 mẫu, tìm đủ 9 mẫu còn thiếu trong DLQ và phát lại nguyên
+  payload qua Worker `00026-xkd` (min 1, Instance-based, được phép bật tạm).
+  History đủ 17 seq/timestamp/eventId riêng biệt. Current đúng seq 11,
+  `evt_448a87a7-8d70-4b87-a419-2bf4ec2092b1`, khớp API Broker Confirmed,
+  Worker và history; các mẫu mới hơn là future theo receivedAt gốc nên không
+  chiếm current. Worker đã hoàn nguyên min 0, Request-based trước hạn 20 phút.
+  Kết quả nghiệm thu có khôi phục DLQ; không cam kết runtime hiện tại chạy
+  GPS nền ổn định hoặc đóng checkpoint marker Customer/Admin.
+  Xem [bằng chứng buổi tối và truy vấn bàn giao](../../evidence/driver-cloud-week8/evening-report.md).
+  Không coi commit/push/deploy là bằng chứng đóng mục này.
+- [x] W708 — R4/R6, finding converge: nhánh lỗi định vị cần xóa interval ngay,
+  không chỉ chờ React effect cleanup. Thêm hồi quy lỗi native đồng bộ và nhiều
+  tick được xử lý trong cùng lượt để bảo đảm không tự gọi định vị lại sau lỗi.
+  Bằng chứng: test từng FAIL (3 lần gọi thay vì 1), sau sửa `fail` thì suite
+  frontend 462/462 và browser 26/26 PASS.
+
+- [x] W709 — D1/D2: danh sách/chi tiết Driver, scope server, trạng thái dữ liệu,
+  cursor/lọc và cleanup; tái sử dụng UI/client hiện có.
+  Bằng chứng: DriverShipments.spec.tsx, 2 ca Driver mới trong shipment-flow.spec.tsx.
+- [x] W710 — D3/D4: adapter pickup/deliver, xác nhận/hủy, chống gửi lặp,
+  đối chiếu GET sau POST và xử lý kết quả chưa rõ.
+  Bằng chứng: driver-actions.spec.ts và DriverShipments.spec.tsx; browser có 404/409,
+  response sai, đọc lại lỗi, xác nhận và cleanup; chưa xác nhận backend nghiệp vụ.
+- [x] W711 — D1–D5: test contract/UI/cleanup, test frontend, lint/build và browser local.
+  Bằng chứng: frontend 493/493, integration 10/10, lint/build exit 0, Edge 39/39;
+  docs/evidence/driver-shipments/report.json và ảnh; chi tiết ở bàn giao nhận/giao.
+- [x] W712 — D5: review/converge, cập nhật bằng chứng và bàn giao phụ thuộc.
+  Bằng chứng: docs/features/driver-shipments-handoff.md; D1–D5 không còn thiếu sót local,
+  W713/W707 giữ mở cho backend/môi trường thật. Lượt implement chưa commit/push/deploy;
+  commit/push/merge được người dùng cho phép riêng sau bàn giao, không deploy.
+- [x] W713 — D5: cùng TV1/5/6 nghiệm thu list → pickup → deliver trên backend thật;
+  cần handler TV1, revision/config và tài khoản có linkage. Không đóng bằng mock.
+  Đạt Cloud 17/11 sau khôi phục DB: đơn mới `PF20261117CGDANJ`, lấy hàng
+  16:36, giao thành công 16:39; Driver/Customer/Admin đọc lại khớp trạng thái,
+  lịch sử và ghi chú. API `backend-service-00036-f67`. Không suy rộng sang
+  các ca cạnh tranh/gọi lặp hoặc toàn bộ AC03.
+  Xem [bằng chứng Cloud](../../evidence/driver-cloud-week8/report.md).
+
+- [x] E801 — E1–E6: cập nhật spec/clarify/plan, review checklist riêng và analyze.
+  Bằng chứng: phần bổ sung tuần 8, review C11–C14 trước implement và analyze
+  tại plan; baseline `npm.cmd run check` exit 0 (538 test web, ngày 15/11).
+- [x] E802 — E1/E6: lọc mẫu mới lấy và tài liệu giới hạn trình duyệt; test biên.
+  Bằng chứng: GpsEmitter.spec.tsx; bộ chuyên biệt 113/113, browser 47/47 local.
+- [x] E803 — E2–E5: buffer FIFO, retry/backoff, giới hạn, dọn theo phiên và UI;
+  test mất mạng, replay, lỗi quyền, tràn/hết hạn và cleanup.
+  Bằng chứng: gps-delivery.spec.ts, DriverPlaceholderPage.spec.tsx; bộ 113/113
+  và browser offline/replay/account; xem bàn giao gps-emitter-reliability.
+- [x] E804 — E1–E6: kiểm tra chuẩn toàn repo, browser local và review/converge;
+  cập nhật bàn giao/trạng thái với bằng chứng đúng môi trường.
+  Bằng chứng: `npm.cmd run check` exit 0 (web 584, API 454, Worker/shared 122,
+  e2e 2; 116 ca môi trường thật bị bỏ qua), Edge 47/47, diff check đạt.
+  docs/evidence/gps-emitter-reliability/report.json ghi SHA-256 nguồn cuối.
+- [x] E805 — E5, review/converge: kiểm tra Stop và HTTP hoàn tất trong cùng
+  một lượt trước effect React; tạm dừng queue ngay trong thao tác Stop. Ràng
+  buộc token gửi bù với đúng mount tài khoản thay vì đọc tài khoản Firebase
+  toàn cục có thể vừa thay đổi; refresh token cùng tài khoản vẫn giữ buffer.
+  Thực hiện và kiểm chứng bằng lượt implement tiếp theo, không sửa code trong
+  lượt review/converge này.
+  Bằng chứng implement tiếp theo: test Stop cùng lượt resolve đạt với cơ chế
+  React hiện có, không cần sửa Stop. Test token từng FAIL do dùng global token;
+  đã pin token theo mount, kiểm tra null/refresh/đổi tài khoản và đạt 113/113.
+  Review/converge cuối chỉ đọc không còn finding bắt buộc trong E1–E6.

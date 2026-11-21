@@ -1,0 +1,141 @@
+{
+  "status": "PASS",
+  "generatedAt": "2026-11-14T18:51:41.017Z",
+  "sourceRevision": "5739d537103ab00bb582f200f286adffcd57e6d5",
+  "sourceTree": "e4af05184de18a5c35f208a9fc83af714819ea5a",
+  "baseRevision": "f28365dfc9c11f1ecfeb83e7bd1feffdeee24ae3",
+  "sourceCommits": {
+    "emitter": "2585638eebf0d7f16864049367e2dd0a05eafe83",
+    "k6": "930e59e4ef8c0b07e565df926bde86ccd311cd58"
+  },
+  "codeMatchesOriginalBranches": true,
+  "conflictsResolved": [
+    "docs/coordination/week-08.md"
+  ],
+  "check": {
+    "command": "npm.cmd run check",
+    "exitCode": 0,
+    "passed": {
+      "workerSharedLoad": 166,
+      "api": 454,
+      "web": 584,
+      "healthE2e": 2
+    },
+    "skipped": {
+      "workerPostgres": 8,
+      "apiPostgresAndFirebaseEmulator": 108
+    },
+    "note": "116 optional environment tests skipped; no Cloud evidence"
+  },
+  "smoke": {
+    "command": "node infra/load/gps-ingest-smoke.mjs",
+    "exitCode": 0,
+    "k6Version": "k6.exe v2.4.0 (commit/dd9395906d, go1.26.11, windows/amd64)",
+    "level": "real-k6-to-local-Nest-HTTP; Firebase, business-user lookup and PubSub mocked; no Worker/SQL/Cloud",
+    "checks": [
+      {
+        "name": "2 Drivers, 1s cadence, 3s duration through real API08",
+        "status": "PASS",
+        "requests": 6,
+        "accepted": 6,
+        "driverCounts": [
+          3,
+          3
+        ],
+        "httpLatencyMs": {
+          "avg": 22.50701666666667,
+          "min": 11.985,
+          "med": 17.556800000000003,
+          "max": 40.0329,
+          "p(95)": 38.452974999999995,
+          "p(99)": 39.716915
+        }
+      },
+      {
+        "name": "broker-error",
+        "status": "PASS",
+        "observedK6Exit": 99
+      },
+      {
+        "name": "malformed-acceptance",
+        "status": "PASS",
+        "observedK6Exit": 99
+      },
+      {
+        "name": "unlinked",
+        "status": "PASS",
+        "observedK6Exit": 108
+      },
+      {
+        "name": "missing token input fails before HTTP",
+        "status": "PASS",
+        "observedK6Exit": 107
+      }
+    ],
+    "eventManifest": [
+      {
+        "eventId": "evt_188e7c31-a642-4a97-b006-cbcb5e2ed69f",
+        "driverId": "usr_00000000000000000000000001",
+        "seq": 1,
+        "clientTimestamp": "2026-11-14T18:49:31.742Z"
+      },
+      {
+        "eventId": "evt_2b464e50-ad0b-4725-978f-6e493d2954a5",
+        "driverId": "usr_00000000000000000000000002",
+        "seq": 1,
+        "clientTimestamp": "2026-11-14T18:49:31.742Z"
+      },
+      {
+        "eventId": "evt_b1bed0bf-9763-4b4d-a5b4-f68970718c88",
+        "driverId": "usr_00000000000000000000000002",
+        "seq": 2,
+        "clientTimestamp": "2026-11-14T18:49:32.743Z"
+      },
+      {
+        "eventId": "evt_9177597f-3aba-42a1-8dd9-f6df876665f9",
+        "driverId": "usr_00000000000000000000000001",
+        "seq": 2,
+        "clientTimestamp": "2026-11-14T18:49:32.742Z"
+      },
+      {
+        "eventId": "evt_7a41cd52-3623-4084-96f0-5ec05fe8fb27",
+        "driverId": "usr_00000000000000000000000001",
+        "seq": 3,
+        "clientTimestamp": "2026-11-14T18:49:33.742Z"
+      },
+      {
+        "eventId": "evt_e0161663-5993-49bb-9fff-0620238783c7",
+        "driverId": "usr_00000000000000000000000002",
+        "seq": 3,
+        "clientTimestamp": "2026-11-14T18:49:33.743Z"
+      }
+    ],
+    "sourceSha256": {
+      "infra/load/gps-ingest.js": "8c811d5d302da9654da512870545fddb0381f57037b03159df95bb56cbd700f0",
+      "infra/load/gps-ingest-config.mjs": "67f122912be4dbd470e8941ebbbf5cb885c0673d1f14e365551be71450631aa4",
+      "infra/load/gps-ingest-smoke.mjs": "7a7cedf73fc7b4af84485fa5ec4230edc4a0d90e0c59fcc0a3226f9bd7b6b1f1"
+    }
+  },
+  "sourceSha256": {
+    ".gitignore": "fa8ebb589322d57db1eecaddd926bc003112c5a583621abfe26e8006813c431d",
+    "apps/web/scripts/verify-driver-dashboard.mjs": "a97f0b425489676104c0b6d300a955d9187f16444415075544b2f5fb2d833ffc",
+    "apps/web/src/api/endpoints/locations.spec.ts": "9ba499449b7416026334f88fb8dcdbb78d154e92891d8760bca280b8ce7a7771",
+    "apps/web/src/api/endpoints/locations.ts": "ce8e4e08ae1cadd7694fe2916f51c029b931124a797dd02a5afbee91e2948e10",
+    "apps/web/src/features/driver/DriverPlaceholderPage.spec.tsx": "a48e1e9e530a13d11b66d6b2bbf2be187a94ed5b249e35cc78968e446b03f7e1",
+    "apps/web/src/features/driver/DriverPlaceholderPage.tsx": "ec4132f26b4060bc774736d29f721c455f6a7cd939e3a1ad9e0189e0b1c4ea1c",
+    "apps/web/src/features/driver/GpsEmitter.spec.tsx": "304c39761153dc1e67eacf58d8c03837b7dae64895cadbfcf7d7d34c27a34966",
+    "apps/web/src/features/driver/GpsEmitter.tsx": "14fe991f7bfebb3aa60fbf8b62a89977fb25a685902160a6412a6dbaea35662f",
+    "apps/web/src/features/driver/gps-delivery.spec.ts": "0382564ecb5c0d9b7d13148444651b4326ba994187955a7c18aa8bfc2bc92c39",
+    "apps/web/src/features/driver/gps-delivery.ts": "c7dee6192b2058ec0d086904618e57b9122707c87c3c358f4473612ab0b5c1d4",
+    "apps/web/src/features/driver/gps-sample.ts": "db667884a43db044efd84635f0678123a7083c222f9d164a5c494784054410dd",
+    "infra/load/README.md": "e32108ec4b673105d9f4b7d482b507b8a0699c8c50b0f489ab1121417de30e95",
+    "infra/load/driver-tokens.example.json": "7b41abfa90b46b613ffd1ed59164d47f3633b7d0ea97fa6ccec6acaed33a62b0",
+    "infra/load/gps-ingest-config.mjs": "67f122912be4dbd470e8941ebbbf5cb885c0673d1f14e365551be71450631aa4",
+    "infra/load/gps-ingest-config.spec.ts": "3aaed04df831921bbabe43f869c3739b66b9b5c31d45169dfff99b009cd8b4c2",
+    "infra/load/gps-ingest-smoke.mjs": "7a7cedf73fc7b4af84485fa5ec4230edc4a0d90e0c59fcc0a3226f9bd7b6b1f1",
+    "infra/load/gps-ingest.js": "8c811d5d302da9654da512870545fddb0381f57037b03159df95bb56cbd700f0",
+    "vitest.config.ts": "5a56bce123adcdeda8e43beeb4a82820a3924b5d5200e64324e7030b8c6b2cb2"
+  },
+  "deployed": false,
+  "cloudAcceptanceVerified": false
+}

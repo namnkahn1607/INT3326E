@@ -47,7 +47,7 @@ Checkpoint: luồng tạo đơn đến giao hàng hoạt động hoàn chỉnh; 
 | W7-TV4-02 | Gửi bằng tài khoản Driver thật, đúng contract, chu kỳ 8 giây, báo lỗi/quyền định vị | API ingest, liên kết danh tính | Driver gửi được GPS đổi theo nguồn | AC04, TC04.1–04.2 |
 | W7-TV5-01 | Kiểm tra runtime, IAM, SQL của API và Worker | Mapping W7-TV2-01 | Ghi nhận cấu hình, không lộ secret | NF12 |
 | W7-TV5-02 | Triển khai đúng source/revision, smoke có mẫu ghi SQL | W7-TV2-02, W7-TV5-01 | Revision gắn SHA, smoke có hàng SQL | NF10 |
-| W7-TV6-01 | Chuẩn bị tài khoản Customer/Admin/Driver và đơn test | Auth tuần 5 | Fixture theo `docs/qa-test-plan.md` | AC10 |
+| W7-TV6-01 | Chuẩn bị tài khoản Customer/Admin/Driver và đơn test | Auth tuần 5 | Fixture theo `docs/qa/test-plan.md` | AC10 |
 | W7-TV6-02 | Chạy create, assign, pickup, deliver; sai quyền; history; đối chiếu SQL; bằng chứng Cloud | Các việc trên | Bảng kết quả theo ca, PASS/FAIL/BLOCKED | AC01–AC03, AC06, AC10 |
 
 Cần đối chiếu: sheet ghi TV5 triển khai push subscription, code hiện dùng pull. Nhóm quyết định, không tự đổi runtime.

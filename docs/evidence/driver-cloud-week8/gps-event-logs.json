@@ -1,0 +1,44 @@
+﻿[
+    {
+        "timestamp":  "2026-11-17T14:53:26.745785Z",
+        "service":  "backend-service",
+        "revision":  "backend-service-00037-4c5",
+        "message":  "[Nest] 1  - 11/17/2026, 2:53:26 PM     LOG [LocationService] [API08 Broker Confirmed] eventId: evt_3de4d199-19ac-444d-8779-5f93382eddaf | driver: usr_01M5SW7617KAKAMEE4G0W50HRX"
+    },
+    {
+        "timestamp":  "2026-11-17T14:53:29.491685Z",
+        "service":  "worker-service",
+        "revision":  "worker-service-00025-hnp",
+        "message":  "[Nest] 1  - 11/17/2026, 2:53:29 PM     LOG [GpsSubscriber] [EVT01 GPS Event] ID: 23329669095927704 | eventId: evt_3de4d199-19ac-444d-8779-5f93382eddaf | driverId: usr_01M5SW7617KAKAMEE4G0W50HRX | coords: (21.028511, 105.804817) | time: 2026-11-17T14:53:30.708Z [history-only: clock_skew]"
+    },
+    {
+        "timestamp":  "2026-11-17T14:53:40.392225Z",
+        "service":  "worker-service",
+        "revision":  "worker-service-00025-hnp",
+        "message":  "[Nest] 1  - 11/17/2026, 2:53:40 PM     LOG [GpsSubscriber] [EVT01 GPS Event] ID: 23329669095927704 | eventId: evt_3de4d199-19ac-444d-8779-5f93382eddaf | driverId: usr_01M5SW7617KAKAMEE4G0W50HRX | coords: (21.028511, 105.804817) | time: 2026-11-17T14:53:30.708Z [history-only: clock_skew]"
+    },
+    {
+        "timestamp":  "2026-11-17T14:53:49.492493Z",
+        "service":  "worker-service",
+        "revision":  "worker-service-00025-hnp",
+        "message":  "[Nest] 1  - 11/17/2026, 2:53:49 PM     LOG [GpsSubscriber] [EVT01 GPS Event] ID: 23329669095927704 | eventId: evt_3de4d199-19ac-444d-8779-5f93382eddaf | driverId: usr_01M5SW7617KAKAMEE4G0W50HRX | coords: (21.028511, 105.804817) | time: 2026-11-17T14:53:30.708Z [history-only: clock_skew]"
+    },
+    {
+        "timestamp":  "2026-11-17T14:53:57.592476Z",
+        "service":  "worker-service",
+        "revision":  "worker-service-00025-hnp",
+        "message":  "[Nest] 1  - 11/17/2026, 2:53:57 PM     LOG [GpsSubscriber] [EVT01 GPS Event] ID: 23329669095927704 | eventId: evt_3de4d199-19ac-444d-8779-5f93382eddaf | driverId: usr_01M5SW7617KAKAMEE4G0W50HRX | coords: (21.028511, 105.804817) | time: 2026-11-17T14:53:30.708Z [history-only: clock_skew]"
+    },
+    {
+        "timestamp":  "2026-11-17T14:54:05.791998Z",
+        "service":  "worker-service",
+        "revision":  "worker-service-00025-hnp",
+        "message":  "[Nest] 1  - 11/17/2026, 2:54:05 PM     LOG [GpsSubscriber] [EVT01 GPS Event] ID: 23329669095927704 | eventId: evt_3de4d199-19ac-444d-8779-5f93382eddaf | driverId: usr_01M5SW7617KAKAMEE4G0W50HRX | coords: (21.028511, 105.804817) | time: 2026-11-17T14:53:30.708Z [history-only: clock_skew]"
+    },
+    {
+        "timestamp":  "2026-11-17T14:54:10.292228Z",
+        "service":  "worker-service",
+        "revision":  "worker-service-00025-hnp",
+        "message":  "[Nest] 1  - 11/17/2026, 2:54:10 PM   DEBUG [GpsWriterRepository] [Clock Skew Tolerance] Event evt_3de4d199-19ac-444d-8779-5f93382eddaf marked history-only; current_locations update skipped"
+    }
+]

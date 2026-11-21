@@ -1,0 +1,95 @@
+{
+  "status": "PASS",
+  "generatedAt": "2026-11-14T18:36:09.033Z",
+  "level": "real-k6-to-local-Nest-HTTP; Firebase, business-user lookup and PubSub mocked; no Worker/SQL/Cloud",
+  "checks": [
+    {
+      "name": "2 Drivers, 1s cadence, 3s duration through real API08",
+      "status": "PASS",
+      "requests": 6,
+      "accepted": 6,
+      "driverCounts": [
+        3,
+        3
+      ],
+      "httpLatencyMs": {
+        "min": 13.7179,
+        "med": 16.2796,
+        "max": 27.7549,
+        "p(95)": 27.356775,
+        "p(99)": 27.675275,
+        "avg": 18.985383333333335
+      },
+      "summary": "accepted-summary.json"
+    },
+    {
+      "name": "broker-error",
+      "status": "PASS",
+      "observedK6Exit": 99,
+      "summary": "broker-error-summary.json"
+    },
+    {
+      "name": "malformed-acceptance",
+      "status": "PASS",
+      "observedK6Exit": 99,
+      "summary": "malformed-acceptance-summary.json"
+    },
+    {
+      "name": "unlinked",
+      "status": "PASS",
+      "observedK6Exit": 108,
+      "summary": "unlinked-summary.json"
+    },
+    {
+      "name": "missing token input fails before HTTP",
+      "status": "PASS",
+      "observedK6Exit": 107
+    }
+  ],
+  "k6Version": "k6.exe v2.4.0 (commit/dd9395906d, go1.26.11, windows/amd64)",
+  "eventManifest": [
+    {
+      "eventId": "evt_cdafa3ac-df8b-4754-93bc-4c63b05c512d",
+      "driverId": "usr_00000000000000000000000001",
+      "seq": 1,
+      "clientTimestamp": "2026-11-14T18:36:10.077Z"
+    },
+    {
+      "eventId": "evt_0e81b243-fa44-4247-9263-95602746bab4",
+      "driverId": "usr_00000000000000000000000002",
+      "seq": 1,
+      "clientTimestamp": "2026-11-14T18:36:10.077Z"
+    },
+    {
+      "eventId": "evt_70905d5b-12ef-4a48-aa29-a2a0d3a6ba9d",
+      "driverId": "usr_00000000000000000000000002",
+      "seq": 2,
+      "clientTimestamp": "2026-11-14T18:36:11.078Z"
+    },
+    {
+      "eventId": "evt_77903acb-f5c7-4809-8ffe-7bb2f45a9a6e",
+      "driverId": "usr_00000000000000000000000001",
+      "seq": 2,
+      "clientTimestamp": "2026-11-14T18:36:11.078Z"
+    },
+    {
+      "eventId": "evt_c9a451f7-c6c6-43b9-bd8e-a9d18c262d26",
+      "driverId": "usr_00000000000000000000000002",
+      "seq": 3,
+      "clientTimestamp": "2026-11-14T18:36:12.078Z"
+    },
+    {
+      "eventId": "evt_a11f4039-72a2-45f1-9074-202a5930de7e",
+      "driverId": "usr_00000000000000000000000001",
+      "seq": 3,
+      "clientTimestamp": "2026-11-14T18:36:12.078Z"
+    }
+  ],
+  "sourceRevision": "f28365dfc9c11f1ecfeb83e7bd1feffdeee24ae3",
+  "uncommittedChanges": true,
+  "sourceSha256": {
+    "infra/load/gps-ingest.js": "54e929f39d3f2c59b199e0b5fb293453d6c84ce9187a6573b7de44660f0a93d8",
+    "infra/load/gps-ingest-config.mjs": "0959ada4d82824b8a9795fada9fa5402811a3f8b643062991bd7764689ed57a5",
+    "infra/load/gps-ingest-smoke.mjs": "4dd9ed0a4280746ce198dd196e0d89104c7d3147771f10a92630bb28345d9246"
+  }
+}

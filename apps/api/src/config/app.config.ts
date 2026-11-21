@@ -9,6 +9,9 @@ export function configureApp(app: INestApplication, corsOrigins = DEFAULT_CORS_O
     allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key'],
   });
   app.setGlobalPrefix('v1', {
-    exclude: [{ path: 'healthz', method: RequestMethod.GET }],
+    exclude: [
+      { path: 'healthz', method: RequestMethod.GET },
+      { path: 'health', method: RequestMethod.GET },
+    ],
   });
 }

@@ -60,8 +60,8 @@ async function selectSource(value: 'simulator' | 'browser') {
   })
 }
 
-function position(lat: number, lng: number, timestamp = Date.now()): GeolocationPosition {
-  return { coords: { latitude: lat, longitude: lng }, timestamp } as GeolocationPosition
+function position(lat: number, lng: number, timestamp = Date.now(), accuracy = 10): GeolocationPosition {
+  return { coords: { latitude: lat, longitude: lng, accuracy }, timestamp } as GeolocationPosition
 }
 
 describe('Driver GPS sample emitter', () => {
@@ -304,6 +304,70 @@ describe('Driver GPS sample emitter', () => {
       kind === 'insecure' ? 'HTTPS' : kind === 'unsupported' ? 'không hỗ trợ' : 'Không lấy được vị trí')
     expect(onEmit).not.toHaveBeenCalled()
     expect(node.textContent).toContain('Đã dừng')
+  })
+
+  it.each([NaN, Infinity, -1, 100.001])('skips accuracy %s without consuming a sequence and recovers on the next tick', async accuracy => {
+    await mount()
+    await selectSource('browser')
+    await click('Bắt đầu phát mẫu')
+    await tick(8000)
+    await act(async () => locate.mock.calls[0][0](position(21, 105, Date.now(), accuracy)))
+    expect(onEmit).not.toHaveBeenCalled()
+    expect(node.textContent).toContain('độ chính xác')
+    expect(node.textContent).toContain('Đang phát mẫu')
+    await tick(8000)
+    await act(async () => locate.mock.calls[1][0](position(21, 105, Date.now(), 100)))
+    expect(onEmit.mock.calls[0][0].seq).toBe(1)
+    expect(node.querySelector('[role="alert"]')).toBeNull()
+  })
+
+  it.each([30_001, -60_001])('skips an acquisition with age %s ms but keeps measuring', async age => {
+    await mount()
+    await selectSource('browser')
+    await click('Bắt đầu phát mẫu')
+    await tick(8000)
+    await act(async () => locate.mock.calls[0][0](position(21, 105, Date.now() - age)))
+    expect(onEmit).not.toHaveBeenCalled()
+    expect(node.textContent).toContain('sai thời gian')
+    await tick(8000)
+    await act(async () => locate.mock.calls[1][0](position(21, 105)))
+    expect(onEmit.mock.calls[0][0].seq).toBe(1)
+  })
+
+  it.each([30_000, -60_000])('accepts the exact acquisition age boundary %s ms', async age => {
+    await mount()
+    await selectSource('browser')
+    await click('Bắt đầu phát mẫu')
+    await tick(8000)
+    await act(async () => locate.mock.calls[0][0](position(21, 105, Date.now() - age, 0)))
+    expect(onEmit).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([0, -1])('ignores a repeated or regressing measurement timestamp (%s ms)', async delta => {
+    await mount()
+    await selectSource('browser')
+    await click('Bắt đầu phát mẫu')
+    await tick(8000)
+    const timestamp = Date.now()
+    await act(async () => locate.mock.calls[0][0](position(21, 105, timestamp)))
+    await tick(8000)
+    await act(async () => locate.mock.calls[1][0](position(22, 106, timestamp + delta)))
+    expect(onEmit).toHaveBeenCalledTimes(1)
+    await tick(8000)
+    await act(async () => locate.mock.calls[2][0](position(22, 106)))
+    expect(onEmit.mock.calls[1][0].seq).toBe(2)
+  })
+
+  it('keeps acquiring after an invalid coordinate instead of stopping the emitter', async () => {
+    await mount()
+    await selectSource('browser')
+    await click('Bắt đầu phát mẫu')
+    await tick(8000)
+    await act(async () => locate.mock.calls[0][0](position(91, 105)))
+    await tick(8000)
+    await act(async () => locate.mock.calls[1][0](position(90, -180)))
+    expect(onEmit).toHaveBeenCalledTimes(1)
+    expect(onEmit.mock.calls[0][0]).toMatchObject({ lat: 90, lng: -180, seq: 1 })
   })
 
   it('clears the old source preview and keeps the sequence when changing sources', async () => {

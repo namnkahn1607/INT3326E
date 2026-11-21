@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "predeploy": ["npm run build --workspace=@parcelflow/web"],
     "public": "dist",
     "ignore": [
       "firebase.json",

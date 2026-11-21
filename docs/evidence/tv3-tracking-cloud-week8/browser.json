@@ -1,0 +1,60 @@
+{
+  "environment": "Local Chrome headless; real Leaflet/CARTO tiles; Auth/HTTP API mocked only via CDP",
+  "results": [
+    {
+      "area": "customer",
+      "width": 390,
+      "basemap": "basemaps.cartocdn.com",
+      "loadedTiles": true,
+      "overflow": false,
+      "gpsDoesNotReloadDetail": true,
+      "stateSync": true,
+      "historyUpdated": true,
+      "staleActionsRemoved": true,
+      "sameMapDuringStateSync": true,
+      "terminalPollingStopped": true
+    },
+    {
+      "area": "admin",
+      "width": 390,
+      "basemap": "basemaps.cartocdn.com",
+      "loadedTiles": true,
+      "overflow": false,
+      "gpsDoesNotReloadDetail": true,
+      "stateSync": true,
+      "historyUpdated": true,
+      "staleActionsRemoved": true,
+      "sameMapDuringStateSync": true,
+      "terminalPollingStopped": true
+    },
+    {
+      "area": "customer",
+      "width": 1440,
+      "basemap": "basemaps.cartocdn.com",
+      "loadedTiles": true,
+      "overflow": false,
+      "gpsDoesNotReloadDetail": true,
+      "stateSync": true,
+      "historyUpdated": true,
+      "staleActionsRemoved": true,
+      "sameMapDuringStateSync": true,
+      "terminalPollingStopped": true
+    },
+    {
+      "area": "admin",
+      "width": 1440,
+      "basemap": "basemaps.cartocdn.com",
+      "loadedTiles": true,
+      "overflow": false,
+      "gpsDoesNotReloadDetail": true,
+      "stateSync": true,
+      "historyUpdated": true,
+      "staleActionsRemoved": true,
+      "sameMapDuringStateSync": true,
+      "terminalPollingStopped": true
+    }
+  ],
+  "exceptions": [],
+  "source": "working tree before commit",
+  "cloudDeployment": false
+}

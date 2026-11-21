@@ -132,7 +132,10 @@ export class ShipmentsRepository {
         throw new ApiProblem(403, 'FORBIDDEN_RESOURCE', 'Không có quyền thao tác với đơn hàng này');
       }
       if (current.status === target) {
-        const response = shipmentResponse(current);
+        // Đọc lại bằng snapshot mới sau khi có khóa FOR UPDATE để subquery terminalAt thấy event vừa commit.
+        const fresh = await client.query<ShipmentRow>(
+          `SELECT ${SHIPMENT_PROJECTION} FROM shipments s WHERE s.id = $1`, [id]);
+        const response = shipmentResponse(fresh.rows[0]);
         // Gọi lặp cùng bước bởi tài xế hiện hành là no-op, giữ nguyên ghi chú và thời điểm đầu tiên.
         await client.query('COMMIT');
         return response;
