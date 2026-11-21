@@ -85,7 +85,8 @@ Mục lục: [Điều phối theo tuần](README.md)
   2 Driver × 3 giây ghi 6 offered, 6 accepted, 0 lỗi, p95 30,68 ms. Tải cố
   định 2 event/s ghi 6 offered, 6 accepted, 0 drop và p95 23,22 ms. Khi đưa
   độ trễ broker giả lập vào lượt 30 event/s, k6 ghi 24 drop và trả exit 99.
-  **Cloud còn mở:** `int3326esql` hiển thị `Stopped` trong Cloud Console.
-  Sau khi được phép bật, phiên điều khiển Console dừng trước khi xác nhận
-  Start. Chưa có file Firebase ID token của Driver test trong workspace.
-  Chưa gửi GPS trên Cloud hoặc đo backlog `gps-events-sub` trong lượt này.
+  **Cloud:** dry-run 1 Driver, chu kỳ 8 giây trong 90 giây. Có 12 offered,
+  12 accepted, 0 lỗi, p95 HTTP 1.209,90 ms. Tổng backlog `gps-events-sub`
+  bằng 0 tại các điểm đo theo phút trước, trong và sau lượt. Worker nhận
+  đủ 12 mẫu, đều đi theo nhánh history-only do clock skew. `int3326esql`
+  đã về `Stopped` lúc 21:01:43 ICT. [Báo cáo Cloud](../evidence/gps-ingest-load/week-09-cloud.md).

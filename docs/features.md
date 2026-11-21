@@ -65,8 +65,10 @@ TV4 tuần 9 (21/11/2026) hoàn thiện [k6 API08](../infra/load/README.md) vớ
 cố định tùy chọn, số offered/accepted, lỗi, p95 HTTP và số lượt bị bỏ. Kiểm
 local đạt 48 test cấu hình/hợp đồng và 7/7 smoke bằng k6 thật → Nest HTTP,
 với Firebase, lookup và Pub/Sub mock. `npm run check` đạt, 125 ca cần
-PostgreSQL thật hoặc Firebase emulator bị bỏ qua. Dry-run Cloud còn mở.
-Xem [kết quả và điều kiện chạy Cloud](coordination/week-09.md#thực-tế-từng-người).
+PostgreSQL thật hoặc Firebase emulator bị bỏ qua. Dry-run Cloud đạt 12/12
+accepted, 0 lỗi, p95 HTTP 1.209,90 ms. Các điểm đo `gps-events-sub` ghi tổng
+backlog bằng 0. Worker nhận 12 mẫu history-only do clock skew. Xem
+[báo cáo Cloud](evidence/gps-ingest-load/week-09-cloud.md).
 
 Công cụ thử tải GPS tuần 8 (15/11/2026): nhánh `test/gps-ingest-load` từ
 `develop@f28365d` có [script k6 và hướng dẫn](../infra/load/README.md) cho API08,
