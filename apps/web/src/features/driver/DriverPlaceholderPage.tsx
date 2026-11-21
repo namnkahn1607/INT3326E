@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { sendLocation } from '../../api/endpoints/locations'
+import deliveryArtwork from '../../assets/delivery-parcels.webp'
+import { Icon } from '../../components/ui/Icon'
 import { useAuth } from '../auth/useAuth'
 import { GpsEmitter } from './GpsEmitter'
 import { GpsDeliveryQueue, INITIAL_GPS_DELIVERY } from './gps-delivery'
@@ -20,25 +22,32 @@ function DriverDashboard({ accountId, displayName, email, token }: { accountId: 
     return () => { queue.dispose(); delivery.current = null }
   }, [])
 
-  return <div className="driver-dashboard">
+  return <div className="driver-dashboard driver-overview">
     <section className="driver-welcome" aria-labelledby="driver-title">
-      <p className="driver-eyebrow">CỔNG TÀI XẾ</p>
-      <h1 id="driver-title">Xin chào, {displayName || email || accountId}</h1>
-      <p>{email || accountId} · Tài xế</p>
+      <div>
+        <p className="driver-eyebrow">TỔNG QUAN</p>
+        <h1 id="driver-title">Xin chào, {displayName || email || accountId}</h1>
+        <p>{email || accountId} · Tài xế</p>
+      </div>
+      <img className="driver-welcome-art" src={deliveryArtwork} alt="" />
     </section>
 
     <DriverShipments />
 
-    <section className="driver-panel" aria-labelledby="driver-gps-title">
-      <h2 id="driver-gps-title">Gửi vị trí GPS</h2>
-      <p>Chọn vị trí trình duyệt để gửi vị trí thiết bị, hoặc Mô phỏng để thử theo tuyến mẫu.</p>
+    <section className="driver-panel driver-gps" aria-labelledby="driver-gps-title">
+      <div className="driver-panel-title">
+        <span className="driver-glyph"><Icon name="pin" /></span>
+        <h2 id="driver-gps-title">Gửi vị trí GPS</h2>
+      </div>
       <GpsEmitter driverId={accountId} onEmit={event => delivery.current?.enqueue(event)}
         onRunningChange={running => delivery.current?.setRunning(running)}
         description="Sau khi bắt đầu, mỗi 8 giây tạo hoặc lấy một mẫu rồi gửi. Dừng để ngừng lấy mẫu và tạm dừng gửi bù; yêu cầu đã gửi có thể hoàn tất." />
       <div className="driver-send-status" role="status" aria-live="polite" aria-busy={sending}>
         <p>{sending ? 'Đang gửi mẫu GPS…' : 'Không có yêu cầu đang gửi.'}</p>
-        <p>Số mẫu được API chấp nhận: <strong>{acceptedCount}</strong></p>
-        <p>Số mẫu chờ gửi: <strong>{queuedCount}</strong></p>
+        <div className="driver-gps-metrics">
+          <p>Số mẫu được API chấp nhận: <strong>{acceptedCount}</strong></p>
+          <p>Số mẫu chờ gửi: <strong>{queuedCount}</strong></p>
+        </div>
         {discardedCount > 0 && <p>Đã bỏ {discardedCount} mẫu hết hạn, vượt giới hạn hoặc bị từ chối.</p>}
         {!online && <p>Đang mất mạng. Mẫu được giữ tạm để gửi bù khi kết nối phục hồi.</p>}
         {lastAccepted && <dl>
@@ -47,7 +56,7 @@ function DriverDashboard({ accountId, displayName, email, token }: { accountId: 
         </dl>}
       </div>
       {error && <p className="driver-send-error" role="alert">{error}</p>}
-      <p>Giữ tạm tối đa 100 mẫu trong 5 phút. Rời trang hoặc đổi tài khoản sẽ xóa các mẫu chưa gửi.</p>
+      <p className="driver-note">Giữ tạm tối đa 100 mẫu trong 5 phút. Rời trang hoặc đổi tài khoản sẽ xóa các mẫu chưa gửi.</p>
       <p className="driver-note">API chấp nhận chưa xác nhận vị trí đã lưu hoặc hiển thị trên bản đồ.</p>
     </section>
   </div>

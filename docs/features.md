@@ -4,6 +4,12 @@ Mỗi dòng là một tiêu chí nghiệm thu (AC) của đặc tả v1.4. Chỉ
 
 Trạng thái: `chưa có` · `đang làm` · `local` (đạt trên máy, PostgreSQL thật hoặc mock như ghi chú) · `cloud` (đạt trên môi trường Cloud, kèm revision).
 
+TV4 cập nhật UI02 ngày 21/11/2026: Driver có Express sáng và Midnight tối,
+mặc định theo hệ thống. Giao diện tổng quan, danh sách và chi tiết đơn đã kiểm
+local với Edge và Auth/API giả lập (49 kịch bản đạt, bố cục 320/390/1440 px).
+Xem [bàn giao Driver](features/driver-shipments-handoff.md). Chưa kiểm giao
+diện mới trên Cloud. Trạng thái nghiệm thu AC03 và AC04 giữ theo bảng bên dưới.
+
 TV3 sửa hai lỗi tracking ngày 18/11/2026: Customer/Admin tự đọc lại detail khi
 status/driverId đổi, cập nhật lịch sử và khóa form theo snapshot cũ; GPS đổi
 tọa độ không tải lại detail. Bản build local dùng CARTO đã cấu hình và có tile
