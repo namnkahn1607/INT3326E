@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { getShipments } from '../../api/endpoints/shipments'
+import { Icon } from '../../components/ui/Icon'
 import { StatusBadge } from '../../components/ui/StatusBadge'
 import { SHIPMENT_STATUS_MAP, type ShipmentStatus } from '../../types/shipment'
-import type { ShipmentPage } from '../../types/shipment-api'
+import type { ShipmentPage, ShipmentResponse } from '../../types/shipment-api'
 import { driverShipmentError } from './driver-shipment-error'
 
 export function DriverShipments() {
@@ -11,8 +12,11 @@ export function DriverShipments() {
   const [cursors, setCursors] = useState<(string | undefined)[]>([undefined])
   const [reload, setReload] = useState(0)
   const cursor = cursors.at(-1)
-  return <section className="driver-panel" aria-labelledby="driver-shipments-title">
-    <h2 id="driver-shipments-title">Đơn được phân công</h2>
+  return <section className="driver-panel driver-orders" aria-labelledby="driver-shipments-title">
+    <div className="driver-panel-title">
+      <span className="driver-glyph"><Icon name="box" /></span>
+      <h2 id="driver-shipments-title">Đơn được phân công</h2>
+    </div>
     <div className="driver-shipment-controls">
       <label htmlFor="driver-shipment-status">Trạng thái đơn</label>
       <select id="driver-shipment-status" value={status} onChange={event => {
@@ -30,6 +34,13 @@ export function DriverShipments() {
   </section>
 }
 
+function ShipmentStops({ shipment }: { shipment: ShipmentResponse }) {
+  return <dl className="driver-stops">
+    <div><dt>Lấy hàng</dt><dd>{shipment.pickupAddress}</dd></div>
+    <div><dt>Giao hàng</dt><dd>{shipment.dropoffAddress}</dd></div>
+  </dl>
+}
+
 function DriverShipmentList({ status, cursor, pageNumber, onPrevious, onNext, onRetry }: {
   status?: ShipmentStatus; cursor?: string; pageNumber: number
   onPrevious: () => void; onNext: (cursor: string) => void; onRetry: () => void
@@ -44,18 +55,32 @@ function DriverShipmentList({ status, cursor, pageNumber, onPrevious, onNext, on
     return () => controller.abort()
   }, [status, cursor])
 
-  if (error) return <div role="alert"><p>{error}</p>
+  if (error) return <div className="driver-list-message" role="alert"><p>{error}</p>
     <button type="button" className="btn btn-outline" onClick={onRetry}>Thử tải lại danh sách</button></div>
-  if (!page) return <p role="status">Đang tải đơn được phân công…</p>
+  if (!page) return <p className="driver-list-message" role="status">Đang tải đơn được phân công…</p>
+  const priority = !status && !cursor && (page.data.find(item => item.status === 'PICKED_UP')
+    ?? page.data.find(item => item.status === 'ASSIGNED'))
   return <>
-    <p role="status">{page.data.length} đơn trên trang {pageNumber}.</p>
-    {page.data.length === 0 ? <p>{status ? 'Không có đơn phù hợp trạng thái đã chọn.' : 'Chưa có đơn trên trang này.'}</p> :
+    {priority && <section className="driver-priority" aria-labelledby="driver-priority-title">
+      <div className="driver-priority-heading">
+        <div><h3 id="driver-priority-title">Hành trình ưu tiên</h3><p translate="no">{priority.trackingNumber}</p></div>
+        <StatusBadge status={priority.status} />
+      </div>
+      <ShipmentStops shipment={priority} />
+      <Link className="btn btn-primary" to={'/driver/shipments/' + priority.id}>Mở hành trình</Link>
+    </section>}
+    <p className="driver-list-count" role="status">{page.data.length} đơn trên trang {pageNumber}.</p>
+    {page.data.length === 0 ? <p className="driver-list-message">{status ? 'Không có đơn phù hợp trạng thái đã chọn.' : 'Chưa có đơn trên trang này.'}</p> :
       <ul className="driver-shipment-list">{page.data.map(item => <li key={item.id}>
-        <h3 translate="no">{item.trackingNumber}</h3><StatusBadge status={item.status} />
-        <p><strong>Lấy:</strong> {item.pickupAddress}</p><p><strong>Giao:</strong> {item.dropoffAddress}</p>
-        <p><strong>Người nhận:</strong> {item.recipientName}</p>
-        <Link className="btn btn-outline" to={'/driver/shipments/' + item.id}
-          aria-label={'Xem đơn ' + item.trackingNumber}>Xem đơn</Link>
+        <div className="driver-card-heading">
+          <h3 translate="no">{item.trackingNumber}</h3><StatusBadge status={item.status} />
+        </div>
+        <ShipmentStops shipment={item} />
+        <div className="driver-card-foot">
+          <p><strong>Người nhận:</strong> {item.recipientName}</p>
+          <Link className="btn btn-outline" to={'/driver/shipments/' + item.id}
+            aria-label={'Xem đơn ' + item.trackingNumber}>Xem đơn</Link>
+        </div>
       </li>)}</ul>}
     <nav className="driver-shipment-actions" aria-label="Phân trang đơn tài xế">
       <button type="button" className="btn btn-outline" disabled={pageNumber === 1} onClick={onPrevious}>Trang trước</button>

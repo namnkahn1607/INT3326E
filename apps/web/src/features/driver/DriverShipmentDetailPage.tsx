@@ -102,21 +102,25 @@ function DriverShipmentDetail({ id }: { id: string }) {
   const pickup = shipment?.status === 'ASSIGNED'
   const actionable = pickup || shipment?.status === 'PICKED_UP'
   const label = pickup ? 'Xác nhận đã lấy hàng' : 'Xác nhận giao thành công'
-  return <div className="driver-dashboard">
-    <Link to="/driver">← Về đơn được phân công</Link>
+  return <div className="driver-dashboard driver-detail-layout">
+    <Link className="driver-back" to="/driver">← Về đơn được phân công</Link>
     <section className="driver-panel driver-shipment-detail" aria-busy={busy} aria-labelledby="driver-detail-title">
       <h1 id="driver-detail-title">Chi tiết đơn tài xế</h1>
       {phase === 'loading' && <p role="status">Đang tải chi tiết đơn…</p>}
       {shipment && <>
-        <h2 translate="no">{shipment.trackingNumber}</h2><StatusBadge status={shipment.status} />
-        <dl><dt>Địa chỉ lấy hàng</dt><dd>{shipment.pickupAddress}</dd>
-          <dt>Địa chỉ giao hàng</dt><dd>{shipment.dropoffAddress}</dd>
-          <dt>Người nhận</dt><dd>{shipment.recipientName}</dd>
-          <dt>Điện thoại</dt><dd>{shipment.recipientPhone}</dd>
-          {shipment.notes && <><dt>Ghi chú đơn hàng</dt><dd>{shipment.notes}</dd></>}
-          {shipment.packageDescription && <><dt>Kiện hàng</dt><dd>{shipment.packageDescription}</dd></>}
+        <div className="driver-detail-identity">
+          <h2 translate="no">{shipment.trackingNumber}</h2><StatusBadge status={shipment.status} />
+        </div>
+        <dl className="driver-stops">
+          <div><dt>Địa chỉ lấy hàng</dt><dd>{shipment.pickupAddress}</dd></div>
+          <div><dt>Địa chỉ giao hàng</dt><dd>{shipment.dropoffAddress}</dd></div>
         </dl>
-        <ShipmentLifecycleDetails shipment={shipment} />
+        <dl className="driver-detail-fields">
+          <div><dt>Người nhận</dt><dd>{shipment.recipientName}</dd></div>
+          <div><dt>Điện thoại</dt><dd>{shipment.recipientPhone}</dd></div>
+          {shipment.notes && <div><dt>Ghi chú đơn hàng</dt><dd>{shipment.notes}</dd></div>}
+          {shipment.packageDescription && <div><dt>Kiện hàng</dt><dd>{shipment.packageDescription}</dd></div>}
+        </dl>
       </>}
       {notice && <p role="status">{notice}</p>}
       {error && <p className="driver-send-error" role="alert">{error}</p>}
@@ -151,6 +155,7 @@ function DriverShipmentDetail({ id }: { id: string }) {
           <button type="button" className="btn btn-outline" disabled={phase === 'submitting'} onClick={() => setPhase('ready')}>Hủy xác nhận</button>
         </div>
       </section>}
+      {shipment && <ShipmentLifecycleDetails shipment={shipment} />}
     </section>
   </div>
 }

@@ -74,4 +74,7 @@ Mục lục: [Điều phối theo tuần](README.md)
 
 ## Thực tế từng người
 
-(Cập nhật trong tuần.)
+- **TV4 (21/11):** cập nhật giao diện Driver với Express sáng và Midnight
+  tối, bổ sung thẻ hành trình trên trang đầu từ dữ liệu đơn được phân công.
+  Kiểm trên Edge local với Auth/API giả lập (49 kịch bản đạt, gồm luồng
+  lấy/giao hàng và gửi GPS). Chưa kiểm UI mới trên Cloud.
