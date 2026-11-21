@@ -78,3 +78,14 @@ Mục lục: [Điều phối theo tuần](README.md)
   tối, bổ sung thẻ hành trình trên trang đầu từ dữ liệu đơn được phân công.
   Kiểm trên Edge local với Auth/API giả lập (49 kịch bản đạt, gồm luồng
   lấy/giao hàng và gửi GPS). Chưa kiểm UI mới trên Cloud.
+- **TV4 (21/11, load test):** hoàn thiện [k6 API08](../../infra/load/README.md)
+  trên `test/tv4-week9-gps-load`. `npm run check` đạt (170 Worker/shared/load,
+  2 health, 465 API, 589 web; 125 ca môi trường bị bỏ qua). Smoke k6 v2.4.0
+  qua Nest HTTP local với Firebase, lookup và Pub/Sub mock đạt 7/7. Lượt
+  2 Driver × 3 giây ghi 6 offered, 6 accepted, 0 lỗi, p95 30,68 ms. Tải cố
+  định 2 event/s ghi 6 offered, 6 accepted, 0 drop và p95 23,22 ms. Khi đưa
+  độ trễ broker giả lập vào lượt 30 event/s, k6 ghi 24 drop và trả exit 99.
+  **Cloud còn mở:** `int3326esql` hiển thị `Stopped` trong Cloud Console.
+  Sau khi được phép bật, phiên điều khiển Console dừng trước khi xác nhận
+  Start. Chưa có file Firebase ID token của Driver test trong workspace.
+  Chưa gửi GPS trên Cloud hoặc đo backlog `gps-events-sub` trong lượt này.
