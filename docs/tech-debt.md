@@ -4,6 +4,7 @@ Việc đã biết nhưng cố ý để sau. Thêm dòng khi hoãn một việc;
 
 | Ngày | Khu vực | Nợ | Lý do để sau | Rủi ro | Xem lại khi |
 | --- | --- | --- | --- | --- | --- |
+| 21/11/2026 | GPS load test | Dry-run k6 tuần 9 trên Cloud còn thiếu offered/accepted, lỗi, p95 và backlog | Cloud SQL hiển thị Stopped, chưa xác nhận Start và thiếu token Driver test trong workspace | Chưa đo được ingest và khả năng tiêu thụ GPS của môi trường Cloud trong cùng cửa sổ | Khi Cloud SQL chạy, Worker đang nhận Pub/Sub và có token Driver test |
 | 20/11/2026 | Triển khai frontend | BUG-W8-02: `VITE_CARTO_API_KEY` trên Hosting là API Access Token, không phải key basemap; nền bản đồ báo "API KEY REQUIRED" | Nhóm chốt tuần 8 trước khi sửa | Bản đồ trống khi demo; token có quyền SQL API nằm trong bundle công khai | Ngay đầu tuần 9 (TV5): key basemap, deploy lại Hosting, xóa token cũ |
 | 20/11/2026 | Web | BUG-W8-03: trang Thông báo của Customer còn dữ liệu minh họa, chưa gọi `GET /v1/notifications` | Không thuộc checkpoint tuần 8 | AC08 không đạt trên giao diện dù API đã có | Tuần 9 (TV3) |
 | 18/11/2026 | Worker/Cloud | Chưa đủ deployment record và kiểm chi phí cho cấu hình chạy nền ổn định | Người dùng báo đã cấu hình lại và GPS mới đã tới Customer/Admin; chưa đọc lại revision/config đầy đủ | Không suy rộng ca kiểm sang vận hành liên tục hoặc NF11; 9 bản gốc DLQ trước đó chưa xác minh dọn | TV5/TV2 ghi billing/CPU/min/max, revision/source và chi phí thực; dọn bản DLQ đã xác minh theo quy trình nhóm |

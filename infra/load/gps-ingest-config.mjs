@@ -18,6 +18,8 @@ export function readConfig(env) {
     baseUrl: env.BASE_URL.replace(/\/$/, ''),
     drivers: positive(env, 'DRIVERS', 2, true),
     intervalSeconds: positive(env, 'SEND_INTERVAL_SECONDS', 8),
+    offeredEventsPerMinute: env.OFFERED_EVENTS_PER_MINUTE === undefined
+      ? null : positive(env, 'OFFERED_EVENTS_PER_MINUTE', undefined, true),
     durationSeconds: positive(env, 'DURATION_SECONDS', 16, true),
     timeoutSeconds: positive(env, 'REQUEST_TIMEOUT_SECONDS', 7),
     tokenFile: env.DRIVER_TOKENS_FILE,
