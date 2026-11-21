@@ -147,6 +147,12 @@ for (const mode of ['pglite', 'pglite-enums', 'postgres'] as const) {
         headers: body === undefined ? { Authorization: `Bearer ${actor}` } : headers(actor),
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       });
+    const fail = (s: string, actor: Actor = 'driver1', body: unknown = { reason: 'Khách không nghe máy 3 lần' }, suffix = '') =>
+      fetch(`${base}/shipments/${s}/fail${suffix}`, {
+        method: 'POST',
+        headers: body === undefined ? { Authorization: `Bearer ${actor}` } : headers(actor),
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      });
     const tracking = (s: string, actor: Actor = 'customer', suffix = '') =>
       fetch(`${base}/shipments/${s}/tracking${suffix}`, { headers: headers(actor) });
     const upsertGps = async (driverId: string, lat: number, lng: number, ageSeconds: number, lagMs = 150) => {
@@ -340,11 +346,13 @@ for (const mode of ['pglite', 'pglite-enums', 'postgres'] as const) {
       expect((await assign('not-an-id')).status).toBe(400);
       expect((await pickup('not-an-id')).status).toBe(400);
       expect((await deliver('not-an-id')).status).toBe(400);
+      expect((await fail('not-an-id')).status).toBe(400);
+      expect((await fetch(`${base}/shipments/${s.id}/fail`, { method: 'POST', headers: { Authorization: 'Bearer driver1' } })).status).toBe(400);
       expect((await get(`/shipments/${s.id}?role=ADMIN`)).status).toBe(400);
       expect((await assign(s.id, id(3), 'admin', { driverId: id(3) }, '?retry=1')).status).toBe(400);
       expect((await pickup(s.id, 'driver1', undefined, '?retry=1')).status).toBe(400);
       expect((await deliver(s.id, 'driver1', undefined, '?retry=1')).status).toBe(400);
-      expect((await fetch(`${base}/shipments/${s.id}/fail`, { method: 'POST', headers: headers('admin') })).status).toBe(404);
+      expect((await fail(s.id, 'admin', { reason: 'Lý do hợp lệ' }, '?retry=1')).status).toBe(400);
     });
 
     it('TC03.1 & TC06.1: lấy hàng và giao hàng thành công ghi đúng lịch sử, thông báo cùng giao dịch', async () => {
@@ -457,10 +465,23 @@ for (const mode of ['pglite', 'pglite-enums', 'postgres'] as const) {
       ['deliver', { unknown: 'x' }],
       ['deliver', { proofOfDeliveryNotes: 123 }],
       ['deliver', { proofOfDeliveryNotes: '🚚'.repeat(256) }],
+      ['fail', null],
+      ['fail', {}],
+      ['fail', []],
+      ['fail', { reason: 123 }],
+      ['fail', { reason: '' }],
+      ['fail', { reason: '     ' }],
+      ['fail', { reason: '   abcd   ' }],
+      ['fail', { reason: '🚚'.repeat(501) }],
+      ['fail', { reason: 'Lý do hợp lệ', extra: 1 }],
     ] as const)('từ chối body không hợp lệ cho %s: %j', async (action, badBody) => {
       const s = await create();
       await assign(s.id);
-      const response = action === 'pickup' ? await pickup(s.id, 'driver1', badBody) : await deliver(s.id, 'driver1', badBody);
+      const response = action === 'pickup'
+        ? await pickup(s.id, 'driver1', badBody)
+        : action === 'deliver'
+          ? await deliver(s.id, 'driver1', badBody)
+          : await fail(s.id, 'driver1', badBody);
       expect(response.status).toBe(400);
       expect(await effects()).toEqual({ events: 1, notifications: 1 });
     });
@@ -517,21 +538,201 @@ for (const mode of ['pglite', 'pglite-enums', 'postgres'] as const) {
       expect((await (await get(`/shipments/${s2.id}`)).json())).toMatchObject({ status: 'ASSIGNED', driverId: id(4) });
     });
 
-    it('frontend hiện có đọc được response thật của API danh sách, chi tiết, phân công, nhận và giao hàng', async () => {
+    it('TC07.1, TC07.2 & TC07.3: báo giao thất bại (Driver/Admin), no-op giữ nguyên lý do đầu, phân quyền và isLate 3 mốc', async () => {
+      const s = await create();
+      expect((await fetch(`${base}/shipments/${s.id}/fail`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason: 'Lý do hợp lệ' }),
+      })).status).toBe(401);
+      for (const actor of ['missing', 'mismatch'] as const) {
+        expect((await fail(s.id, actor)).status).toBe(409);
+      }
+      expect((await fail(shipmentId(999), 'admin')).status).toBe(404);
+      expect((await fail(s.id, 'customer')).status).toBe(403);
+      expect((await fail(s.id, 'driver1')).status).toBe(403);
+      expect((await fail(s.id, 'admin')).status).toBe(409);
+
+      await assign(s.id, id(3));
+      expect((await fail(s.id, 'driver2')).status).toBe(403);
+      expect((await fail(s.id, 'driver1')).status).toBe(409);
+      expect((await fail(s.id, 'admin')).status).toBe(409);
+
+      await pickup(s.id, 'driver1');
+      expect((await fail(s.id, 'driver2')).status).toBe(403);
+
+      // Lỗi SQL phải rollback sạch và cho phép gọi lại thành công.
+      for (const stage of ['INSERT INTO shipment_status_events', 'INSERT INTO notifications', 'UPDATE shipments'] as const) {
+        failWrite = stage;
+        const failedWrite = await fail(s.id, 'driver1', { reason: 'Không liên lạc được' });
+        expect(failedWrite.status).toBe(503);
+        expect(JSON.stringify(await failedWrite.json())).not.toMatch(/credentials|INSERT|UPDATE|SELECT/);
+        expect((await query('SELECT status, "failureReason" FROM shipments WHERE id=$1', [s.id])).rows[0])
+          .toEqual({ status: 'PICKED_UP', failureReason: null });
+        expect(await effects()).toEqual({ events: 2, notifications: 2 });
+        failWrite = null;
+      }
+
+      // Driver hiện hành báo fail thành công.
+      const firstFailRes = await fail(s.id, 'driver1', { reason: '  Người nhận từ chối nhận hàng 🚚  ' });
+      expect(firstFailRes.status).toBe(200);
+      expect(firstFailRes.headers.get('cache-control')).toBe('no-store');
+      const firstFail = await firstFailRes.json();
+      expect(firstFail).toMatchObject({
+        ...s,
+        driverId: id(3),
+        status: 'DELIVERY_FAILED',
+        failureReason: 'Người nhận từ chối nhận hàng 🚚',
+        failedByUserId: id(3),
+        failedByRole: 'DRIVER',
+        proofOfDeliveryNotes: null,
+        isLate: null,
+        updatedAt: expect.any(String),
+      });
+      expect(Object.keys(firstFail).sort((a, b) => a.localeCompare(b))).toEqual(
+        Object.keys(s).sort((a, b) => a.localeCompare(b)),
+      );
+
+      // Gọi lặp fail bởi driver hiện hành hoặc admin là no-op, giữ nguyên reason/actor/updatedAt ban đầu; driver khác vẫn 403.
+      expect((await fail(s.id, 'driver2')).status).toBe(403);
+      for (const actor of ['driver1', 'admin'] as const) {
+        const repeat = await fail(s.id, actor, { reason: 'Lý do khác không được ghi đè' });
+        expect(repeat.status).toBe(200);
+        expect(await repeat.json()).toEqual(firstFail);
+      }
+      expect(await effects()).toEqual({ events: 3, notifications: 3 });
+      expect((await pickup(s.id, 'driver1')).status).toBe(409);
+      expect((await deliver(s.id, 'driver1')).status).toBe(409);
+      expect((await assign(s.id, id(4), 'admin2')).status).toBe(409);
+
+      const detail = await (await get(`/shipments/${s.id}`, 'customer')).json();
+      expect(detail.statusHistory[3]).toMatchObject({
+        shipmentId: s.id,
+        action: 'DELIVERY_FAILED',
+        fromStatus: 'PICKED_UP',
+        toStatus: 'DELIVERY_FAILED',
+        actorUserId: id(3),
+        actorRole: 'DRIVER',
+        previousDriverId: id(3),
+        newDriverId: id(3),
+        reason: 'Người nhận từ chối nhận hàng 🚚',
+        occurredAt: firstFail.updatedAt,
+      });
+      const notif = (await query<{ body: string }>(`SELECT body FROM notifications WHERE "shipmentId"=$1 AND kind='DELIVERY_FAILED'`, [s.id])).rows[0];
+      expect(notif.body).not.toContain(payload.recipientPhone);
+
+      // Admin can thiệp fail trên đơn PICKED_UP của driver1 + kiểm tra giới hạn 500 ký tự và 3 mốc isLate (TC07.3).
+      const sAdmin = await create('customer', { expectedDeliveryAt: new Date(Date.now() + 3_600_000).toISOString() });
+      await assign(sAdmin.id, id(3));
+      await pickup(sAdmin.id, 'driver1');
+      // Khi đang PICKED_UP (chưa terminal): isLate đổi theo đồng hồ server.
+      expect((await (await get(`/shipments/${sAdmin.id}`, 'customer')).json()).isLate).toBe(false);
+      await query(`UPDATE shipments SET "expectedDeliveryAt"=clock_timestamp()-interval '1 second' WHERE id=$1`, [sAdmin.id]);
+      expect((await (await get(`/shipments/${sAdmin.id}`, 'customer')).json()).isLate).toBe(true);
+      await query(`UPDATE shipments SET "expectedDeliveryAt"=clock_timestamp()+interval '1 hour' WHERE id=$1`, [sAdmin.id]);
+
+      const longReason = '🚚'.repeat(500);
+      const adminFail = await (await fail(sAdmin.id, 'admin', { reason: longReason })).json();
+      expect(adminFail).toMatchObject({
+        status: 'DELIVERY_FAILED',
+        driverId: id(3),
+        failureReason: longReason,
+        failedByUserId: id(5),
+        failedByRole: 'ADMIN',
+      });
+      const adminDetail = await (await get(`/shipments/${sAdmin.id}`, 'customer')).json();
+      expect(adminDetail.statusHistory[adminDetail.statusHistory.length - 1]).toMatchObject({
+        action: 'DELIVERY_FAILED',
+        actorUserId: id(5),
+        actorRole: 'ADMIN',
+        previousDriverId: id(3),
+        newDriverId: id(3),
+        reason: longReason,
+      });
+
+      // Mốc isLate khi terminal DELIVERY_FAILED: trước hạn -> false, đúng bằng hạn -> false (dù hiện tại đã quá hạn), sau hạn 1ms -> true.
+      await query(`UPDATE shipment_status_events SET "occurredAt"='2026-01-01T01:00:00Z' WHERE "shipmentId"=$1 AND action='DELIVERY_FAILED'`, [sAdmin.id]);
+      await query(`UPDATE shipments SET "expectedDeliveryAt"='2026-01-01T02:00:00Z' WHERE id=$1`, [sAdmin.id]);
+      expect((await (await get(`/shipments/${sAdmin.id}`, 'customer')).json()).isLate).toBe(false);
+      expect((await (await tracking(sAdmin.id, 'customer')).json()).isLate).toBe(false);
+      expect((await (await get('/shipments?status=DELIVERY_FAILED&trackingNumber=' + sAdmin.trackingNumber, 'customer')).json()).data[0].isLate).toBe(false);
+
+      await query(`UPDATE shipments SET "expectedDeliveryAt"='2026-01-01T01:00:00Z' WHERE id=$1`, [sAdmin.id]);
+      expect((await (await get(`/shipments/${sAdmin.id}`, 'customer')).json()).isLate).toBe(false);
+      expect((await (await tracking(sAdmin.id, 'customer')).json()).isLate).toBe(false);
+
+      await query(`UPDATE shipment_status_events SET "occurredAt"='2026-01-01T01:00:00.001Z' WHERE "shipmentId"=$1 AND action='DELIVERY_FAILED'`, [sAdmin.id]);
+      expect((await (await get(`/shipments/${sAdmin.id}`, 'customer')).json()).isLate).toBe(true);
+      expect((await (await tracking(sAdmin.id, 'customer')).json()).isLate).toBe(true);
+      expect((await (await get('/shipments?status=DELIVERY_FAILED&trackingNumber=' + sAdmin.trackingNumber, 'customer')).json()).data[0].isLate).toBe(true);
+
+      // Đơn đã DELIVERED -> không thể fail (409).
+      const sDelivered = await create();
+      await assign(sDelivered.id, id(3));
+      await pickup(sDelivered.id, 'driver1');
+      await deliver(sDelivered.id, 'driver1');
+      expect((await fail(sDelivered.id, 'driver1')).status).toBe(409);
+      expect((await fail(sDelivered.id, 'admin')).status).toBe(409);
+    });
+
+    it('TC03.4: cạnh tranh đồng thời giữa deliver và fail tuân thủ khóa dòng, chỉ một trạng thái kết thúc thắng', async () => {
+      const s1 = await create();
+      await assign(s1.id, id(3));
+      await pickup(s1.id, 'driver1');
+      let reached1!: () => void; let release1!: () => void;
+      const arrived1 = new Promise<void>(r => { reached1 = r; });
+      blockWrite = { reached: reached1, gate: new Promise<void>(r => { release1 = r; }) };
+      const firstDeliver = deliver(s1.id, 'driver1', { proofOfDeliveryNotes: 'Giao xong' });
+      let secondFail!: Promise<Response>;
+      try {
+        await arrived1;
+        secondFail = fail(s1.id, 'admin', { reason: 'Admin báo thất bại trễ' });
+      } finally { release1(); }
+      const [d1, f1] = await Promise.all([firstDeliver, secondFail]);
+      expect([d1.status, f1.status]).toEqual([200, 409]);
+      expect((await (await get(`/shipments/${s1.id}`)).json())).toMatchObject({ status: 'DELIVERED', failureReason: null });
+
+      const s2 = await create();
+      await assign(s2.id, id(3));
+      await pickup(s2.id, 'driver1');
+      let reached2!: () => void; let release2!: () => void;
+      const arrived2 = new Promise<void>(r => { reached2 = r; });
+      blockWrite = { reached: reached2, gate: new Promise<void>(r => { release2 = r; }) };
+      const firstFail = fail(s2.id, 'admin', { reason: 'Admin báo thất bại trước' });
+      let secondDeliver!: Promise<Response>;
+      try {
+        await arrived2;
+        secondDeliver = deliver(s2.id, 'driver1', { proofOfDeliveryNotes: 'Giao muộn' });
+      } finally { release2(); }
+      const [f2, d2] = await Promise.all([firstFail, secondDeliver]);
+      expect([f2.status, d2.status]).toEqual([200, 409]);
+      expect((await (await get(`/shipments/${s2.id}`)).json())).toMatchObject({
+        status: 'DELIVERY_FAILED', failureReason: 'Admin báo thất bại trước', proofOfDeliveryNotes: null,
+      });
+    });
+
+    it('frontend hiện có đọc được response thật của API danh sách, chi tiết, phân công, nhận, giao và thất bại', async () => {
       const {
-        getShipments, getShipmentById, assignShipment, pickupShipment, deliverShipment,
+        getShipments, getShipmentById, assignShipment, pickupShipment, deliverShipment, failShipment,
       } = await import(resolve(process.cwd(), '../web/src/api/endpoints/shipments.ts'));
       const { setTokenReader } = await import(resolve(process.cwd(), '../web/src/features/auth/session.ts'));
-      const s = await create(); vi.stubEnv('VITE_API_URL', base);
+      const s = await create();
+      const sFail = await create();
+      vi.stubEnv('VITE_API_URL', base);
       try {
         setTokenReader(async () => 'admin');
-        expect((await getShipments()).data[0].id).toBe(s.id);
+        expect((await getShipments()).data.length).toBeGreaterThanOrEqual(2);
         expect((await assignShipment(s.id, id(3))).status).toBe('ASSIGNED');
+        expect((await assignShipment(sFail.id, id(3))).status).toBe('ASSIGNED');
         setTokenReader(async () => 'driver1');
         expect((await pickupShipment(s.id)).status).toBe('PICKED_UP');
         expect((await deliverShipment(s.id, '  Giao tận tay  ')).proofOfDeliveryNotes).toBe('Giao tận tay');
+        expect((await pickupShipment(sFail.id)).status).toBe('PICKED_UP');
+        setTokenReader(async () => 'admin');
+        expect((await failShipment(sFail.id, '  Người nhận từ chối  '))).toMatchObject({
+          status: 'DELIVERY_FAILED', failureReason: 'Người nhận từ chối', failedByRole: 'ADMIN',
+        });
         setTokenReader(async () => 'customer');
         expect((await getShipmentById(s.id)).statusHistory).toHaveLength(4);
+        expect((await getShipmentById(sFail.id)).statusHistory).toHaveLength(4);
       } finally { setTokenReader(null); vi.unstubAllEnvs(); }
     });
 

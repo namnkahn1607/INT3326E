@@ -2,7 +2,7 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { assignShipment, createShipment, deliverShipment, pickupShipment } from '../src/api/endpoints/shipments'
+import { assignShipment, createShipment, deliverShipment, failShipment, pickupShipment } from '../src/api/endpoints/shipments'
 import { getShipmentTracking } from '../src/api/endpoints/tracking'
 import { AdminAssignmentPage } from '../src/features/admin/AdminAssignmentPage'
 import { AdminShipmentsPage } from '../src/features/admin/AdminShipmentsPage'
@@ -378,6 +378,22 @@ describe('Driver list/detail → real Nest HTTP → isolated SQL (Firebase fixtu
     const delivered = await getShipmentTracking(order.id)
     expect(delivered.currentDriverLocation).toBeNull()
     expect(delivered.etaUnavailableReason).toBe('NOT_PICKED_UP')
+    await server.query('DELETE FROM current_locations')
+  })
+  it('fails a picked-up shipment through API07 and hides driver location on tracking', async () => {
+    await server.query('DELETE FROM current_locations')
+    const order = await create()
+    session.actor = 'admin'; await assignShipment(order.id, userId(3))
+    session.actor = 'driver1'; await pickupShipment(order.id)
+    await server.query(`INSERT INTO current_locations ("driverId", lat, lng, "clientTimestamp", "receivedAt")
+      VALUES ($1, 21.0285, 105.8048, clock_timestamp() - interval '3 seconds', clock_timestamp())`, [userId(3)])
+    session.actor = 'admin'
+    const failed = await failShipment(order.id, '  Khách hẹn giao lại sau  ')
+    expect(failed).toMatchObject({ status: 'DELIVERY_FAILED', failureReason: 'Khách hẹn giao lại sau', failedByRole: 'ADMIN' })
+    session.actor = 'customer'
+    const tracking = await getShipmentTracking(order.id)
+    expect(tracking.status).toBe('DELIVERY_FAILED')
+    expect(tracking.currentDriverLocation).toBeNull()
     await server.query('DELETE FROM current_locations')
   })
 })

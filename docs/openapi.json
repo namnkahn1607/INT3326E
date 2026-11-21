@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "ParcelFlow Core Logistics API (MVP)",
-    "description": "Đã triển khai và kiểm thử trên máy API01/02/03/04/05/06/09 (cùng API08, API10, API11) theo đặc tả ParcelFlow v1.4: tạo đơn, danh sách/chi tiết theo quyền, phân công tài xế dành cho ADMIN, nhận hàng/giao hàng dành cho DRIVER hiện hành, và theo dõi vị trí + ETA (`GET /v1/shipments/{id}/tracking`). API nghiệp vụ yêu cầu Firebase hợp lệ và liên kết người dùng nghiệp vụ. Chưa thay schema hay triển khai Cloud SQL. Fail (`API07`) vẫn là bản nháp. Giữ Auth, Admin directory, Notifications và geocoding hiện có.",
-    "version": "0.8.0-shipment-tracking"
+    "description": "Đã triển khai và kiểm thử trên máy API01/02/03/04/05/06/07/09 (cùng API08, API10, API11) theo đặc tả ParcelFlow v1.4: tạo đơn, danh sách/chi tiết theo quyền, phân công tài xế dành cho ADMIN, nhận hàng/giao hàng dành cho DRIVER hiện hành, báo giao thất bại dành cho DRIVER hiện hành hoặc ADMIN, và theo dõi vị trí + ETA (`GET /v1/shipments/{id}/tracking`). API nghiệp vụ yêu cầu Firebase hợp lệ và liên kết người dùng nghiệp vụ. Chưa thay schema hay triển khai Cloud SQL. Giữ Auth, Admin directory, Notifications và geocoding hiện có.",
+    "version": "0.9.0-shipment-fail"
   },
   "servers": [
     {
@@ -794,6 +794,7 @@
         "summary": "Report shipment delivery failure (Driver or Admin)",
         "description": "Transitions state from `PICKED_UP` to `DELIVERY_FAILED` (terminal state).\n\n**Authorized Roles:** `DRIVER` (assigned driver) or `ADMIN`.\n\n**Invariant:** Delivery failure is strictly valid *only* after `PICKED_UP`. If a driver cannot collect an item before pickup, the admin reassigns another driver.\n\n**Audit Trail:** The server records `failedByRole` (`DRIVER` or `ADMIN`) and `failedByUserId` to preserve provenance if a admin steps in after a driver vanishes.\n\n**Natural Idempotency:** Retrying `/fail` on an already failed shipment returns `200 OK`.",
         "operationId": "failShipment",
+        "x-implementation-status": "implemented-local",
         "parameters": [
           {
             "$ref": "#/components/parameters/ShipmentIdParam"
@@ -812,6 +813,17 @@
         "responses": {
           "200": {
             "description": "Shipment marked as failed (or already marked as failed)",
+            "headers": {
+              "Cache-Control": {
+                "description": "Dữ liệu nghiệp vụ không được lưu cache.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -846,8 +858,7 @@
           {
             "BearerAuth": []
           }
-        ],
-        "x-implementation-status": "draft"
+        ]
       }
     },
     "/locations": {
@@ -1662,6 +1673,7 @@
       },
       "FailShipmentRequest": {
         "type": "object",
+        "additionalProperties": false,
         "required": [
           "reason"
         ],
