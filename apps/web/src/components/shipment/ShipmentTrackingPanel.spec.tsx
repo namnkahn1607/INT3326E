@@ -67,6 +67,24 @@ describe('Shipment tracking UI using server snapshots', () => {
     expect(node.querySelector('[data-testid="map"]')).toBeNull()
     expect(node.querySelector('[role="alert"]')?.textContent).toContain('không có quyền')
   })
+  it('announces a slow poll without overlapping requests, then shows missing GPS without an old driver', async () => {
+    let finish!: (value: ReturnType<typeof trackingFixture>) => void
+    api.load.mockResolvedValueOnce(trackingFixture()).mockImplementation(() => new Promise(resolve => { finish = resolve }))
+    await mount()
+    await act(async () => vi.advanceTimersByTimeAsync(5000))
+    const button = node.querySelector<HTMLButtonElement>('.tracking-toolbar button')!
+    expect(button.textContent).toContain('Đang cập nhật')
+    expect(button.disabled).toBe(true)
+    expect(node.querySelector('.shipment-tracking')?.getAttribute('aria-busy')).toBe('true')
+    await act(async () => vi.advanceTimersByTimeAsync(10_000))
+    expect(api.load).toHaveBeenCalledTimes(2)
+    await act(async () => finish(trackingFixture({ currentDriverLocation: null, locationClientTimestamp: null,
+      lastLocationUpdatedAt: null, isLocationStale: null, etaUnavailableReason: 'LOCATION_MISSING' })))
+    expect(node.textContent).toContain('Chưa có GPS')
+    expect(node.querySelectorAll('[data-pin]')).toHaveLength(2)
+    expect(button.disabled).toBe(false)
+    expect(node.querySelector('.shipment-tracking')?.getAttribute('aria-busy')).toBe('false')
+  })
   it('keeps fixed delivery pins for missing GPS and never invents a driver', async () => {
     api.load.mockResolvedValue(trackingFixture({ currentDriverLocation: null, lastLocationUpdatedAt: null,
       locationClientTimestamp: null, isLocationStale: null, etaUnavailableReason: 'LOCATION_MISSING' }))

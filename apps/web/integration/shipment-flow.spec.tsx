@@ -4,6 +4,10 @@ import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { assignShipment, createShipment, deliverShipment, failShipment, pickupShipment } from '../src/api/endpoints/shipments'
 import { getShipmentTracking } from '../src/api/endpoints/tracking'
+import { getNotifications } from '../src/api/endpoints/notifications'
+import { getCustomers } from '../src/api/endpoints/customers'
+import { CustomerNotificationsPage } from '../src/features/customer/CustomerNotificationsPage'
+import { AdminAccountsPage } from '../src/features/admin/AdminAccountsPage'
 import { AdminAssignmentPage } from '../src/features/admin/AdminAssignmentPage'
 import { AdminShipmentsPage } from '../src/features/admin/AdminShipmentsPage'
 import { AdminShipmentDetailPage } from '../src/features/admin/AdminShipmentDetailPage'
@@ -84,6 +88,8 @@ async function mount(path: string, actor = 'customer') {
     <Route path="/customer/create" element={<CustomerCreatePage />} />
     <Route path="/customer/shipments" element={<CustomerShipmentsPage />} />
     <Route path="/customer/history" element={<CustomerHistoryPage />} />
+    <Route path="/customer/notifications" element={<CustomerNotificationsPage />} />
+    <Route path="/admin/accounts" element={<AdminAccountsPage />} />
     <Route path="/customer/shipments/:id" element={<CustomerShipmentDetailPage />} />
     <Route path="/admin/shipments" element={<AdminShipmentsPage />} />
     <Route path="/admin/shipments/:id" element={<AdminShipmentDetailPage />} />
@@ -380,20 +386,38 @@ describe('Driver list/detail → real Nest HTTP → isolated SQL (Firebase fixtu
     expect(delivered.etaUnavailableReason).toBe('NOT_PICKED_UP')
     await server.query('DELETE FROM current_locations')
   })
-  it('fails a picked-up shipment through API07 and hides driver location on tracking', async () => {
-    await server.query('DELETE FROM current_locations')
+  it('renders notifications from Nest/SQL and isolates another Customer without read receipts', async () => {
+    const order = await create()
+    const own = await getNotifications()
+    expect(own.data.some(item => item.shipmentId === order.id && item.kind === 'CREATED')).toBe(true)
+    await mount('/customer/notifications')
+    await eventually(() => expect(node.textContent).toContain(order.trackingNumber))
+    expect(node.querySelector('a[href="/customer/shipments/' + order.id + '"]')).not.toBeNull()
+    expect(node.querySelector('.unread')).toBeNull()
+    await mount('/customer/notifications', 'other')
+    await eventually(() => expect(node.textContent).toContain('Chưa có thông báo.'))
+    expect(node.textContent).not.toContain(order.trackingNumber)
+  })
+  it('reads the customer directory through Admin UI and rejects a Customer session', async () => {
+    await mount('/admin/accounts', 'admin')
+    await eventually(() => expect(node.textContent).toContain('other@example.com'))
+    expect(node.textContent).toContain('customer@example.com')
+    expect(node.textContent).not.toContain('driver1@example.com')
+    session.actor = 'customer'
+    await expect(getCustomers()).rejects.toMatchObject({ status: 403 })
+  })
+  it('uses the database-derived late flag on Customer/Admin details and hides unknown lateness', async () => {
     const order = await create()
     session.actor = 'admin'; await assignShipment(order.id, userId(3))
     session.actor = 'driver1'; await pickupShipment(order.id)
-    await server.query(`INSERT INTO current_locations ("driverId", lat, lng, "clientTimestamp", "receivedAt")
-      VALUES ($1, 21.0285, 105.8048, clock_timestamp() - interval '3 seconds', clock_timestamp())`, [userId(3)])
-    session.actor = 'admin'
-    const failed = await failShipment(order.id, '  Khách hẹn giao lại sau  ')
-    expect(failed).toMatchObject({ status: 'DELIVERY_FAILED', failureReason: 'Khách hẹn giao lại sau', failedByRole: 'ADMIN' })
-    session.actor = 'customer'
-    const tracking = await getShipmentTracking(order.id)
-    expect(tracking.status).toBe('DELIVERY_FAILED')
-    expect(tracking.currentDriverLocation).toBeNull()
-    await server.query('DELETE FROM current_locations')
+    await server.query('UPDATE shipments SET "expectedDeliveryAt" = CURRENT_TIMESTAMP - interval \'5 minutes\' WHERE id=$1', [order.id])
+    await mount('/customer/shipments/' + order.id)
+    await eventually(() => expect(node.querySelector('.shipment-late-badge')?.textContent).toBe('Giao trễ'))
+    await mount('/admin/shipments/' + order.id, 'admin')
+    await eventually(() => expect(node.querySelector('.shipment-late-badge')?.textContent).toBe('Giao trễ'))
+    await server.query('UPDATE shipments SET "expectedDeliveryAt" = NULL WHERE id=$1', [order.id])
+    await mount('/customer/shipments/' + order.id)
+    await eventually(() => expect(node.querySelector('.customer-tracking-number')).not.toBeNull())
+    expect(node.querySelector('.shipment-late-badge')).toBeNull()
   })
 })

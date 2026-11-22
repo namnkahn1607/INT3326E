@@ -75,3 +75,32 @@ Mục lục: [Điều phối theo tuần](README.md)
 ## Thực tế từng người
 
 - **TV1** (21/11, nhánh `tv1/week9`): hoàn thiện `API07` (`POST /v1/shipments/:id/fail`, `Cache-Control: no-store`) cho `DRIVER` hiện hành hoặc `ADMIN` từ `PICKED_UP` sang `DELIVERY_FAILED`, hợp nhất khóa giao dịch `runLockedTransition` (kèm đọc lại snapshot mới ở nhánh no-op `DELIVERED` / `DELIVERY_FAILED` dưới `READ COMMITTED`), kiểm `isLate` đủ 3 mốc ở trạng thái active và terminal, cập nhật `docs/openapi.json`, `docs/features.md` (`AC07` mức `local`), `docs/tech-debt.md` và `docs/contracts/api-contract.md`. Đã kiểm tra trên PostgreSQL 16 thật (container tạm): `src/qa/` đạt 15/15 (gồm `TC03.4` Deliver vs Fail, Fail vs Fail đồng thời và ma trận quyền `TC10`), `assignments.postgres.spec.ts` đạt 190/192 (2 ca PGlite-only bỏ qua ở chế độ tương ứng); chưa deploy hoặc kiểm trên Cloud, chờ TV3 ghép nút Fail phía Driver và TV6 nghiệm thu `AC07`/`AC08`.
+- **TV3 (22/11):** đã lấy `develop@5e79dcb` vào `feature/frontend`, bảo toàn
+  phần local 18/11 và nội dung điều phối chung. Customer Notifications nối
+  API10, polling 10s serial/cursor/account; Admin Accounts nối directory khách
+  hàng; Customer/Admin hiện và đồng bộ `isLate` từ server. Driver có form
+  fail/reason/review/no-op/recovery theo contract PR #51, chưa ghép backend
+  chưa merge. Local đạt check toàn repo (181 Worker/shared/load, 2 health,
+  465 API, 621 web; 125 skipped), integration Nest/PGlite 15/15, 103 test liên
+  quan và browser 10 lượt 390/1440px. Bàn giao qua PR vào develop; chưa deploy. AC07/08
+  Cloud còn chờ API07 tích hợp và deploy từ SHA chung. [Bàn giao và ảnh](../features/week9-frontend-handoff.md).
+  Công cụ đo tracking/polling local 18/11 vẫn được giữ trong
+  [tracking-read-load](../features/tracking-read-load.md); chưa đo LT04 Cloud,
+  không thay thứ tự ưu tiên AC07/08 hiện tại.
+
+- **TV4 (21/11):** cập nhật giao diện Driver với Express sáng và Midnight
+  tối, bổ sung thẻ hành trình trên trang đầu từ dữ liệu đơn được phân công.
+  Kiểm trên Edge local với Auth/API giả lập (49 kịch bản đạt, gồm luồng
+  lấy/giao hàng và gửi GPS). Chưa kiểm UI mới trên Cloud.
+- **TV4 (21/11, load test):** hoàn thiện [k6 API08](../../infra/load/README.md)
+  trên `test/tv4-week9-gps-load`. `npm run check` đạt (170 Worker/shared/load,
+  2 health, 465 API, 589 web; 125 ca môi trường bị bỏ qua). Smoke k6 v2.4.0
+  qua Nest HTTP local với Firebase, lookup và Pub/Sub mock đạt 7/7. Lượt
+  2 Driver × 3 giây ghi 6 offered, 6 accepted, 0 lỗi, p95 30,68 ms. Tải cố
+  định 2 event/s ghi 6 offered, 6 accepted, 0 drop và p95 23,22 ms. Khi đưa
+  độ trễ broker giả lập vào lượt 30 event/s, k6 ghi 24 drop và trả exit 99.
+  **Cloud:** dry-run 1 Driver, chu kỳ 8 giây trong 90 giây. Có 12 offered,
+  12 accepted, 0 lỗi, p95 HTTP 1.209,90 ms. Tổng backlog `gps-events-sub`
+  bằng 0 tại các điểm đo theo phút trước, trong và sau lượt. Worker nhận
+  đủ 12 mẫu, đều đi theo nhánh history-only do clock skew. `int3326esql`
+  đã về `Stopped` lúc 21:01:43 ICT. [Báo cáo Cloud](../evidence/gps-ingest-load/week-09-cloud.md).

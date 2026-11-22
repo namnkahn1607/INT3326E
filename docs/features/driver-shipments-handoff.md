@@ -1,5 +1,15 @@
 # Bàn giao TV4 — danh sách đơn và nhận/giao
 
+Giao diện Driver từ ngày 21/11/2026 có hai chế độ: **Express · Sáng** và
+**Midnight · Tối**. Bộ chọn trên thanh đầu trang mặc định theo hệ thống và
+lưu lựa chọn riêng cho Driver trên trình duyệt. Màn tổng quan đưa một đơn
+đang giao hoặc chờ lấy lên thẻ **Hành trình ưu tiên** khi mở trang đầu và
+chưa lọc. Thẻ hiển thị hai địa chỉ từ đơn được phân công.
+
+Trong môi trường local, xem tại `/driver` sau khi đăng nhập bằng tài khoản
+Driver. Bộ kiểm tra trình duyệt bên dưới tạo phiên và đơn giả lập để kiểm
+giao diện mà không cần cấu hình Cloud.
+
 Ngày 08/11/2026. Nhánh `feature/driver-shipments` tạo từ
 `origin/develop@cbec8fb93765fb12e78b01fac3f09778e7ed94de` sau fetch.
 Working tree đầu lượt sạch. Các kết quả bên dưới được thu trước commit.

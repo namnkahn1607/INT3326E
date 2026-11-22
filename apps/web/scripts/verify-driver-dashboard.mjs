@@ -186,6 +186,43 @@ try {
       } finally { await context.close() }
     })
   }
+  for (const width of [390, 1440]) {
+    await check(`Express and Midnight at ${width}px, including shipment detail`, async () => {
+      const { page, context, shipmentRequests } = await reviewPage({ width })
+      try {
+        const select = page.getByLabel('Giao diện tài xế')
+        const shell = page.locator('.driver-shell')
+        const background = () => shell.evaluate(element => getComputedStyle(element).backgroundColor)
+        assert.equal(await select.inputValue(), 'system')
+        await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' })
+        const midnight = await background()
+        await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' })
+        const express = await background()
+        assert.notEqual(midnight, express)
+        const journey = page.getByRole('link', { name: 'Mở hành trình', exact: true })
+        await journey.waitFor()
+        const beforeSwitch = shipmentRequests.length
+        for (const [theme, expected] of [['light', express], ['dark', midnight]]) {
+          await select.selectOption(theme)
+          assert.equal(await background(), expected)
+          await noOverflow(page)
+          await page.screenshot({ path: path.join(output, `driver-${theme}-${width}.png`), fullPage: true })
+        }
+        assert.equal(shipmentRequests.length, beforeSwitch)
+        await page.reload()
+        assert.equal(await select.inputValue(), 'dark')
+        await journey.click()
+        await page.getByRole('button', { name: 'Đã lấy hàng', exact: true }).waitFor()
+        assert.equal(await background(), midnight)
+        await noOverflow(page)
+        await page.screenshot({ path: path.join(output, `driver-detail-dark-${width}.png`), fullPage: true })
+        await select.selectOption('system')
+        assert.equal(await background(), express)
+        await page.reload()
+        assert.equal(await select.inputValue(), 'system')
+      } finally { await context.close() }
+    })
+  }
   await check('keyboard skip link reaches main content', async () => {
     const { page, context } = await reviewPage()
     try {

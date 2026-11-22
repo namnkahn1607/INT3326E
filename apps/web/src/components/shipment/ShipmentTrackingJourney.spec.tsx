@@ -21,7 +21,8 @@ let hold: boolean, reads: { path: string; auth: string | null; signal?: AbortSig
 let holdDetail: boolean
 let pendingDetail: { resolve: (response: Response) => void; signal?: AbortSignal | null }[]
 let pending: { resolve: (response: Response) => void; signal?: AbortSignal | null }[]
-const detail = () => ({ ...shipmentFixture, status: snapshot.status, driverId: snapshot.driverId, statusHistory: [],
+const detail = () => ({ ...shipmentFixture, status: snapshot.status, driverId: snapshot.driverId,
+  isLate: snapshot.isLate, expectedDeliveryAt: snapshot.expectedDeliveryAt, statusHistory: [],
   proofOfDeliveryNotes: snapshot.status === 'DELIVERED' ? 'Đã bàn giao bưu kiện' : null })
 const count = () => reads.filter(read => read.path.endsWith('/tracking')).length
 function Navigation() {
@@ -65,6 +66,22 @@ afterEach(async () => {
 })
 
 describe('Customer/Admin tracking journeys (HTTP responses mocked, real client and parser)', () => {
+  it.each(['customer', 'admin'])('updates the %s late flag from API data without reloading detail for every GPS sample', async area => {
+    session.role = area === 'admin' ? 'ADMIN' : 'CUSTOMER'
+    await mount(area)
+    expect(node.querySelector('.shipment-late-badge')).toBeNull()
+    snapshot = { ...snapshot, isLate: true, expectedDeliveryAt: '2026-11-14T02:00:00.000Z' }
+    await refresh()
+    expect(node.querySelector('.shipment-late-badge')?.textContent).toBe('Giao trễ')
+    const detailReads = reads.filter(read => !read.path.endsWith('/tracking')).length
+    await refresh()
+    expect(reads.filter(read => !read.path.endsWith('/tracking'))).toHaveLength(detailReads)
+    snapshot = { ...snapshot, isLate: false }
+    await refresh()
+    expect(node.querySelector('.shipment-late-badge')).toBeNull()
+    // Admin's focus restoration queues a jsdom selectionchange event at 0ms.
+    await act(async () => vi.advanceTimersByTimeAsync(0))
+  })
   it.each(['customer', 'admin'])('reads %s detail then polls SC05, replaces drivers and stops at terminal', async area => {
     session.role = area === 'admin' ? 'ADMIN' : 'CUSTOMER'
     await mount(area)

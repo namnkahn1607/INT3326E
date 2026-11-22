@@ -4,6 +4,27 @@ Mỗi dòng là một tiêu chí nghiệm thu (AC) của đặc tả v1.4. Chỉ
 
 Trạng thái: `chưa có` · `đang làm` · `local` (đạt trên máy, PostgreSQL thật hoặc mock như ghi chú) · `cloud` (đạt trên môi trường Cloud, kèm revision).
 
+TV3 ngày 22/11/2026: frontend Thông báo nối API10 thật, Admin Accounts nối
+directory khách hàng; chi tiết Customer/Admin hiện cờ giao trễ từ server và
+Driver có form fail theo API07. Đạt local: check toàn repo (181/2/465/621;
+125 ca môi trường bỏ qua), UI→Nest/PGlite 15/15, browser 390/1440px với
+Auth/HTTP mock. API07 vẫn chờ PR #51 merge; chưa kiểm fail qua Nest thật,
+chưa deploy hoặc nâng AC07/AC08 Cloud. [Bàn giao](features/week9-frontend-handoff.md).
+
+TV4 cập nhật UI02 ngày 21/11/2026: Driver có Express sáng và Midnight tối,
+mặc định theo hệ thống. Giao diện tổng quan, danh sách và chi tiết đơn đã kiểm
+local với Edge và Auth/API giả lập (49 kịch bản đạt, bố cục 320/390/1440 px).
+Xem [bàn giao Driver](features/driver-shipments-handoff.md). Chưa kiểm giao
+diện mới trên Cloud. Trạng thái nghiệm thu AC03 và AC04 giữ theo bảng bên dưới.
+
+TV3 tuần 9 (18/11/2026): công cụ đo API09 và kiểm UI dưới polling đã có,
+local đạt sampler 11 test, smoke Nest/PGlite 5 kịch bản, 500 hook ở chu kỳ
+5s/10s và browser Customer/Admin 390/1440px. `npm run check` đạt: 177
+Worker/shared/load, 2 health, 465 API, 592 web; 125 ca môi trường bỏ qua.
+LT04 Cloud hai lượt 500 poller × 10 phút **chưa chạy**, chưa kết luận NF04
+hoặc nâng AC05 lên Cloud. [Phương pháp](features/tracking-read-load.md) ·
+[Bằng chứng](evidence/tracking-read-week9/report.md).
+
 TV3 sửa hai lỗi tracking ngày 18/11/2026: Customer/Admin tự đọc lại detail khi
 status/driverId đổi, cập nhật lịch sử và khóa form theo snapshot cũ; GPS đổi
 tọa độ không tải lại detail. Bản build local dùng CARTO đã cấu hình và có tile
@@ -31,8 +52,8 @@ health e2e 2); 116 ca PostgreSQL/Firebase emulator bỏ qua do thiếu cấu hì
 | AC04 | Driver gửi GPS; Worker ghi lịch sử và vị trí hiện tại, mẫu đầu tiên thắng, không lùi vị trí, ACK sau commit | API08, EVT01, DATA04, DATA05 | `npm test -- gps-writer gps-duplicate-order` (cần `WORKER_TEST_DATABASE_URL`, thiếu thì bị bỏ qua) | local; pipeline Cloud đã đối chiếu W707, chưa nghiệm thu toàn bộ AC04 |
 | AC05 | Customer chủ đơn xem vị trí tài xế gần real-time, ẩn hoặc hiện theo trạng thái, nhãn vị trí cũ | API09, UI01 | `npm test --workspace=@parcelflow/api -- assignments.postgres`, `npm run test:integration --workspace=@parcelflow/web`; web UI mock: `npm test --workspace=@parcelflow/web -- tracking` | local (API09 Nest/PGlite, bản đồ UI mock; Cloud chưa xác nhận) |
 | AC06 | Lịch sử trạng thái đúng thứ tự, đúng người thực hiện, đúng phạm vi quyền | API02, API03 | `npm test --workspace=@parcelflow/api -- shipment-flow` (TC06.1) | local |
-| AC07 | Báo giao thất bại sau khi lấy hàng; phát hiện giao trễ | API07 | `npm test --workspace=@parcelflow/api -- assignments.postgres shipment-flow` | local (Cloud chưa xác nhận) |
-| AC08 | Thông báo tạo cùng lúc đổi trạng thái; người dùng chỉ đọc thông báo của mình | API10, DATA06 | `npm test --workspace=@parcelflow/api -- notifications` | local |
+| AC07 | Báo giao thất bại sau khi lấy hàng; phát hiện giao trễ | API07 | Web: `npm test --workspace=@parcelflow/web -- DriverShipments AdminShipmentDetailPage ShipmentTrackingJourney` | frontend local/mock; API07 chờ PR #51 tích hợp và kiểm thật |
+| AC08 | Thông báo tạo cùng lúc đổi trạng thái; người dùng chỉ đọc thông báo của mình | API10, DATA06 | `npm test --workspace=@parcelflow/api -- notifications`; web: `npm run test:integration --workspace=@parcelflow/web` | local (frontend đã nối API10; Nest/PGlite, Firebase mock; Cloud chưa kiểm UI mới) |
 | AC09 | ETA Haversine 20 km/h khi đơn đang giao và vị trí còn mới; không sửa hạn giao | ETA01, API09 | `npm test --workspace=@parcelflow/api -- assignments.postgres` và `npm test -- eta` | local (Cloud chưa xác nhận) |
 | AC10 | Phân quyền 3 role; sai quyền 403, chưa liên kết user 409, không token 401 | AUTH01 | `npm test --workspace=@parcelflow/api -- auth shipment-flow` (TC10.x) | local |
 
@@ -54,6 +75,15 @@ Một số test chỉ chạy trên PostgreSQL thật, thiếu biến thì bị b
 Mỗi biến phải trỏ tới DB loopback dùng tạm; test tự tạo và xóa schema riêng.
 
 Kết quả từng tuần và bằng chứng Cloud ghi ở [điều phối theo tuần](coordination/README.md).
+
+TV4 tuần 9 (21/11/2026) hoàn thiện [k6 API08](../infra/load/README.md) với tải
+cố định tùy chọn, số offered/accepted, lỗi, p95 HTTP và số lượt bị bỏ. Kiểm
+local đạt 48 test cấu hình/hợp đồng và 7/7 smoke bằng k6 thật → Nest HTTP,
+với Firebase, lookup và Pub/Sub mock. `npm run check` đạt, 125 ca cần
+PostgreSQL thật hoặc Firebase emulator bị bỏ qua. Dry-run Cloud đạt 12/12
+accepted, 0 lỗi, p95 HTTP 1.209,90 ms. Các điểm đo `gps-events-sub` ghi tổng
+backlog bằng 0. Worker nhận 12 mẫu history-only do clock skew. Xem
+[báo cáo Cloud](evidence/gps-ingest-load/week-09-cloud.md).
 
 Công cụ thử tải GPS tuần 8 (15/11/2026): nhánh `test/gps-ingest-load` từ
 `develop@f28365d` có [script k6 và hướng dẫn](../infra/load/README.md) cho API08,
