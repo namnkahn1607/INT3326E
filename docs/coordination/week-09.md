@@ -74,6 +74,7 @@ Mục lục: [Điều phối theo tuần](README.md)
 
 ## Thực tế từng người
 
+- **TV1** (21/11, nhánh `tv1/week9`): hoàn thiện `API07` (`POST /v1/shipments/:id/fail`, `Cache-Control: no-store`) cho `DRIVER` hiện hành hoặc `ADMIN` từ `PICKED_UP` sang `DELIVERY_FAILED`, hợp nhất khóa giao dịch `runLockedTransition` (kèm đọc lại snapshot mới ở nhánh no-op `DELIVERED` / `DELIVERY_FAILED` dưới `READ COMMITTED`), kiểm `isLate` đủ 3 mốc ở trạng thái active và terminal, cập nhật `docs/openapi.json`, `docs/features.md` (`AC07` mức `local`), `docs/tech-debt.md` và `docs/contracts/api-contract.md`. Đã kiểm tra trên PostgreSQL 16 thật (container tạm): `src/qa/` đạt 15/15 (gồm `TC03.4` Deliver vs Fail, Fail vs Fail đồng thời và ma trận quyền `TC10`), `assignments.postgres.spec.ts` đạt 190/192 (2 ca PGlite-only bỏ qua ở chế độ tương ứng); chưa deploy hoặc kiểm trên Cloud, chờ TV3 ghép nút Fail phía Driver và TV6 nghiệm thu `AC07`/`AC08`.
 - **TV3 (22/11):** đã lấy `develop@5e79dcb` vào `feature/frontend`, bảo toàn
   phần local 18/11 và nội dung điều phối chung. Customer Notifications nối
   API10, polling 10s serial/cursor/account; Admin Accounts nối directory khách

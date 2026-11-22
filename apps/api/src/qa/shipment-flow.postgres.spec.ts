@@ -144,6 +144,41 @@ describe.skipIf(!connectionString)('QA tuần 7: luồng đầu cuối và ma tr
     expect(runs.filter((r) => r.statuses.some((code) => code !== 200))).toEqual([]);
   });
 
+  it('TC03.4 đầy đủ: Deliver đối đầu Fail đồng thời chỉ một terminal thắng (200 và 409); Fail lặp đồng thời cùng trả 200', async () => {
+    for (let i = 0; i < 10; i++) {
+      const s = await create();
+      await assign(s.id, 'd1');
+      await call('POST', `/shipments/${s.id}/pickup`, 'd1');
+      const [deliverRes, failRes] = await Promise.all([
+        call('POST', `/shipments/${s.id}/deliver`, 'd1', { proofOfDeliveryNotes: 'Giao xong' }),
+        call('POST', `/shipments/${s.id}/fail`, 'a1', { reason: 'Admin báo thất bại' }),
+      ]);
+      expect([deliverRes.status, failRes.status].sort((a, b) => a - b)).toEqual([200, 409]);
+      const counts = (await pool.query<{ e: number; n: number; status: string }>(
+        `SELECT (SELECT count(*)::int FROM shipment_status_events WHERE "shipmentId"=$1 AND action IN ('DELIVERED','DELIVERY_FAILED')) e,
+                (SELECT count(*)::int FROM notifications WHERE "shipmentId"=$1 AND kind IN ('DELIVERED','DELIVERY_FAILED')) n,
+                (SELECT status FROM shipments WHERE id=$1) status`, [s.id])).rows[0];
+      expect(counts.e).toBe(1);
+      expect(counts.n).toBe(1);
+      expect(['DELIVERED', 'DELIVERY_FAILED']).toContain(counts.status);
+    }
+    for (let i = 0; i < 10; i++) {
+      const s = await create();
+      await assign(s.id, 'd1');
+      await call('POST', `/shipments/${s.id}/pickup`, 'd1');
+      const [r1, r2] = await Promise.all([
+        call('POST', `/shipments/${s.id}/fail`, 'd1', { reason: 'Tài xế báo thất bại' }),
+        call('POST', `/shipments/${s.id}/fail`, 'a1', { reason: 'Admin báo thất bại' }),
+      ]);
+      expect([r1.status, r2.status]).toEqual([200, 200]);
+      expect(await r1.json()).toEqual(await r2.json());
+      const counts = (await pool.query<{ e: number; n: number }>(
+        `SELECT (SELECT count(*)::int FROM shipment_status_events WHERE "shipmentId"=$1 AND action='DELIVERY_FAILED') e,
+                (SELECT count(*)::int FROM notifications WHERE "shipmentId"=$1 AND kind='DELIVERY_FAILED') n`, [s.id])).rows[0];
+      expect(counts).toEqual({ e: 1, n: 1 });
+    }
+  });
+
   describe('TC10: ma trận quyền', () => {
     let delivered: string;
     let assigned: string;
@@ -159,7 +194,8 @@ describe.skipIf(!connectionString)('QA tuần 7: luồng đầu cuối và ma tr
     const protectedCalls = (id: string): [string, string, unknown?][] => [
       ['GET', '/shipments'], ['GET', `/shipments/${id}`], ['POST', '/shipments', payload],
       ['POST', `/shipments/${id}/assign`, { driverId: users.d2[0] }], ['POST', `/shipments/${id}/pickup`],
-      ['POST', `/shipments/${id}/deliver`], ['GET', '/notifications'], ['GET', '/drivers'], ['GET', '/admin/customers'],
+      ['POST', `/shipments/${id}/deliver`], ['POST', `/shipments/${id}/fail`, { reason: 'Khách từ chối' }],
+      ['GET', '/notifications'], ['GET', '/drivers'], ['GET', '/admin/customers'],
       ['GET', '/auth/me'], ['GET', '/admin/me'], ['POST', '/locations', {}],
     ];
 
@@ -186,13 +222,18 @@ describe.skipIf(!connectionString)('QA tuần 7: luồng đầu cuối và ma tr
     const matrix = (): [Actor, string, string, number, unknown?][] => [
       ['c2', 'GET', `/shipments/${delivered}`, 403], ['c2', 'POST', `/shipments/${assigned}/assign`, 403, { driverId: users.d2[0] }],
       ['c2', 'POST', `/shipments/${assigned}/pickup`, 403], ['c2', 'POST', `/shipments/${delivered}/deliver`, 403],
+      ['c2', 'POST', `/shipments/${delivered}/fail`, 403, { reason: 'Lý do hợp lệ' }],
       ['c2', 'GET', '/drivers', 403], ['c2', 'GET', '/admin/customers', 403], ['c2', 'POST', '/locations', 403, {}],
       ['d2', 'GET', `/shipments/${assigned}`, 403], ['d2', 'GET', `/shipments/${delivered}`, 403],
       ['d2', 'POST', `/shipments/${assigned}/pickup`, 403], ['d2', 'POST', `/shipments/${assigned}/deliver`, 403],
+      ['d2', 'POST', `/shipments/${assigned}/fail`, 403, { reason: 'Lý do hợp lệ' }],
       ['d2', 'POST', `/shipments/${assigned}/assign`, 403, { driverId: users.d2[0] }], ['d2', 'GET', '/notifications', 403],
       ['d2', 'GET', '/drivers', 403], ['d2', 'POST', '/shipments', 403, payload],
       ['a1', 'GET', `/shipments/${delivered}`, 200], ['a1', 'POST', `/shipments/${assigned}/pickup`, 403],
-      ['a1', 'POST', `/shipments/${assigned}/deliver`, 403], ['a1', 'POST', `/shipments/${delivered}/assign`, 409, { driverId: users.d2[0] }],
+      ['a1', 'POST', `/shipments/${assigned}/deliver`, 403],
+      ['a1', 'POST', `/shipments/${assigned}/fail`, 409, { reason: 'Lý do hợp lệ' }],
+      ['a1', 'POST', `/shipments/${delivered}/fail`, 409, { reason: 'Lý do hợp lệ' }],
+      ['a1', 'POST', `/shipments/${delivered}/assign`, 409, { driverId: users.d2[0] }],
       ['a1', 'GET', '/notifications', 403], ['a1', 'POST', '/shipments', 403, payload], ['a1', 'POST', '/locations', 403, {}],
       ['a1', 'GET', '/drivers', 200],
     ];

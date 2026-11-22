@@ -58,4 +58,13 @@ export class ShipmentsController {
     @Body() body: unknown, @Query() query: Record<string, unknown>) {
     return this.shipments.deliver(request.businessUser!, id, body, query);
   }
+
+  @Post(':id/fail')
+  @Roles(UserRole.DRIVER, UserRole.ADMIN)
+  @HttpCode(200)
+  @Header('Cache-Control', 'no-store')
+  fail(@Req() request: AuthenticatedRequest, @Param('id') id: string,
+    @Body() body: unknown, @Query() query: Record<string, unknown>) {
+    return this.shipments.fail(request.businessUser!, id, body, query);
+  }
 }
