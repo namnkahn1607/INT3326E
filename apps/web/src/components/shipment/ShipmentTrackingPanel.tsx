@@ -25,10 +25,10 @@ export default function ShipmentTrackingPanel({ id, pickupLocation, dropoffLocat
   const { user } = useAuth(), now = useGpsClock()
   const tracking = usePollingTracking(id, undefined, 5000, user?.id)
   const data = tracking.data
-  const status = data?.status, driverId = data?.driverId
+  const status = data?.status, driverId = data?.driverId, isLate = data?.isLate
   useEffect(() => {
-    if (status) onStateChange?.(status, driverId ?? null)
-  }, [status, driverId, onStateChange])
+    if (status) onStateChange?.(status, driverId ?? null, isLate ?? null)
+  }, [status, driverId, isLate, onStateChange])
   const terminal = data?.status === 'DELIVERED' || data?.status === 'DELIVERY_FAILED'
   const freshness = gpsFreshness(data?.currentDriverLocation ?? null, data?.locationClientTimestamp ?? null,
     data?.isLocationStale ?? null, Math.max(now, tracking.updatedAt ?? 0))
@@ -43,9 +43,11 @@ export default function ShipmentTrackingPanel({ id, pickupLocation, dropoffLocat
     ...(data?.currentDriverLocation && !terminal ? [{ id: data.driverId!, label: freshness === 'fresh' ? 'Vị trí tài xế' : 'Vị trí tài xế ghi nhận gần nhất',
       kind: freshness === 'fresh' ? 'fresh' as const : 'stale' as const, position: data.currentDriverLocation }] : []),
   ] : []
-  return <section className="shipment-tracking" aria-label="Theo dõi vị trí đơn hàng">
+  return <section className="shipment-tracking" aria-label="Theo dõi vị trí đơn hàng" aria-busy={tracking.loading || tracking.refreshing}>
     <div className="tracking-toolbar"><h2>Theo dõi giao hàng</h2>
-      <button type="button" className="btn btn-outline" disabled={tracking.loading || tracking.refreshing} onClick={tracking.refresh}>Tải lại vị trí</button>
+      <button type="button" className="btn btn-outline" disabled={tracking.loading || tracking.refreshing} onClick={tracking.refresh}>
+        {tracking.loading ? 'Đang tải…' : tracking.refreshing ? 'Đang cập nhật…' : 'Tải lại vị trí'}
+      </button>
     </div>
     <div className="tracking-feedback">
       {tracking.loading && <p className="tracking-message" role="status">Đang tải vị trí…</p>}

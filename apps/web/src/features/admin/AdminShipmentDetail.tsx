@@ -1,11 +1,13 @@
 import type { ShipmentDetail, ShipmentResponse } from '../../types/shipment-api'
 import { StatusBadge } from '../../components/ui/StatusBadge'
+import { ShipmentLateBadge } from '../../components/shipment/ShipmentLateBadge'
 import { formatDateTime } from '../../utils'
 import { ShipmentLifecycleDetails } from '../../components/shipment/ShipmentLifecycleDetails'
 
 export function AdminShipmentDetail({ shipment, compact = false }: { shipment: ShipmentResponse | ShipmentDetail; compact?: boolean }) {
   return <section className="admin-shipment-detail" aria-label="Chi tiết đơn hiện hành">
     <div className="card-top"><h2>{shipment.trackingNumber}</h2><StatusBadge status={shipment.status} /></div>
+    <ShipmentLateBadge isLate={shipment.isLate} />
     <dl className="admin-detail-grid">
       <div><dt>Điểm lấy</dt><dd>{shipment.pickupAddress}</dd></div>
       <div><dt>Điểm giao</dt><dd>{shipment.dropoffAddress}</dd></div>

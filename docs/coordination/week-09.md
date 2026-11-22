@@ -74,6 +74,19 @@ Mục lục: [Điều phối theo tuần](README.md)
 
 ## Thực tế từng người
 
+- **TV3 (22/11):** đã lấy `develop@5e79dcb` vào `feature/frontend`, bảo toàn
+  phần local 18/11 và nội dung điều phối chung. Customer Notifications nối
+  API10, polling 10s serial/cursor/account; Admin Accounts nối directory khách
+  hàng; Customer/Admin hiện và đồng bộ `isLate` từ server. Driver có form
+  fail/reason/review/no-op/recovery theo contract PR #51, chưa ghép backend
+  chưa merge. Local đạt check toàn repo (181 Worker/shared/load, 2 health,
+  465 API, 621 web; 125 skipped), integration Nest/PGlite 15/15, 103 test liên
+  quan và browser 10 lượt 390/1440px. Bàn giao qua PR vào develop; chưa deploy. AC07/08
+  Cloud còn chờ API07 tích hợp và deploy từ SHA chung. [Bàn giao và ảnh](../features/week9-frontend-handoff.md).
+  Công cụ đo tracking/polling local 18/11 vẫn được giữ trong
+  [tracking-read-load](../features/tracking-read-load.md); chưa đo LT04 Cloud,
+  không thay thứ tự ưu tiên AC07/08 hiện tại.
+
 - **TV4 (21/11):** cập nhật giao diện Driver với Express sáng và Midnight
   tối, bổ sung thẻ hành trình trên trang đầu từ dữ liệu đơn được phân công.
   Kiểm trên Edge local với Auth/API giả lập (49 kịch bản đạt, gồm luồng

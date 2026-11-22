@@ -1,0 +1,158 @@
+{
+  "checkedAt": "2026-11-22T07:08:01.754Z",
+  "source": "feature/frontend on develop@5e79dcb plus local TV3 changes",
+  "environment": "Chrome headless local; actual app/layout/router; Auth and HTTP intercepted by CDP",
+  "cloudAcceptance": false,
+  "api07Integration": "Mock contract only; tv1/week9 route is not on develop",
+  "results": [
+    {
+      "page": "notifications",
+      "width": 390,
+      "dataFromHttp": true,
+      "cursor": true,
+      "errorRecovery": true,
+      "noDemoOrUnread": true
+    },
+    {
+      "page": "accounts",
+      "width": 390,
+      "dataFromHttp": true,
+      "errorRecovery": true,
+      "noDemo": true,
+      "lightTheme": true
+    },
+    {
+      "page": "customer-detail",
+      "width": 390,
+      "lateFlag": true
+    },
+    {
+      "page": "admin-detail",
+      "width": 390,
+      "lateFlag": true
+    },
+    {
+      "page": "driver-fail",
+      "width": 390,
+      "reviewed": true,
+      "singlePost": true,
+      "confirmedServerState": true
+    },
+    {
+      "page": "notifications",
+      "width": 1440,
+      "dataFromHttp": true,
+      "cursor": true,
+      "errorRecovery": true,
+      "noDemoOrUnread": true
+    },
+    {
+      "page": "accounts",
+      "width": 1440,
+      "dataFromHttp": true,
+      "errorRecovery": true,
+      "noDemo": true,
+      "lightTheme": true
+    },
+    {
+      "page": "customer-detail",
+      "width": 1440,
+      "lateFlag": true
+    },
+    {
+      "page": "admin-detail",
+      "width": 1440,
+      "lateFlag": true
+    },
+    {
+      "page": "driver-fail",
+      "width": 1440,
+      "reviewed": true,
+      "singlePost": true,
+      "confirmedServerState": true
+    }
+  ],
+  "exceptions": [],
+  "requests": [
+    {
+      "path": "/v1/notifications",
+      "query": "?limit=20",
+      "method": "GET"
+    },
+    {
+      "path": "/v1/notifications",
+      "query": "?limit=20&cursor=opaque%2B%2F%3D",
+      "method": "GET"
+    },
+    {
+      "path": "/v1/notifications",
+      "query": "?limit=20&cursor=opaque%2B%2F%3D",
+      "method": "GET"
+    },
+    {
+      "path": "/v1/notifications",
+      "query": "?limit=20&cursor=opaque%2B%2F%3D",
+      "method": "GET"
+    },
+    {
+      "path": "/v1/admin/customers",
+      "query": "?limit=20",
+      "method": "GET"
+    },
+    {
+      "path": "/v1/admin/customers",
+      "query": "?limit=20",
+      "method": "GET"
+    },
+    {
+      "path": "/v1/admin/customers",
+      "query": "?limit=20",
+      "method": "GET"
+    },
+    {
+      "path": "/v1/shipments/sh_01ARZ3NDEKTSV4RRFFQ69G5FAV/fail",
+      "query": "",
+      "method": "POST"
+    },
+    {
+      "path": "/v1/notifications",
+      "query": "?limit=20",
+      "method": "GET"
+    },
+    {
+      "path": "/v1/notifications",
+      "query": "?limit=20&cursor=opaque%2B%2F%3D",
+      "method": "GET"
+    },
+    {
+      "path": "/v1/notifications",
+      "query": "?limit=20&cursor=opaque%2B%2F%3D",
+      "method": "GET"
+    },
+    {
+      "path": "/v1/notifications",
+      "query": "?limit=20&cursor=opaque%2B%2F%3D",
+      "method": "GET"
+    },
+    {
+      "path": "/v1/admin/customers",
+      "query": "?limit=20",
+      "method": "GET"
+    },
+    {
+      "path": "/v1/admin/customers",
+      "query": "?limit=20",
+      "method": "GET"
+    },
+    {
+      "path": "/v1/admin/customers",
+      "query": "?limit=20",
+      "method": "GET"
+    },
+    {
+      "path": "/v1/shipments/sh_01ARZ3NDEKTSV4RRFFQ69G5FAV/fail",
+      "query": "",
+      "method": "POST"
+    }
+  ]
+}
