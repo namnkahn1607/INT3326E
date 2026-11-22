@@ -21,7 +21,7 @@ Tài liệu này chuẩn hóa và bàn giao kỹ thuật từ TV2 (Worker) cho T
 
 ### 2.1. Cấu trúc bảng (SQL Schema)
 
-Bảng được định nghĩa trong [packages/database/sql/002-create-gps-locations.sql](file:///e:/INT3326E/packages/database/sql/002-create-gps-locations.sql):
+Bảng được định nghĩa trong [packages/database/sql/002-create-gps-locations.sql](../../packages/database/sql/002-create-gps-locations.sql):
 
 ```sql
 CREATE TABLE current_locations (
@@ -74,8 +74,8 @@ LIMIT 1;
 
 - **Hiệu năng:** $O(1)$ index scan trực tiếp trên Primary Key `"driverId"`.
 - **Hàm có sẵn trong repo:**
-  - Worker: `GpsWriterRepository.getLatestCurrentLocation(driverId)` trong [apps/worker/src/storage/gps-writer.repository.ts](file:///e:/INT3326E/apps/worker/src/storage/gps-writer.repository.ts)
-  - API: `LocationRepository.getDriverCurrentLocation(driverId)` trong [apps/api/src/modules/location/location.repository.ts](file:///e:/INT3326E/apps/api/src/modules/location/location.repository.ts)
+  - Worker: `GpsWriterRepository.getLatestCurrentLocation(driverId)` trong [apps/worker/src/storage/gps-writer.repository.ts](../../apps/worker/src/storage/gps-writer.repository.ts)
+  - API: `LocationRepository.getDriverCurrentLocation(driverId)` trong [apps/api/src/modules/location/location.repository.ts](../../apps/api/src/modules/location/location.repository.ts)
 
 ### 3.2. Truy vấn kết hợp MVCC Snapshot cho API09 (Bảo vệ khi Reassign)
 
@@ -190,14 +190,12 @@ const PERMANENT_PG_ERROR_CLASSES = new Set([
 export function isPermanentDatabaseError(error: any): boolean {
   const code: string | undefined = error?.code;
   if (!code || typeof code !== 'string') return false;
-  if (PERMANENT_PG_ERROR_CLASSES.has(code)) return true;
-  if (code.startsWith('42')) return true; // Lỗi cú pháp/schema class 42
-  return false;
+  return PERMANENT_PG_ERROR_CLASSES.has(code);
 }
 ```
 
 ### Nguyên tắc xử lý trong Worker:
-- **Lỗi vĩnh viễn (Permanent - `23503`, `23502`, class `42xxx`):** Worker log `[GPS Persistence Permanent]`, gọi `message.ack()`. Tin nhắn không bị thử lại vô tận (tight loop), mà được Pub/Sub chuyển vào Dead Letter Queue (DLQ `gps-events-dlq`) theo dead-letter policy để phân tích sau.
+- **Lỗi vĩnh viễn (Permanent - `23503`, `23502`, `23514`, `23P01`):** Worker log `[GPS Persistence Permanent]`, publish tin nhắn sang Dead Letter Queue (`gps-events-dlq`), và sau khi publish thành công mới gọi `message.ack()`. Tin nhắn không bị thử lại vô tận (tight loop), mà được lưu an toàn vào DLQ để phân tích sau.
 - **Lỗi tạm thời (Transient - Connection timeout, `ECONNREFUSED`, `57P01` admin shutdown):** Worker log `[GPS Persistence Failed]`, gọi `message.nack()`, ném ngoại lệ để transaction rollback hoàn toàn và Pub/Sub redeliver sau khoảng thời gian backoff.
 
 ---

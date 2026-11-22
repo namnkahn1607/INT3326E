@@ -109,6 +109,15 @@ describe('GpsSubscriber message handling', () => {
   });
 
   describe('Permanent vs Transient error classification', () => {
+    let mockDlqTopic: { publishMessage: ReturnType<typeof vi.fn> };
+
+    beforeEach(() => {
+      mockDlqTopic = {
+        publishMessage: vi.fn().mockResolvedValue('dlq-msg-123'),
+      };
+      subscriber.setDlqTopic(mockDlqTopic);
+    });
+
     const validGps = {
       eventId: 'evt_perm_test',
       driverId: 'drv_perm',
@@ -118,21 +127,29 @@ describe('GpsSubscriber message handling', () => {
       receivedAt: '2026-10-18T14:30:00.000Z',
     };
 
-    it('should ACK (not NACK) on foreign key violation (23503) so message routes to DLQ', async () => {
+    it('should publish to gps-events-dlq and then ACK (not NACK) on foreign key violation (23503)', async () => {
       const fkError = new Error('insert or update on table "location_history" violates foreign key constraint') as any;
       fkError.code = '23503';
       vi.spyOn(repository, 'recordGpsEvent').mockRejectedValueOnce(fkError);
 
       const mockMessage = createMockMessage(JSON.stringify(validGps));
 
-      // Should NOT throw — permanent errors are handled gracefully
+      // Should NOT throw — permanent errors are handled by forwarding to DLQ then ACKing
       await subscriber.handleIncomingMessage(mockMessage as any);
 
+      expect(mockDlqTopic.publishMessage).toHaveBeenCalledOnce();
+      expect(mockDlqTopic.publishMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          attributes: expect.objectContaining({
+            errorCode: '23503',
+          }),
+        }),
+      );
       expect(mockMessage.ack).toHaveBeenCalledOnce();
       expect(mockMessage.nack).not.toHaveBeenCalled();
     });
 
-    it('should ACK on not-null violation (23502)', async () => {
+    it('should publish to DLQ and ACK on not-null violation (23502)', async () => {
       const nnError = new Error('null value in column "driverId" violates not-null constraint') as any;
       nnError.code = '23502';
       vi.spyOn(repository, 'recordGpsEvent').mockRejectedValueOnce(nnError);
@@ -140,11 +157,12 @@ describe('GpsSubscriber message handling', () => {
       const mockMessage = createMockMessage(JSON.stringify(validGps));
       await subscriber.handleIncomingMessage(mockMessage as any);
 
+      expect(mockDlqTopic.publishMessage).toHaveBeenCalledOnce();
       expect(mockMessage.ack).toHaveBeenCalledOnce();
       expect(mockMessage.nack).not.toHaveBeenCalled();
     });
 
-    it('should ACK on check constraint violation (23514)', async () => {
+    it('should publish to DLQ and ACK on check constraint violation (23514)', async () => {
       const ckError = new Error('new row violates check constraint') as any;
       ckError.code = '23514';
       vi.spyOn(repository, 'recordGpsEvent').mockRejectedValueOnce(ckError);
@@ -152,18 +170,34 @@ describe('GpsSubscriber message handling', () => {
       const mockMessage = createMockMessage(JSON.stringify(validGps));
       await subscriber.handleIncomingMessage(mockMessage as any);
 
+      expect(mockDlqTopic.publishMessage).toHaveBeenCalledOnce();
       expect(mockMessage.ack).toHaveBeenCalledOnce();
       expect(mockMessage.nack).not.toHaveBeenCalled();
     });
 
-    it('should ACK on syntax/access class 42 errors (e.g. 42P01 undefined_table)', async () => {
+    it('should NACK on syntax/access class 42 errors (e.g. 42P01 undefined_table - not in permanent list)', async () => {
       const synError = new Error('relation "location_history" does not exist') as any;
       synError.code = '42P01';
       vi.spyOn(repository, 'recordGpsEvent').mockRejectedValueOnce(synError);
 
       const mockMessage = createMockMessage(JSON.stringify(validGps));
+      await expect(subscriber.handleIncomingMessage(mockMessage as any)).rejects.toThrow('relation "location_history" does not exist');
+
+      expect(mockDlqTopic.publishMessage).not.toHaveBeenCalled();
+      expect(mockMessage.ack).not.toHaveBeenCalled();
+      expect(mockMessage.nack).toHaveBeenCalledOnce();
+    });
+
+    it('should still ACK if publishing to DLQ fails on permanent error (prevents poison retry loop)', async () => {
+      const fkError = new Error('insert or update violates foreign key') as any;
+      fkError.code = '23503';
+      vi.spyOn(repository, 'recordGpsEvent').mockRejectedValueOnce(fkError);
+      mockDlqTopic.publishMessage.mockRejectedValueOnce(new Error('Pub/Sub DLQ network failure'));
+
+      const mockMessage = createMockMessage(JSON.stringify(validGps));
       await subscriber.handleIncomingMessage(mockMessage as any);
 
+      expect(mockDlqTopic.publishMessage).toHaveBeenCalledOnce();
       expect(mockMessage.ack).toHaveBeenCalledOnce();
       expect(mockMessage.nack).not.toHaveBeenCalled();
     });
@@ -233,10 +267,10 @@ describe('GpsSubscriber message handling', () => {
       expect(isPermanentDatabaseError({ code: '23P01' })).toBe(true);
     });
 
-    it('returns true for class 42 errors (42P01, 42000, etc.)', () => {
-      expect(isPermanentDatabaseError({ code: '42P01' })).toBe(true);
-      expect(isPermanentDatabaseError({ code: '42000' })).toBe(true);
-      expect(isPermanentDatabaseError({ code: '42501' })).toBe(true);
+    it('returns false for class 42 errors (42P01, 42000, etc.)', () => {
+      expect(isPermanentDatabaseError({ code: '42P01' })).toBe(false);
+      expect(isPermanentDatabaseError({ code: '42000' })).toBe(false);
+      expect(isPermanentDatabaseError({ code: '42501' })).toBe(false);
     });
 
     it('returns false for transient PG errors (57P01 admin_shutdown)', () => {

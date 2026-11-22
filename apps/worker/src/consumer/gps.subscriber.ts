@@ -5,8 +5,8 @@ import { GpsWriterRepository } from '../storage/gps-writer.repository';
 
 /**
  * PostgreSQL SQLSTATE codes that indicate a permanent (non-retryable) error.
- * These errors will not resolve on retry, so the message should be ACKed
- * and routed to DLQ instead of being NACKed for redelivery.
+ * These errors will not resolve on retry, so the message should be published
+ * to gps-events-dlq and then ACKed instead of being NACKed for redelivery.
  */
 const PERMANENT_PG_ERROR_CLASSES = new Set([
   '23503', // foreign_key_violation
@@ -19,11 +19,7 @@ const PERMANENT_PG_ERROR_CLASSES = new Set([
 export function isPermanentDatabaseError(error: any): boolean {
   const code: string | undefined = error?.code;
   if (!code || typeof code !== 'string') return false;
-  // Exact match on known codes
-  if (PERMANENT_PG_ERROR_CLASSES.has(code)) return true;
-  // Class 42 — syntax / access rule errors (e.g. 42P01 undefined_table)
-  if (code.startsWith('42')) return true;
-  return false;
+  return PERMANENT_PG_ERROR_CLASSES.has(code);
 }
 
 @Injectable()
@@ -31,11 +27,16 @@ export class GpsSubscriber implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(GpsSubscriber.name);
   private pubSubClient: PubSub;
   private subscription: any;
+  private dlqTopic: any;
 
   constructor(
     private readonly processor: GpsProcessorService,
     private readonly repository: GpsWriterRepository,
   ) {}
+
+  setDlqTopic(topic: any): void {
+    this.dlqTopic = topic;
+  }
 
   onModuleInit() {
     const subscriptionName =
@@ -53,6 +54,11 @@ export class GpsSubscriber implements OnModuleInit, OnModuleDestroy {
     this.logger.log(`Đang kết nối tới Pub/Sub Subscription: ${subscriptionName}`);
 
     this.subscription = this.pubSubClient.subscription(subscriptionName);
+
+    const dlqTopicName =
+      process.env.PUBSUB_TOPIC_GPS_DLQ ||
+      'gps-events-dlq';
+    this.dlqTopic = this.pubSubClient.topic(dlqTopicName);
 
     // Lắng nghe sự kiện đẩy về từ Pub/Sub
     this.subscription.on('message', async (message: Message) => {
@@ -96,12 +102,19 @@ export class GpsSubscriber implements OnModuleInit, OnModuleDestroy {
           message.ack();
         } catch (error: any) {
           if (isPermanentDatabaseError(error)) {
-            // Lỗi vĩnh viễn (FK violation, check constraint…): ACK để chuyển sang DLQ,
-            // retry sẽ không bao giờ thành công.
+            // (1) Lỗi vĩnh viễn (FK violation 23503...): Publish sang gps-events-dlq rồi mới ACK
             this.logger.error(
-              `[GPS Persistence Permanent] ID: ${message.id} | code: ${error.code} - ${error.message}. ACKed for DLQ routing.`,
+              `[GPS Persistence Permanent] ID: ${message.id} | code: ${error.code} - ${error.message}. Publishing to DLQ before ACK.`,
               error.stack,
             );
+            try {
+              await this.forwardToDlq(message, error);
+            } catch (dlqErr: any) {
+              this.logger.error(
+                `[DLQ Publish Failed] ID: ${message.id} - ${dlqErr.message}. Still ACKing to prevent poison loop.`,
+                dlqErr.stack,
+              );
+            }
             message.ack();
           } else {
             // Lỗi tạm thời (connection timeout, ECONNREFUSED…): NACK để Pub/Sub redeliver.
@@ -129,6 +142,31 @@ export class GpsSubscriber implements OnModuleInit, OnModuleDestroy {
         this.logger.error(`[EVT01 Invalid Payload] ID: ${message.id} | ${result.error}`);
         message.ack();
         break;
+    }
+  }
+
+  async forwardToDlq(
+    message: Message | { id: string; data: Buffer; ack: () => void; nack?: () => void },
+    error: any,
+  ): Promise<void> {
+    if (!this.dlqTopic && this.pubSubClient) {
+      const dlqTopicName = process.env.PUBSUB_TOPIC_GPS_DLQ || 'gps-events-dlq';
+      this.dlqTopic = this.pubSubClient.topic(dlqTopicName);
+    }
+    if (this.dlqTopic && typeof this.dlqTopic.publishMessage === 'function') {
+      const dataBuffer = Buffer.isBuffer(message.data)
+        ? message.data
+        : Buffer.from(typeof message.data === 'string' ? message.data : JSON.stringify(message.data), 'utf-8');
+      await this.dlqTopic.publishMessage({
+        data: dataBuffer,
+        attributes: {
+          originalMessageId: String(message.id),
+          errorCode: String(error?.code || 'UNKNOWN'),
+          errorMessage: String(error?.message || ''),
+          failedAt: new Date().toISOString(),
+        },
+      });
+      this.logger.log(`[DLQ Forwarded] ID: ${message.id} -> gps-events-dlq | code: ${error?.code}`);
     }
   }
 
