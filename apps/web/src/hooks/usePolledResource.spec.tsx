@@ -5,9 +5,9 @@ import { usePolledResource } from './usePolledResource'
 
 const read = vi.fn()
 let root: Root, node: HTMLDivElement, current: ReturnType<typeof usePolledResource<string>>
-function Probe({ cursor }: { cursor: string }) {
+function Probe({ cursor, interval = 5000 }: { cursor: string; interval?: number }) {
   const load = useCallback((signal: AbortSignal) => read(cursor, signal), [cursor])
-  const result = usePolledResource<string>(load, cursor)
+  const result = usePolledResource<string>(load, cursor, interval)
   useEffect(() => { current = result }, [result])
   return <p>{result.data}</p>
 }
@@ -30,5 +30,20 @@ describe('Paged polling isolation', () => {
     await render('a'); const signal = read.mock.calls[0][1] as AbortSignal
     await act(async () => current.refresh()); await act(async () => fail(new Error('late')))
     expect(signal.aborted).toBe(true); expect(current.data).toBe('new'); expect(current.error).toBeNull()
+  })
+  it.each([5000, 10000])('keeps 500 independent pollers serial under delayed reads at %ims and aborts every read on cleanup', async interval => {
+    const pending: { finish: (value: string) => void; signal: AbortSignal }[] = []
+    read.mockImplementation((_cursor: string, signal: AbortSignal) => new Promise<string>(finish => { pending.push({ finish, signal }) }))
+    await act(async () => root.render(<>{Array.from({ length: 500 }, (_, index) => <Probe key={index} cursor={String(index)} interval={interval} />)}</>))
+    expect(read).toHaveBeenCalledTimes(500)
+    await act(async () => vi.advanceTimersByTimeAsync(30_000))
+    expect(read).toHaveBeenCalledTimes(500)
+    await act(async () => { for (const task of pending) task.finish('snapshot') })
+    await act(async () => vi.advanceTimersByTimeAsync(interval))
+    expect(read).toHaveBeenCalledTimes(1000)
+    for (let index = 0; index < 500; index++) expect(read.mock.calls.filter(call => call[0] === String(index))).toHaveLength(2)
+    await act(async () => root.render(null))
+    expect(pending.every(task => task.signal.aborted)).toBe(true)
+    expect(vi.getTimerCount()).toBe(0)
   })
 })

@@ -1,0 +1,579 @@
+{
+  "checkedAt": "2026-11-18T15:03:48.240Z",
+  "sourceSha256": "b6443a3615bf9d1fa55ecbfe133622e557b3b68f7422546f4066d30495497314",
+  "environment": "Local Nest HTTP + PGlite with Firebase mock; not NF04/LT04 Cloud acceptance",
+  "scenarios": [
+    {
+      "name": "fresh-5s",
+      "operation": "API09 tracking read",
+      "target": "PF SPEC 01 v1.4 NF04 / LT04",
+      "workload": {
+        "pollers": 10,
+        "intervalSeconds": 5,
+        "durationSeconds": 2,
+        "warmupSeconds": 1,
+        "expectedRequestsPerSecond": 2,
+        "timeoutMs": 5000,
+        "model": "paced arrivals; one in-flight request per logical poller; no catch-up burst"
+      },
+      "environment": "local Nest HTTP + PGlite; Firebase mocked; no Worker/PubSub/Cloud",
+      "warmup": {
+        "scheduled": 2,
+        "expected": 2,
+        "started": 2,
+        "completed": 2,
+        "success": 2,
+        "failed": 0,
+        "dropped": 0,
+        "timeouts": 0,
+        "requestRate": 2,
+        "p95CompletedMs": 9.588700000000244,
+        "percentileMethod": "nearest-rank; all completed HTTP responses including errors",
+        "maxStartLatenessMs": 6.534099999999853,
+        "locationStates": {
+          "fresh": 2,
+          "stale": 0,
+          "missing": 0,
+          "hidden": 0
+        },
+        "latencyTargetMs": 300,
+        "latencyAndWorkloadPass": true
+      },
+      "measurement": {
+        "scheduled": 4,
+        "expected": 4,
+        "started": 4,
+        "completed": 4,
+        "success": 4,
+        "failed": 0,
+        "dropped": 0,
+        "timeouts": 0,
+        "requestRate": 2,
+        "p95CompletedMs": 11.326799999999821,
+        "percentileMethod": "nearest-rank; all completed HTTP responses including errors",
+        "maxStartLatenessMs": 8.129399999999805,
+        "locationStates": {
+          "fresh": 4,
+          "stale": 0,
+          "missing": 0,
+          "hidden": 0
+        },
+        "latencyTargetMs": 300,
+        "latencyAndWorkloadPass": true
+      },
+      "fullLt04Window": false,
+      "cloudAcceptance": "Requires the complete LT04 runs at 5s and 10s, deployment/config records and group review; not inferred from a smoke pass.",
+      "fixtureCount": 2,
+      "observedElapsedMs": 3009.9438000000005,
+      "stoppedForAccessOrFixtureError": false,
+      "records": [
+        {
+          "index": 0,
+          "poller": 0,
+          "phase": "warmup",
+          "startLatenessMs": 0.008100000000013097,
+          "completed": true,
+          "outcome": "success",
+          "status": 200,
+          "durationMs": 6.2905000000000655,
+          "locationState": "fresh"
+        },
+        {
+          "index": 1,
+          "poller": 1,
+          "phase": "warmup",
+          "startLatenessMs": 6.534099999999853,
+          "completed": true,
+          "outcome": "success",
+          "status": 200,
+          "durationMs": 9.588700000000244,
+          "locationState": "fresh"
+        },
+        {
+          "index": 2,
+          "poller": 2,
+          "phase": "measurement",
+          "startLatenessMs": 8.085799999999836,
+          "completed": true,
+          "outcome": "success",
+          "status": 200,
+          "durationMs": 5.095999999999549,
+          "locationState": "fresh"
+        },
+        {
+          "index": 3,
+          "poller": 3,
+          "phase": "measurement",
+          "startLatenessMs": 6.147399999999834,
+          "completed": true,
+          "outcome": "success",
+          "status": 200,
+          "durationMs": 11.326799999999821,
+          "locationState": "fresh"
+        },
+        {
+          "index": 4,
+          "poller": 4,
+          "phase": "measurement",
+          "startLatenessMs": 8.129399999999805,
+          "completed": true,
+          "outcome": "success",
+          "status": 200,
+          "durationMs": 7.714100000000144,
+          "locationState": "fresh"
+        },
+        {
+          "index": 5,
+          "poller": 5,
+          "phase": "measurement",
+          "startLatenessMs": 6.388199999999415,
+          "completed": true,
+          "outcome": "success",
+          "status": 200,
+          "durationMs": 5.274699999999939,
+          "locationState": "fresh"
+        }
+      ]
+    },
+    {
+      "name": "fresh-10s",
+      "operation": "API09 tracking read",
+      "target": "PF SPEC 01 v1.4 NF04 / LT04",
+      "workload": {
+        "pollers": 10,
+        "intervalSeconds": 10,
+        "durationSeconds": 2,
+        "warmupSeconds": 1,
+        "expectedRequestsPerSecond": 1,
+        "timeoutMs": 5000,
+        "model": "paced arrivals; one in-flight request per logical poller; no catch-up burst"
+      },
+      "environment": "local Nest HTTP + PGlite; Firebase mocked; no Worker/PubSub/Cloud",
+      "warmup": {
+        "scheduled": 1,
+        "expected": 1,
+        "started": 1,
+        "completed": 1,
+        "success": 1,
+        "failed": 0,
+        "dropped": 0,
+        "timeouts": 0,
+        "requestRate": 1,
+        "p95CompletedMs": 14.154199999999946,
+        "percentileMethod": "nearest-rank; all completed HTTP responses including errors",
+        "maxStartLatenessMs": 0.014500000000225555,
+        "locationStates": {
+          "fresh": 1,
+          "stale": 0,
+          "missing": 0,
+          "hidden": 0
+        },
+        "latencyTargetMs": 300,
+        "latencyAndWorkloadPass": true
+      },
+      "measurement": {
+        "scheduled": 2,
+        "expected": 2,
+        "started": 2,
+        "completed": 2,
+        "success": 2,
+        "failed": 0,
+        "dropped": 0,
+        "timeouts": 0,
+        "requestRate": 1,
+        "p95CompletedMs": 11.546299999999974,
+        "percentileMethod": "nearest-rank; all completed HTTP responses including errors",
+        "maxStartLatenessMs": 2.5000999999992928,
+        "locationStates": {
+          "fresh": 2,
+          "stale": 0,
+          "missing": 0,
+          "hidden": 0
+        },
+        "latencyTargetMs": 300,
+        "latencyAndWorkloadPass": true
+      },
+      "fullLt04Window": false,
+      "cloudAcceptance": "Requires the complete LT04 runs at 5s and 10s, deployment/config records and group review; not inferred from a smoke pass.",
+      "fixtureCount": 2,
+      "observedElapsedMs": 3002.249599999999,
+      "stoppedForAccessOrFixtureError": false,
+      "records": [
+        {
+          "index": 0,
+          "poller": 0,
+          "phase": "warmup",
+          "startLatenessMs": 0.014500000000225555,
+          "completed": true,
+          "outcome": "success",
+          "status": 200,
+          "durationMs": 14.154199999999946,
+          "locationState": "fresh"
+        },
+        {
+          "index": 1,
+          "poller": 1,
+          "phase": "measurement",
+          "startLatenessMs": 1.4314000000003944,
+          "completed": true,
+          "outcome": "success",
+          "status": 200,
+          "durationMs": 9.929299999999785,
+          "locationState": "fresh"
+        },
+        {
+          "index": 2,
+          "poller": 2,
+          "phase": "measurement",
+          "startLatenessMs": 2.5000999999992928,
+          "completed": true,
+          "outcome": "success",
+          "status": 200,
+          "durationMs": 11.546299999999974,
+          "locationState": "fresh"
+        }
+      ]
+    },
+    {
+      "name": "stale-5s",
+      "operation": "API09 tracking read",
+      "target": "PF SPEC 01 v1.4 NF04 / LT04",
+      "workload": {
+        "pollers": 10,
+        "intervalSeconds": 5,
+        "durationSeconds": 2,
+        "warmupSeconds": 1,
+        "expectedRequestsPerSecond": 2,
+        "timeoutMs": 5000,
+        "model": "paced arrivals; one in-flight request per logical poller; no catch-up burst"
+      },
+      "environment": "local Nest HTTP + PGlite; Firebase mocked; no Worker/PubSub/Cloud",
+      "warmup": {
+        "scheduled": 2,
+        "expected": 2,
+        "started": 2,
+        "completed": 2,
+        "success": 2,
+        "failed": 0,
+        "dropped": 0,
+        "timeouts": 0,
+        "requestRate": 2,
+        "p95CompletedMs": 13.976699999999255,
+        "percentileMethod": "nearest-rank; all completed HTTP responses including errors",
+        "maxStartLatenessMs": 8.26799999999821,
+        "locationStates": {
+          "fresh": 0,
+          "stale": 2,
+          "missing": 0,
+          "hidden": 0
+        },
+        "latencyTargetMs": 300,
+        "latencyAndWorkloadPass": true
+      },
+      "measurement": {
+        "scheduled": 4,
+        "expected": 4,
+        "started": 4,
+        "completed": 4,
+        "success": 4,
+        "failed": 0,
+        "dropped": 0,
+        "timeouts": 0,
+        "requestRate": 2,
+        "p95CompletedMs": 13.011800000000221,
+        "percentileMethod": "nearest-rank; all completed HTTP responses including errors",
+        "maxStartLatenessMs": 10.636399999999412,
+        "locationStates": {
+          "fresh": 0,
+          "stale": 4,
+          "missing": 0,
+          "hidden": 0
+        },
+        "latencyTargetMs": 300,
+        "latencyAndWorkloadPass": true
+      },
+      "fullLt04Window": false,
+      "cloudAcceptance": "Requires the complete LT04 runs at 5s and 10s, deployment/config records and group review; not inferred from a smoke pass.",
+      "fixtureCount": 2,
+      "observedElapsedMs": 3010.073699999999,
+      "stoppedForAccessOrFixtureError": false,
+      "records": [
+        {
+          "index": 0,
+          "poller": 0,
+          "phase": "warmup",
+          "startLatenessMs": 0.008899999998902786,
+          "completed": true,
+          "outcome": "success",
+          "status": 200,
+          "durationMs": 10.728100000000268,
+          "locationState": "stale"
+        },
+        {
+          "index": 1,
+          "poller": 1,
+          "phase": "warmup",
+          "startLatenessMs": 8.26799999999821,
+          "completed": true,
+          "outcome": "success",
+          "status": 200,
+          "durationMs": 13.976699999999255,
+          "locationState": "stale"
+        },
+        {
+          "index": 2,
+          "poller": 2,
+          "phase": "measurement",
+          "startLatenessMs": 9.529399999999441,
+          "completed": true,
+          "outcome": "success",
+          "status": 200,
+          "durationMs": 8.27100000000064,
+          "locationState": "stale"
+        },
+        {
+          "index": 3,
+          "poller": 3,
+          "phase": "measurement",
+          "startLatenessMs": 8.614999999999782,
+          "completed": true,
+          "outcome": "success",
+          "status": 200,
+          "durationMs": 8.214900000000853,
+          "locationState": "stale"
+        },
+        {
+          "index": 4,
+          "poller": 4,
+          "phase": "measurement",
+          "startLatenessMs": 10.636399999999412,
+          "completed": true,
+          "outcome": "success",
+          "status": 200,
+          "durationMs": 8.60609999999906,
+          "locationState": "stale"
+        },
+        {
+          "index": 5,
+          "poller": 5,
+          "phase": "measurement",
+          "startLatenessMs": 8.15599999999904,
+          "completed": true,
+          "outcome": "success",
+          "status": 200,
+          "durationMs": 13.011800000000221,
+          "locationState": "stale"
+        }
+      ]
+    },
+    {
+      "name": "missing-5s",
+      "operation": "API09 tracking read",
+      "target": "PF SPEC 01 v1.4 NF04 / LT04",
+      "workload": {
+        "pollers": 10,
+        "intervalSeconds": 5,
+        "durationSeconds": 2,
+        "warmupSeconds": 1,
+        "expectedRequestsPerSecond": 2,
+        "timeoutMs": 5000,
+        "model": "paced arrivals; one in-flight request per logical poller; no catch-up burst"
+      },
+      "environment": "local Nest HTTP + PGlite; Firebase mocked; no Worker/PubSub/Cloud",
+      "warmup": {
+        "scheduled": 2,
+        "expected": 2,
+        "started": 2,
+        "completed": 2,
+        "success": 2,
+        "failed": 0,
+        "dropped": 0,
+        "timeouts": 0,
+        "requestRate": 2,
+        "p95CompletedMs": 8.816500000000815,
+        "percentileMethod": "nearest-rank; all completed HTTP responses including errors",
+        "maxStartLatenessMs": 12.127399999999398,
+        "locationStates": {
+          "fresh": 0,
+          "stale": 0,
+          "missing": 2,
+          "hidden": 0
+        },
+        "latencyTargetMs": 300,
+        "latencyAndWorkloadPass": true
+      },
+      "measurement": {
+        "scheduled": 4,
+        "expected": 4,
+        "started": 4,
+        "completed": 4,
+        "success": 4,
+        "failed": 0,
+        "dropped": 0,
+        "timeouts": 0,
+        "requestRate": 2,
+        "p95CompletedMs": 9.790399999999863,
+        "percentileMethod": "nearest-rank; all completed HTTP responses including errors",
+        "maxStartLatenessMs": 11.726299999998446,
+        "locationStates": {
+          "fresh": 0,
+          "stale": 0,
+          "missing": 4,
+          "hidden": 0
+        },
+        "latencyTargetMs": 300,
+        "latencyAndWorkloadPass": true
+      },
+      "fullLt04Window": false,
+      "cloudAcceptance": "Requires the complete LT04 runs at 5s and 10s, deployment/config records and group review; not inferred from a smoke pass.",
+      "fixtureCount": 2,
+      "observedElapsedMs": 3009.8050999999996,
+      "stoppedForAccessOrFixtureError": false,
+      "records": [
+        {
+          "index": 0,
+          "poller": 0,
+          "phase": "warmup",
+          "startLatenessMs": 0.006899999998495332,
+          "completed": true,
+          "outcome": "success",
+          "status": 200,
+          "durationMs": 5.300699999999779,
+          "locationState": "missing"
+        },
+        {
+          "index": 1,
+          "poller": 1,
+          "phase": "warmup",
+          "startLatenessMs": 12.127399999999398,
+          "completed": true,
+          "outcome": "success",
+          "status": 200,
+          "durationMs": 8.816500000000815,
+          "locationState": "missing"
+        },
+        {
+          "index": 2,
+          "poller": 2,
+          "phase": "measurement",
+          "startLatenessMs": 11.726299999998446,
+          "completed": true,
+          "outcome": "success",
+          "status": 200,
+          "durationMs": 4.142900000000736,
+          "locationState": "missing"
+        },
+        {
+          "index": 3,
+          "poller": 3,
+          "phase": "measurement",
+          "startLatenessMs": 9.761199999999008,
+          "completed": true,
+          "outcome": "success",
+          "status": 200,
+          "durationMs": 8.241500000000087,
+          "locationState": "missing"
+        },
+        {
+          "index": 4,
+          "poller": 4,
+          "phase": "measurement",
+          "startLatenessMs": 9.374299999999494,
+          "completed": true,
+          "outcome": "success",
+          "status": 200,
+          "durationMs": 4.91150000000016,
+          "locationState": "missing"
+        },
+        {
+          "index": 5,
+          "poller": 5,
+          "phase": "measurement",
+          "startLatenessMs": 9.715399999999136,
+          "completed": true,
+          "outcome": "success",
+          "status": 200,
+          "durationMs": 9.790399999999863,
+          "locationState": "missing"
+        }
+      ]
+    },
+    {
+      "name": "ownership-403",
+      "operation": "API09 tracking read",
+      "target": "PF SPEC 01 v1.4 NF04 / LT04",
+      "workload": {
+        "pollers": 10,
+        "intervalSeconds": 5,
+        "durationSeconds": 2,
+        "warmupSeconds": 0,
+        "expectedRequestsPerSecond": 2,
+        "timeoutMs": 5000,
+        "model": "paced arrivals; one in-flight request per logical poller; no catch-up burst"
+      },
+      "environment": "local Nest HTTP + PGlite; Firebase mocked; no Worker/PubSub/Cloud",
+      "warmup": {
+        "scheduled": 0,
+        "expected": 0,
+        "started": 0,
+        "completed": 0,
+        "success": 0,
+        "failed": 0,
+        "dropped": 0,
+        "timeouts": 0,
+        "requestRate": 0,
+        "p95CompletedMs": null,
+        "percentileMethod": "nearest-rank; all completed HTTP responses including errors",
+        "maxStartLatenessMs": 0,
+        "locationStates": {
+          "fresh": 0,
+          "stale": 0,
+          "missing": 0,
+          "hidden": 0
+        },
+        "latencyTargetMs": 300,
+        "latencyAndWorkloadPass": false
+      },
+      "measurement": {
+        "scheduled": 1,
+        "expected": 4,
+        "started": 1,
+        "completed": 1,
+        "success": 0,
+        "failed": 1,
+        "dropped": 0,
+        "timeouts": 0,
+        "requestRate": 0.5,
+        "p95CompletedMs": 3.9486000000015338,
+        "percentileMethod": "nearest-rank; all completed HTTP responses including errors",
+        "maxStartLatenessMs": 0.002899999999499414,
+        "locationStates": {
+          "fresh": 0,
+          "stale": 0,
+          "missing": 0,
+          "hidden": 0
+        },
+        "latencyTargetMs": 300,
+        "latencyAndWorkloadPass": false
+      },
+      "fullLt04Window": false,
+      "cloudAcceptance": "Requires the complete LT04 runs at 5s and 10s, deployment/config records and group review; not inferred from a smoke pass.",
+      "fixtureCount": 1,
+      "observedElapsedMs": 512.2519000000011,
+      "stoppedForAccessOrFixtureError": true,
+      "records": [
+        {
+          "index": 0,
+          "poller": 0,
+          "phase": "measurement",
+          "startLatenessMs": 0.002899999999499414,
+          "completed": true,
+          "outcome": "http_error",
+          "status": 403,
+          "durationMs": 3.9486000000015338
+        }
+      ]
+    }
+  ],
+  "fullLt04Executed": false
+}

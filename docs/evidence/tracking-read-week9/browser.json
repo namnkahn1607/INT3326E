@@ -1,0 +1,79 @@
+{
+    "environment":  "Local Chrome headless; real Leaflet/CARTO; delayed/stale/null/503 Auth/HTTP fixtures via CDP; not Cloud load",
+    "results":  [
+                    {
+                        "area":  "customer",
+                        "width":  390,
+                        "basemap":  "basemaps.cartocdn.com",
+                        "loadedTiles":  true,
+                        "overflow":  false,
+                        "gpsDoesNotReloadDetail":  true,
+                        "stateSync":  true,
+                        "historyUpdated":  true,
+                        "staleActionsRemoved":  true,
+                        "sameMapDuringStateSync":  true,
+                        "terminalPollingStopped":  true,
+                        "slowFeedback":  true,
+                        "staleAndNull":  true,
+                        "errorRecovery":  true,
+                        "overlappingRequests":  0
+                    },
+                    {
+                        "area":  "admin",
+                        "width":  390,
+                        "basemap":  "basemaps.cartocdn.com",
+                        "loadedTiles":  true,
+                        "overflow":  false,
+                        "gpsDoesNotReloadDetail":  true,
+                        "stateSync":  true,
+                        "historyUpdated":  true,
+                        "staleActionsRemoved":  true,
+                        "sameMapDuringStateSync":  true,
+                        "terminalPollingStopped":  true,
+                        "slowFeedback":  true,
+                        "staleAndNull":  true,
+                        "errorRecovery":  true,
+                        "overlappingRequests":  0
+                    },
+                    {
+                        "area":  "customer",
+                        "width":  1440,
+                        "basemap":  "basemaps.cartocdn.com",
+                        "loadedTiles":  true,
+                        "overflow":  false,
+                        "gpsDoesNotReloadDetail":  true,
+                        "stateSync":  true,
+                        "historyUpdated":  true,
+                        "staleActionsRemoved":  true,
+                        "sameMapDuringStateSync":  true,
+                        "terminalPollingStopped":  true,
+                        "slowFeedback":  true,
+                        "staleAndNull":  true,
+                        "errorRecovery":  true,
+                        "overlappingRequests":  0
+                    },
+                    {
+                        "area":  "admin",
+                        "width":  1440,
+                        "basemap":  "basemaps.cartocdn.com",
+                        "loadedTiles":  true,
+                        "overflow":  false,
+                        "gpsDoesNotReloadDetail":  true,
+                        "stateSync":  true,
+                        "historyUpdated":  true,
+                        "staleActionsRemoved":  true,
+                        "sameMapDuringStateSync":  true,
+                        "terminalPollingStopped":  true,
+                        "slowFeedback":  true,
+                        "staleAndNull":  true,
+                        "errorRecovery":  true,
+                        "overlappingRequests":  0
+                    }
+                ],
+    "exceptions":  [
+
+                   ],
+    "source":  "working tree on aca0320; week9 changes uncommitted",
+    "cloudDeployment":  false,
+    "checkedAt":  "2026-11-18T15:20:50.3904456Z"
+}

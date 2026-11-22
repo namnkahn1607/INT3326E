@@ -1,4 +1,5 @@
 .admin-api-page { min-width: 0; }
+.admin-layout .admin-accounts-page .admin-api-message { border: 0; border-radius: 0; background: none; padding: 12px 0; font-size: 14px; }
 .admin-api-page :is(input, select) { font: inherit; min-height: 44px; width: 100%; padding: 10px 12px; border: 1px solid var(--ui-line, #d8d2df); border-radius: 8px; background: white; color: inherit; }
 .admin-api-page label { display: block; font-weight: 600; margin-bottom: 8px; }
 .admin-api-page .admin-api-controls { display: flex; flex-direction: row; align-items: end; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }

@@ -335,6 +335,7 @@
 .driver-shipment-detail > p { margin-bottom: 10px; }
 .driver-shipment-form { display: grid; justify-items: stretch; gap: 9px; margin-top: 16px; }
 .driver-shipment-form textarea { width: 100%; resize: vertical; }
+.driver-failure-toggle { margin-top: 12px; }
 .driver-shipment-form > p { color: var(--driver-muted); font-size: .875rem; }
 .driver-shipment-form > p[role='alert'] { color: var(--driver-danger); }
 .driver-shipment-review { margin-top: 16px; padding: 16px; border-radius: 12px; background: var(--driver-tint); }
