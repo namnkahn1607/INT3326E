@@ -87,6 +87,9 @@ Mục lục: [Điều phối theo tuần](README.md)
   Công cụ đo tracking/polling local 18/11 vẫn được giữ trong
   [tracking-read-load](../features/tracking-read-load.md); chưa đo LT04 Cloud,
   không thay thứ tự ưu tiên AC07/08 hiện tại.
+- **TV2 (22/11):** hoàn thành xử lý lỗi Worker và bàn giao truy vấn vị trí ETA.
+  - Phân loại lỗi database trong `GpsSubscriber`: publish sang `gps-events-dlq` rồi mới ACK (publish DLQ lỗi thì NACK để Pub/Sub thử lại, không mất message) đối với các lỗi không thể tự phục hồi như vi phạm khóa ngoại `23503`, `23502` (not null), `23514` (check), và `23P01` (exclusion) để tránh tight-loop retry kẹt tin nhắn; chỉ NACK khi gặp lỗi tạm thời (mất kết nối, timeout, `ECONNREFUSED`, `57P01` admin shutdown). Bổ sung 17 unit tests kiểm tra phân loại lỗi và publish DLQ tại `apps/worker/src/consumer/gps.subscriber.spec.ts` (đạt 22/22 tests); bộ phục hồi `recovery-scenarios.spec.ts` đạt 5/5.
+  - Hoàn thiện tài liệu bàn giao kỹ thuật cho tuần 10 tại [`docs/features/eta-location-handoff.md`](../features/eta-location-handoff.md): chuẩn hóa truy vấn vị trí tức thời theo `driverId` từ bảng `current_locations` (DATA04), câu truy vấn MVCC snapshot bảo vệ trạng thái khi gán lại tài xế, công thức tính ETA Haversine 20 km/h, trần giây `Math.ceil`, quy tắc độ tươi 30 giây và ma trận kiểm thử TC09.1–TC09.4 cho TV6 (QA).
 
 - **TV4 (21/11):** cập nhật giao diện Driver với Express sáng và Midnight
   tối, bổ sung thẻ hành trình trên trang đầu từ dữ liệu đơn được phân công.
