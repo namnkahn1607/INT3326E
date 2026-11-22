@@ -74,6 +74,9 @@ Mục lục: [Điều phối theo tuần](README.md)
 
 ## Thực tế từng người
 
+- **TV2 (22/11):** hoàn thành xử lý lỗi Worker và bàn giao truy vấn vị trí ETA.
+  - Phân loại lỗi database trong `GpsSubscriber`: ACK (đưa vào DLQ) các lỗi không thể tự phục hồi như vi phạm khóa ngoại `23503`, `23502` (not null), `23514` (check), và class `42xxx` (syntax/access rules) để tránh tight-loop retry kẹt tin nhắn; chỉ NACK khi gặp lỗi tạm thời (mất kết nối, timeout, `ECONNREFUSED`, `57P01` admin shutdown). Bổ sung 16 unit tests kiểm tra phân loại lỗi tại `apps/worker/src/consumer/gps.subscriber.spec.ts` (đạt 21/21 tests); bộ phục hồi `recovery-scenarios.spec.ts` đạt 5/5.
+  - Hoàn thiện tài liệu bàn giao kỹ thuật cho tuần 10 tại [`docs/features/eta-location-handoff.md`](../features/eta-location-handoff.md): chuẩn hóa truy vấn vị trí tức thời theo `driverId` từ bảng `current_locations` (DATA04), câu truy vấn MVCC snapshot bảo vệ trạng thái khi gán lại tài xế, công thức tính ETA Haversine 20 km/h, trần giây `Math.ceil`, quy tắc độ tươi 30 giây và ma trận kiểm thử TC09.1–TC09.4 cho TV6 (QA).
 - **TV4 (21/11):** cập nhật giao diện Driver với Express sáng và Midnight
   tối, bổ sung thẻ hành trình trên trang đầu từ dữ liệu đơn được phân công.
   Kiểm trên Edge local với Auth/API giả lập (49 kịch bản đạt, gồm luồng

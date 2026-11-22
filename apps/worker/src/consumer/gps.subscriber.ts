@@ -3,6 +3,29 @@ import { PubSub, Message } from '@google-cloud/pubsub';
 import { GpsProcessorService } from './gps-processor.service';
 import { GpsWriterRepository } from '../storage/gps-writer.repository';
 
+/**
+ * PostgreSQL SQLSTATE codes that indicate a permanent (non-retryable) error.
+ * These errors will not resolve on retry, so the message should be ACKed
+ * and routed to DLQ instead of being NACKed for redelivery.
+ */
+const PERMANENT_PG_ERROR_CLASSES = new Set([
+  '23503', // foreign_key_violation
+  '23502', // not_null_violation
+  '23514', // check_violation
+  '23P01', // exclusion_violation
+]);
+
+/** Returns true when the error is permanent and retrying will never succeed. */
+export function isPermanentDatabaseError(error: any): boolean {
+  const code: string | undefined = error?.code;
+  if (!code || typeof code !== 'string') return false;
+  // Exact match on known codes
+  if (PERMANENT_PG_ERROR_CLASSES.has(code)) return true;
+  // Class 42 — syntax / access rule errors (e.g. 42P01 undefined_table)
+  if (code.startsWith('42')) return true;
+  return false;
+}
+
 @Injectable()
 export class GpsSubscriber implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(GpsSubscriber.name);
@@ -72,14 +95,25 @@ export class GpsSubscriber implements OnModuleInit, OnModuleDestroy {
           // Quy tắc D08: Chỉ ACK sau khi commit database thành công
           message.ack();
         } catch (error: any) {
-          this.logger.error(
-            `[GPS Persistence Failed] ID: ${message.id} - ${error.message}. Transaction rolled back; message not acknowledged.`,
-            error.stack,
-          );
-          if (typeof message.nack === 'function') {
-            message.nack();
+          if (isPermanentDatabaseError(error)) {
+            // Lỗi vĩnh viễn (FK violation, check constraint…): ACK để chuyển sang DLQ,
+            // retry sẽ không bao giờ thành công.
+            this.logger.error(
+              `[GPS Persistence Permanent] ID: ${message.id} | code: ${error.code} - ${error.message}. ACKed for DLQ routing.`,
+              error.stack,
+            );
+            message.ack();
+          } else {
+            // Lỗi tạm thời (connection timeout, ECONNREFUSED…): NACK để Pub/Sub redeliver.
+            this.logger.error(
+              `[GPS Persistence Failed] ID: ${message.id} - ${error.message}. Transaction rolled back; message not acknowledged.`,
+              error.stack,
+            );
+            if (typeof message.nack === 'function') {
+              message.nack();
+            }
+            throw error;
           }
-          throw error;
         }
         break;
       }
