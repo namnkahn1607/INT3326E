@@ -26,3 +26,23 @@ export function parseDeliverShipment(body: unknown): string | null {
   }
   return normalized.length === 0 ? null : normalized;
 }
+
+export function parseFailShipment(body: unknown): string {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    invalidField('body', 'Nội dung yêu cầu phải là một object');
+  }
+  const value = body as Record<string, unknown>;
+  const keys = Object.keys(value);
+  if (keys.length !== 1 || keys[0] !== 'reason') {
+    invalidField('body', 'Chỉ nhận trường reason bắt buộc');
+  }
+  if (typeof value.reason !== 'string') {
+    invalidField('reason', 'Lý do giao thất bại phải là chuỗi ký tự');
+  }
+  const normalized = value.reason.trim();
+  const length = Array.from(normalized).length;
+  if (length < 5 || length > 500) {
+    invalidField('reason', 'Lý do giao thất bại phải từ 5 đến 500 ký tự');
+  }
+  return normalized;
+}

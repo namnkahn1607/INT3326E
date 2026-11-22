@@ -192,3 +192,9 @@
 @media (prefers-reduced-motion: reduce) {
   .customer-api-page *, .customer-api-page *::before, .customer-api-page *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+.customer-notifications-page .notifications-list { padding: 0; list-style: none; }
+.customer-notifications-page .notification-body { min-width: 0; }
+.customer-notifications-page .notification-body :is(h2, p, a) { overflow-wrap: anywhere; }
+.customer-notifications-page .notification-order { display: inline-block; margin-top: 8px; font-size: 14px; }
+.customer-notifications-page .notification-error { margin-block: 16px; font-size: 14px; }
+.customer-notifications-page .notification-error p { color: var(--ui-danger); margin-bottom: 12px; }

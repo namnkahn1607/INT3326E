@@ -37,9 +37,11 @@
 | Admin phân công | [admin-assignment](features/admin-assignment.md) | [admin-assignment-handoff](features/admin-assignment-handoff.md) |
 | Admin directory | [admin-directory](features/admin-directory.md) | [tv6/admin-directory-handoff](tv6/admin-directory-handoff.md) |
 | Vòng đời đơn | [shipment-lifecycle](features/shipment-lifecycle.md) | [shipment-lifecycle-handoff](features/shipment-lifecycle-handoff.md) |
+| Frontend tuần 9 | API10 / directory / giao trễ / Driver fail | [Bàn giao và ảnh](features/week9-frontend-handoff.md) |
 | Lấy hàng, giao hàng | [shipment-pickup-deliver/](features/shipment-pickup-deliver/spec.md) | [shipment-pickup-deliver-handoff](features/shipment-pickup-deliver-handoff.md) |
 | Driver và GPS | [driver-dashboard-gps](features/driver-dashboard-gps.md), [driver-gps/](features/driver-gps/spec.md) | [driver-shipments-handoff](features/driver-shipments-handoff.md) |
 | Tracking | [live-tracking](features/live-tracking.md) | [live-tracking-handoff](features/live-tracking-handoff.md) |
+| Tracking read dưới tải | [Phương pháp và lệnh đo](features/tracking-read-load.md) | [Kết quả local tuần 9](evidence/tracking-read-week9/report.md) |
 | Auth | [contracts/auth-rbac](contracts/auth-rbac.md) | [tv6/auth-rbac-handoff](tv6/auth-rbac-handoff.md) |
 
 ## Vận hành

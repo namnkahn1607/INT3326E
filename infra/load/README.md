@@ -1,5 +1,9 @@
 # Kiểm thử tải GPS ingest bằng k6
 
+Tracking read API09 tuần 9 dùng công cụ riêng `tracking-read.mjs` và runner
+local `tracking-read-smoke.mjs`, không sửa generator GPS dưới đây. Xem
+[cấu hình LT04, cách tính p95 và kết quả](../../docs/features/tracking-read-load.md).
+
 `gps-ingest.js` gửi HTTP thật vào `POST /v1/locations`. Mỗi VU tương ứng một
 tài xế với Firebase ID token riêng, tạo tọa độ mô phỏng và timestamp UTC ms
 hiện tại. Không gửi driverId; API lấy danh tính từ Bearer và ánh xạ nghiệp vụ.

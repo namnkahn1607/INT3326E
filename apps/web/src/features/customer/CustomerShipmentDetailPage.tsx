@@ -4,6 +4,7 @@ import { getShipmentById } from '../../api/endpoints/shipments'
 import { StatusBadge } from '../../components/ui/StatusBadge'
 import { DataSkeleton } from '../../components/ui/DataSkeleton'
 import { ShipmentLifecycleDetails } from '../../components/shipment/ShipmentLifecycleDetails'
+import { ShipmentLateBadge } from '../../components/shipment/ShipmentLateBadge'
 import { ShipmentTracking } from '../../components/shipment/ShipmentTracking'
 import { useTrackingDetailSync } from '../../hooks/useTrackingDetailSync'
 import { formatDateTime, formatNumber } from '../../utils'
@@ -54,7 +55,7 @@ function DetailData({ id, onRetry }: { id: string; onRetry: () => void }) {
   ]
   return <section className="customer-result" aria-busy={updating}>
     {updating ? <DataSkeleton label="Đang cập nhật chi tiết đơn…" detail /> : <>
-    <StatusBadge status={shipment.status} /><h2 className="customer-tracking-number">{shipment.trackingNumber}</h2>
+    <StatusBadge status={shipment.status} /> <ShipmentLateBadge isLate={shipment.isLate} /><h2 className="customer-tracking-number">{shipment.trackingNumber}</h2>
     <dl className="customer-detail-grid">{rows.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
     <ShipmentLifecycleDetails shipment={shipment} />
     </>}

@@ -4,6 +4,7 @@ import type { Pool, PoolClient } from 'pg';
 import { ApiProblem } from '../../common/api-problem';
 import { logDependencyFailure, type DependencyStage } from '../../common/dependency-diagnostics';
 import { USER_DATABASE } from '../users/user-database.provider';
+import type { BusinessUser } from '../users/entities/user.entity';
 import type { ShipmentResponseDto } from './dto/shipment-response.dto';
 import { SHIPMENT_PROJECTION, shipmentResponse, type ShipmentRow } from './shipment-response.mapper';
 
@@ -108,27 +109,58 @@ export class ShipmentsRepository {
   }
 
   async pickup(driverId: string, id: string): Promise<ShipmentResponseDto> {
-    return this.transitionByDriver(driverId, id, 'PICKED_UP', null);
+    return this.runLockedTransition(
+      { id: driverId, role: 'DRIVER' }, id, 'PICKED_UP', 'ASSIGNED', null,
+      (client, occurredAt) => client.query(`UPDATE shipments SET status='PICKED_UP', "updatedAt"=$2 WHERE id=$1`, [id, occurredAt]),
+      { title: 'Tài xế đã lấy hàng', body: code => `Đơn ${code} đã được tài xế nhận và đang giao.` },
+    );
   }
 
   async deliver(driverId: string, id: string, proofOfDeliveryNotes: string | null): Promise<ShipmentResponseDto> {
-    return this.transitionByDriver(driverId, id, 'DELIVERED', proofOfDeliveryNotes);
+    return this.runLockedTransition(
+      { id: driverId, role: 'DRIVER' }, id, 'DELIVERED', 'PICKED_UP', null,
+      (client, occurredAt) => client.query(
+        `UPDATE shipments SET status='DELIVERED', "proofOfDeliveryNotes"=$2, "updatedAt"=$3 WHERE id=$1`,
+        [id, proofOfDeliveryNotes, occurredAt]),
+      { title: 'Đơn hàng đã giao thành công', body: code => `Đơn ${code} đã được giao thành công.` },
+    );
   }
 
-  private async transitionByDriver(driverId: string, id: string, target: 'PICKED_UP' | 'DELIVERED',
-    proofOfDeliveryNotes: string | null): Promise<ShipmentResponseDto> {
+  async fail(actor: BusinessUser, id: string, reason: string): Promise<ShipmentResponseDto> {
+    if (actor.role !== 'DRIVER' && actor.role !== 'ADMIN') {
+      throw new ApiProblem(403, 'FORBIDDEN_RESOURCE', 'Không có quyền thao tác với đơn hàng này');
+    }
+    const role = actor.role;
+    return this.runLockedTransition(
+      { id: actor.id, role }, id, 'DELIVERY_FAILED', 'PICKED_UP', reason,
+      (client, occurredAt) => client.query(
+        `UPDATE shipments SET status='DELIVERY_FAILED', "failureReason"=$2, "failedByUserId"=$3, "failedByRole"=$4, "updatedAt"=$5 WHERE id=$1`,
+        [id, reason, actor.id, role, occurredAt]),
+      { title: 'Giao hàng thất bại', body: code => `Đơn ${code} giao không thành công.` },
+    );
+  }
+
+  private async runLockedTransition(
+    actor: { id: string; role: 'DRIVER' | 'ADMIN' },
+    id: string,
+    target: 'PICKED_UP' | 'DELIVERED' | 'DELIVERY_FAILED',
+    expectedFrom: 'ASSIGNED' | 'PICKED_UP',
+    reason: string | null,
+    applyUpdate: (client: PoolClient, occurredAt: string) => Promise<unknown>,
+    notification: { title: string; body: (trackingCode: string) => string },
+  ): Promise<ShipmentResponseDto> {
     if (!this.pool) throw new ServiceUnavailableException();
     let client: PoolClient | undefined;
     let releaseError: Error | undefined;
     try {
       client = await this.pool.connect();
       await client.query('BEGIN');
-      // Khóa dòng đơn trước khi kiểm tra quyền sở hữu và trạng thái để tránh race với phân công lại.
+      // Khóa dòng đơn trước khi kiểm tra quyền sở hữu và trạng thái để tránh race với phân công lại hoặc chuyển kết thúc khác.
       const locked = await client.query<ShipmentRow>(
         `SELECT ${SHIPMENT_PROJECTION} FROM shipments s WHERE s.id = $1 FOR UPDATE OF s`, [id]);
       const current = locked.rows[0];
       if (!current) throw new ApiProblem(404, 'RESOURCE_NOT_FOUND', 'Không tìm thấy đơn hàng');
-      if (current.driverId !== driverId) {
+      if (actor.role !== 'ADMIN' && current.driverId !== actor.id) {
         throw new ApiProblem(403, 'FORBIDDEN_RESOURCE', 'Không có quyền thao tác với đơn hàng này');
       }
       if (current.status === target) {
@@ -136,38 +168,27 @@ export class ShipmentsRepository {
         const fresh = await client.query<ShipmentRow>(
           `SELECT ${SHIPMENT_PROJECTION} FROM shipments s WHERE s.id = $1`, [id]);
         const response = shipmentResponse(fresh.rows[0]);
-        // Gọi lặp cùng bước bởi tài xế hiện hành là no-op, giữ nguyên ghi chú và thời điểm đầu tiên.
+        // Gọi lặp cùng bước bởi actor hợp lệ là no-op, giữ nguyên lý do/ghi chú và thời điểm đầu tiên.
         await client.query('COMMIT');
         return response;
       }
-      const expectedFrom = target === 'PICKED_UP' ? 'ASSIGNED' : 'PICKED_UP';
       if (current.status !== expectedFrom) {
         throw new ApiProblem(409, 'INVALID_STATE_TRANSITION', 'Trạng thái đơn hiện tại không cho phép thực hiện thao tác này');
       }
 
       const clock = await client.query<{ now: Date }>('SELECT clock_timestamp() AS now');
       const occurredAt = new Date(clock.rows[0].now).toISOString();
-      if (target === 'PICKED_UP') {
-        await client.query(`UPDATE shipments SET status='PICKED_UP', "updatedAt"=$2 WHERE id=$1`, [id, occurredAt]);
-      } else {
-        await client.query(
-          `UPDATE shipments SET status='DELIVERED', "proofOfDeliveryNotes"=$2, "updatedAt"=$3 WHERE id=$1`,
-          [id, proofOfDeliveryNotes, occurredAt]);
-      }
+      await applyUpdate(client, occurredAt);
       const eventId = randomUUID();
       await client.query(`INSERT INTO shipment_status_events
         (id,"shipmentId",action,"fromStatus","toStatus","actorUserId","actorRole","previousDriverId","newDriverId",reason,"occurredAt")
-        VALUES ($1,$2,$3,$4,$5,$6,'DRIVER',$6,$6,NULL,$7)`,
-      [eventId, id, target, expectedFrom, target, driverId, occurredAt]);
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$8,$9,$10)`,
+      [eventId, id, target, expectedFrom, target, actor.id, actor.role, current.driverId, reason, occurredAt]);
       await client.query(`INSERT INTO notifications
         (id,"customerId","shipmentId","statusEventId",kind,title,body,"createdAt")
         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`, [
         randomUUID(), current.senderId, id, eventId, target,
-        target === 'PICKED_UP' ? 'Tài xế đã lấy hàng' : 'Đơn hàng đã giao thành công',
-        target === 'PICKED_UP'
-          ? `Đơn ${current.trackingCode} đã được tài xế nhận và đang giao.`
-          : `Đơn ${current.trackingCode} đã được giao thành công.`,
-        occurredAt,
+        notification.title, notification.body(current.trackingCode), occurredAt,
       ]);
       const updated = await client.query<ShipmentRow>(`SELECT ${SHIPMENT_PROJECTION} FROM shipments s WHERE s.id=$1`, [id]);
       const response = shipmentResponse(updated.rows[0]);

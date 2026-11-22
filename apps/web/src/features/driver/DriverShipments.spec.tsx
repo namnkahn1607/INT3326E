@@ -3,7 +3,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { Link, MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../api/client'
-import { deliverShipment, getShipmentById, getShipments, pickupShipment } from '../../api/endpoints/shipments'
+import { deliverShipment, failShipment, getShipmentById, getShipments, pickupShipment } from '../../api/endpoints/shipments'
 import type { ShipmentDetail, ShipmentPage, ShipmentResponse } from '../../types/shipment-api'
 import { AuthContext, type AuthContextType, type UserProfile } from '../auth/context'
 import { shipmentFixture } from '../customer/shipment-fixture'
@@ -11,11 +11,13 @@ import { DriverPlaceholderPage } from './DriverPlaceholderPage'
 import { DriverShipmentDetailPage } from './DriverShipmentDetailPage'
 
 vi.mock('../../api/endpoints/shipments', async original => ({ ...await original<object>(),
-  getShipments: vi.fn(), getShipmentById: vi.fn(), pickupShipment: vi.fn(), deliverShipment: vi.fn() }))
+  getShipments: vi.fn(), getShipmentById: vi.fn(), pickupShipment: vi.fn(), deliverShipment: vi.fn(), failShipment: vi.fn() }))
 const driver: UserProfile = { id: 'firebase-uid', displayName: 'An', email: 'an@example.test', role: 'DRIVER' }
 const assigned: ShipmentDetail = { ...shipmentFixture, driverId: 'usr_01ARZ3NDEKTSV4RRFFQ69G5FAX', status: 'ASSIGNED', statusHistory: [] }
 const picked: ShipmentDetail = { ...assigned, status: 'PICKED_UP' }
 const delivered: ShipmentDetail = { ...picked, status: 'DELIVERED', proofOfDeliveryNotes: 'Gửi lễ tân' }
+const failed: ShipmentDetail = { ...picked, status: 'DELIVERY_FAILED', failureReason: 'Lý do gốc trên máy chủ',
+  failedByRole: 'DRIVER', failedByUserId: picked.driverId }
 let root: Root, node: HTMLDivElement
 beforeEach(() => {
   vi.resetAllMocks(); vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
@@ -23,6 +25,7 @@ beforeEach(() => {
   vi.mocked(getShipmentById).mockResolvedValue(assigned)
   vi.mocked(pickupShipment).mockResolvedValue(picked)
   vi.mocked(deliverShipment).mockResolvedValue(delivered)
+  vi.mocked(failShipment).mockResolvedValue(failed)
   node = document.createElement('div'); document.body.append(node); root = createRoot(node)
 })
 afterEach(async () => { await act(async () => root.unmount()); node.remove(); vi.unstubAllGlobals() })
@@ -97,6 +100,55 @@ describe('Driver assigned shipments (mock API)', () => {
 })
 
 describe('Driver pickup/delivery UI (mock API)', () => {
+  it('reviews failure reasons, submits once and retains the server outcome after a no-op', async () => {
+    vi.mocked(getShipmentById).mockResolvedValue(picked); await mount()
+    await click('Báo giao thất bại')
+    expect(document.activeElement).toBe(node.querySelector('#driver-failure-reason'))
+    await notes('   '); await click('Xem lại báo cáo')
+    expect(node.querySelector('[role=alert]')?.textContent).toContain('5 đến 500')
+    expect(failShipment).not.toHaveBeenCalled()
+    await notes('  Người nhận từ chối  '); await click('Xem lại báo cáo')
+    expect(document.activeElement).toBe(node.querySelector('.driver-shipment-review'))
+    await click('Hủy xác nhận')
+    expect(document.activeElement).toBe(button('Xem lại báo cáo'))
+    await click('Xem lại báo cáo')
+    const pending = deferred<ShipmentResponse>(); vi.mocked(failShipment).mockReturnValue(pending.promise)
+    await act(async () => { button('Xác nhận giao thất bại').click(); button('Xác nhận giao thất bại').click() })
+    expect(failShipment).toHaveBeenCalledExactlyOnceWith(picked.id, 'Người nhận từ chối', expect.any(AbortSignal))
+    vi.mocked(getShipmentById).mockResolvedValue(failed)
+    await act(async () => pending.resolve(failed))
+    expect(node.textContent).toContain('Máy chủ đã xác nhận giao thất bại.')
+    expect(node.textContent).toContain(failed.failureReason)
+    expect(node.querySelector('form')).toBeNull()
+    expect(deliverShipment).not.toHaveBeenCalled()
+  })
+  it('never retries an uncertain failure and clears the old intent before reading again', async () => {
+    vi.mocked(getShipmentById).mockResolvedValue(picked); await mount()
+    await click('Báo giao thất bại'); await notes('Không liên hệ được'); await click('Xem lại báo cáo')
+    vi.mocked(failShipment).mockRejectedValue(new ApiError(0, 'REQUEST_TIMEOUT'))
+    vi.mocked(getShipmentById).mockRejectedValue(new ApiError(503, 'SERVICE_UNAVAILABLE'))
+    await click('Xác nhận giao thất bại')
+    expect(failShipment).toHaveBeenCalledTimes(1)
+    expect(node.querySelector('form')).toBeNull()
+    expect(node.textContent).not.toContain('Máy chủ đã xác nhận giao thất bại.')
+    vi.mocked(getShipmentById).mockResolvedValue(picked); await click('Đọc lại thông tin đơn')
+    expect(node.querySelector('#driver-failure-reason')).toBeNull()
+    expect(failShipment).toHaveBeenCalledTimes(1)
+  })
+  it('keeps a confirmed failure when the follow-up detail cannot be read', async () => {
+    vi.mocked(getShipmentById).mockResolvedValue(picked); await mount()
+    await click('Báo giao thất bại'); await notes('Người nhận từ chối'); await click('Xem lại báo cáo')
+    vi.mocked(getShipmentById).mockRejectedValue(new ApiError(503, 'SERVICE_UNAVAILABLE'))
+    await click('Xác nhận giao thất bại')
+    expect(node.textContent).toContain('Máy chủ đã xác nhận giao thất bại.')
+    expect(node.textContent).toContain(failed.failureReason)
+    expect(node.querySelector('form')).toBeNull()
+  })
+  it.each(['ASSIGNED', 'DELIVERED', 'DELIVERY_FAILED'] as const)('does not offer failure for %s', async status => {
+    vi.mocked(getShipmentById).mockResolvedValue({ ...assigned, status }); await mount()
+    expect(node.querySelector('.driver-failure-toggle')).toBeNull()
+    expect(failShipment).not.toHaveBeenCalled()
+  })
   it('requires confirmation, supports cancel, and reads server state/history after pickup', async () => {
     await mount(); await click('Đã lấy hàng')
     expect(pickupShipment).not.toHaveBeenCalled()

@@ -8,7 +8,7 @@ export interface ShipmentTrackingProps {
   status: ShipmentStatus
   pickupLocation?: Coordinates
   dropoffLocation?: Coordinates
-  onStateChange?: (status: ShipmentStatus, driverId: string | null) => void
+  onStateChange?: (status: ShipmentStatus, driverId: string | null, isLate: boolean | null) => void
 }
 export function ShipmentTracking({ id, status, pickupLocation, dropoffLocation, onStateChange }: ShipmentTrackingProps) {
   if (status === 'DELIVERED' || status === 'DELIVERY_FAILED') return <section className="shipment-tracking" aria-label="Theo dõi vị trí đơn hàng">

@@ -74,9 +74,23 @@ Mục lục: [Điều phối theo tuần](README.md)
 
 ## Thực tế từng người
 
+- **TV1** (21/11, nhánh `tv1/week9`): hoàn thiện `API07` (`POST /v1/shipments/:id/fail`, `Cache-Control: no-store`) cho `DRIVER` hiện hành hoặc `ADMIN` từ `PICKED_UP` sang `DELIVERY_FAILED`, hợp nhất khóa giao dịch `runLockedTransition` (kèm đọc lại snapshot mới ở nhánh no-op `DELIVERED` / `DELIVERY_FAILED` dưới `READ COMMITTED`), kiểm `isLate` đủ 3 mốc ở trạng thái active và terminal, cập nhật `docs/openapi.json`, `docs/features.md` (`AC07` mức `local`), `docs/tech-debt.md` và `docs/contracts/api-contract.md`. Đã kiểm tra trên PostgreSQL 16 thật (container tạm): `src/qa/` đạt 15/15 (gồm `TC03.4` Deliver vs Fail, Fail vs Fail đồng thời và ma trận quyền `TC10`), `assignments.postgres.spec.ts` đạt 190/192 (2 ca PGlite-only bỏ qua ở chế độ tương ứng); chưa deploy hoặc kiểm trên Cloud, chờ TV3 ghép nút Fail phía Driver và TV6 nghiệm thu `AC07`/`AC08`.
+- **TV3 (22/11):** đã lấy `develop@5e79dcb` vào `feature/frontend`, bảo toàn
+  phần local 18/11 và nội dung điều phối chung. Customer Notifications nối
+  API10, polling 10s serial/cursor/account; Admin Accounts nối directory khách
+  hàng; Customer/Admin hiện và đồng bộ `isLate` từ server. Driver có form
+  fail/reason/review/no-op/recovery theo contract PR #51, chưa ghép backend
+  chưa merge. Local đạt check toàn repo (181 Worker/shared/load, 2 health,
+  465 API, 621 web; 125 skipped), integration Nest/PGlite 15/15, 103 test liên
+  quan và browser 10 lượt 390/1440px. Bàn giao qua PR vào develop; chưa deploy. AC07/08
+  Cloud còn chờ API07 tích hợp và deploy từ SHA chung. [Bàn giao và ảnh](../features/week9-frontend-handoff.md).
+  Công cụ đo tracking/polling local 18/11 vẫn được giữ trong
+  [tracking-read-load](../features/tracking-read-load.md); chưa đo LT04 Cloud,
+  không thay thứ tự ưu tiên AC07/08 hiện tại.
 - **TV2 (22/11):** hoàn thành xử lý lỗi Worker và bàn giao truy vấn vị trí ETA.
-  - Phân loại lỗi database trong `GpsSubscriber`: publish sang `gps-events-dlq` rồi mới ACK đối với các lỗi không thể tự phục hồi như vi phạm khóa ngoại `23503`, `23502` (not null), `23514` (check), và `23P01` (exclusion) để tránh tight-loop retry kẹt tin nhắn; chỉ NACK khi gặp lỗi tạm thời (mất kết nối, timeout, `ECONNREFUSED`, `57P01` admin shutdown). Bổ sung 17 unit tests kiểm tra phân loại lỗi và publish DLQ tại `apps/worker/src/consumer/gps.subscriber.spec.ts` (đạt 22/22 tests); bộ phục hồi `recovery-scenarios.spec.ts` đạt 5/5.
+  - Phân loại lỗi database trong `GpsSubscriber`: publish sang `gps-events-dlq` rồi mới ACK (publish DLQ lỗi thì NACK để Pub/Sub thử lại, không mất message) đối với các lỗi không thể tự phục hồi như vi phạm khóa ngoại `23503`, `23502` (not null), `23514` (check), và `23P01` (exclusion) để tránh tight-loop retry kẹt tin nhắn; chỉ NACK khi gặp lỗi tạm thời (mất kết nối, timeout, `ECONNREFUSED`, `57P01` admin shutdown). Bổ sung 17 unit tests kiểm tra phân loại lỗi và publish DLQ tại `apps/worker/src/consumer/gps.subscriber.spec.ts` (đạt 22/22 tests); bộ phục hồi `recovery-scenarios.spec.ts` đạt 5/5.
   - Hoàn thiện tài liệu bàn giao kỹ thuật cho tuần 10 tại [`docs/features/eta-location-handoff.md`](../features/eta-location-handoff.md): chuẩn hóa truy vấn vị trí tức thời theo `driverId` từ bảng `current_locations` (DATA04), câu truy vấn MVCC snapshot bảo vệ trạng thái khi gán lại tài xế, công thức tính ETA Haversine 20 km/h, trần giây `Math.ceil`, quy tắc độ tươi 30 giây và ma trận kiểm thử TC09.1–TC09.4 cho TV6 (QA).
+
 - **TV4 (21/11):** cập nhật giao diện Driver với Express sáng và Midnight
   tối, bổ sung thẻ hành trình trên trang đầu từ dữ liệu đơn được phân công.
   Kiểm trên Edge local với Auth/API giả lập (49 kịch bản đạt, gồm luồng
