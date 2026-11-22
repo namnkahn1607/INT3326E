@@ -110,10 +110,13 @@ export class GpsSubscriber implements OnModuleInit, OnModuleDestroy {
             try {
               await this.forwardToDlq(message, error);
             } catch (dlqErr: any) {
+              // Chưa đưa được vào DLQ thì không ACK: NACK để Pub/Sub thử lại, hết maxDeliveryAttempts sẽ tự chuyển DLQ.
               this.logger.error(
-                `[DLQ Publish Failed] ID: ${message.id} - ${dlqErr.message}. Still ACKing to prevent poison loop.`,
+                `[DLQ Publish Failed] ID: ${message.id} - ${dlqErr.message}. NACKing so the message is not lost.`,
                 dlqErr.stack,
               );
+              if (typeof message.nack === 'function') message.nack();
+              break;
             }
             message.ack();
           } else {
@@ -153,21 +156,22 @@ export class GpsSubscriber implements OnModuleInit, OnModuleDestroy {
       const dlqTopicName = process.env.PUBSUB_TOPIC_GPS_DLQ || 'gps-events-dlq';
       this.dlqTopic = this.pubSubClient.topic(dlqTopicName);
     }
-    if (this.dlqTopic && typeof this.dlqTopic.publishMessage === 'function') {
-      const dataBuffer = Buffer.isBuffer(message.data)
-        ? message.data
-        : Buffer.from(typeof message.data === 'string' ? message.data : JSON.stringify(message.data), 'utf-8');
-      await this.dlqTopic.publishMessage({
-        data: dataBuffer,
-        attributes: {
-          originalMessageId: String(message.id),
-          errorCode: String(error?.code || 'UNKNOWN'),
-          errorMessage: String(error?.message || ''),
-          failedAt: new Date().toISOString(),
-        },
-      });
-      this.logger.log(`[DLQ Forwarded] ID: ${message.id} -> gps-events-dlq | code: ${error?.code}`);
+    if (!this.dlqTopic || typeof this.dlqTopic.publishMessage !== 'function') {
+      throw new Error('DLQ topic is not configured');
     }
+    const dataBuffer = Buffer.isBuffer(message.data)
+      ? message.data
+      : Buffer.from(typeof message.data === 'string' ? message.data : JSON.stringify(message.data), 'utf-8');
+    await this.dlqTopic.publishMessage({
+      data: dataBuffer,
+      attributes: {
+        originalMessageId: String(message.id),
+        errorCode: String(error?.code || 'UNKNOWN'),
+        errorMessage: String(error?.message || ''),
+        failedAt: new Date().toISOString(),
+      },
+    });
+    this.logger.log(`[DLQ Forwarded] ID: ${message.id} -> gps-events-dlq | code: ${error?.code}`);
   }
 
   onModuleDestroy() {

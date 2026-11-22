@@ -188,7 +188,7 @@ describe('GpsSubscriber message handling', () => {
       expect(mockMessage.nack).toHaveBeenCalledOnce();
     });
 
-    it('should still ACK if publishing to DLQ fails on permanent error (prevents poison retry loop)', async () => {
+    it('should NACK (not ACK) if publishing to DLQ fails, so the message is not lost', async () => {
       const fkError = new Error('insert or update violates foreign key') as any;
       fkError.code = '23503';
       vi.spyOn(repository, 'recordGpsEvent').mockRejectedValueOnce(fkError);
@@ -198,8 +198,8 @@ describe('GpsSubscriber message handling', () => {
       await subscriber.handleIncomingMessage(mockMessage as any);
 
       expect(mockDlqTopic.publishMessage).toHaveBeenCalledOnce();
-      expect(mockMessage.ack).toHaveBeenCalledOnce();
-      expect(mockMessage.nack).not.toHaveBeenCalled();
+      expect(mockMessage.ack).not.toHaveBeenCalled();
+      expect(mockMessage.nack).toHaveBeenCalledOnce();
     });
 
     it('should NACK on connection timeout (transient error)', async () => {
