@@ -147,9 +147,9 @@ export function GpsEmitter({ driverId, onEmit, onRunningChange, description }: G
   }
 
   return (
-    <section aria-labelledby="gps-emitter-title" style={{ marginTop: '24px', textAlign: 'left' }}>
+    <section aria-labelledby="gps-emitter-title" className="driver-emitter">
       <h3 id="gps-emitter-title">Nguồn vị trí GPS</h3>
-      <p style={{ color: '#64748b', marginTop: '8px' }}>
+      <p className="driver-note">
         {description ?? 'Tạo mẫu mỗi 8 giây để xem payload. Chưa gửi dữ liệu lên máy chủ.'}
       </p>
       <div className="driver-gps-source">
@@ -164,20 +164,20 @@ export function GpsEmitter({ driverId, onEmit, onRunningChange, description }: G
           <option value="browser">Vị trí trình duyệt</option>
         </select>
       </div>
-      <p id="gps-source-note">{source === 'simulator'
+      <p id="gps-source-note" className="driver-note">{source === 'simulator'
         ? 'Mô phỏng: tọa độ di chuyển theo tuyến mẫu, không phải vị trí thật của thiết bị.'
         : 'Vị trí trình duyệt: cần cấp quyền định vị. Mỗi 8 giây lấy một vị trí mới, chờ tối đa 7 giây.'}</p>
-      <p>Định vị cần quyền vị trí và HTTPS hoặc localhost. Tab chạy nền có thể bị trình duyệt làm chậm hoặc tạm dừng; nhịp 8 giây không được đảm bảo.</p>
-      <p style={{ marginTop: '12px' }}>Tài khoản: {driverId}</p>
-      <p role="status">
+      <p className="driver-note">Định vị cần quyền vị trí và HTTPS hoặc localhost. Tab chạy nền có thể bị trình duyệt làm chậm hoặc tạm dừng; nhịp 8 giây không được đảm bảo.</p>
+      <p className="driver-note">Tài khoản: {driverId}</p>
+      <p className="driver-gps-state" role="status">
         Trạng thái: {running && driverId.trim() ? 'Đang phát mẫu' : 'Đã dừng'} · Số mẫu: {eventCount}
         {acquiring && ' · Đang lấy vị trí…'}
       </p>
       {error && <p className="driver-send-error" role="alert">{error}</p>}
-      <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+      <div className="driver-emitter-actions">
         <button
           type="button"
-          className="btn btn-secondary"
+          className="btn btn-primary"
           disabled={running || !driverId.trim() || eventCount >= MAX_GPS_SEQUENCE}
           onClick={start}
         >
@@ -194,11 +194,11 @@ export function GpsEmitter({ driverId, onEmit, onRunningChange, description }: G
       </div>
       <p className="ui-disabled-reason">{!driverId.trim() ? 'Cần mã tài xế để phát mẫu.' : running ? 'Chọn Dừng để đổi nguồn vị trí hoặc kết thúc phát mẫu.' : 'Nút Dừng khả dụng sau khi bắt đầu phát mẫu.'}</p>
       {lastEvent ? (
-        <pre style={{ marginTop: '16px', padding: '12px', background: '#f0fdf4', overflowX: 'auto' }}>
+        <pre className="driver-sample">
           <code>{JSON.stringify(lastEvent, null, 2)}</code>
         </pre>
       ) : (
-        <p style={{ marginTop: '16px' }}>Chưa có mẫu. Mẫu đầu sớm nhất sau 8 giây; vị trí trình duyệt cần thêm thời gian định vị.</p>
+        <p className="driver-note">Chưa có mẫu. Mẫu đầu sớm nhất sau 8 giây; vị trí trình duyệt cần thêm thời gian định vị.</p>
       )}
     </section>
   )

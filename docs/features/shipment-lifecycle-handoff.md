@@ -1,5 +1,9 @@
 # Bàn giao frontend vòng đời đơn — tuần 4
 
+Cập nhật 22/11/2026: xem [bàn giao frontend tuần 9](week9-frontend-handoff.md)
+cho thông báo, giao trễ và Driver báo thất bại. Kết quả bên dưới là lịch sử
+theo ngày; không thay kết quả hiện tại hoặc gate Cloud.
+
 Ngày kiểm tra: 30/10/2026. Nền tích hợp `6d75d53`; phần frontend tuần 4 đang ở
 working tree, chưa commit/push/deploy. [Đặc tả chức năng](shipment-lifecycle.md)
 tham chiếu PF SPEC 01 v1.3. Không sửa backend, Driver, database hoặc tài nguyên Cloud.

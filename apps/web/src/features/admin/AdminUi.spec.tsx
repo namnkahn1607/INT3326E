@@ -100,9 +100,9 @@ describe('Admin API pages and demo boundaries', () => {
     await act(async () => node.querySelector<HTMLButtonElement>('.dashboard-theme-toggle')!.click())
     expect(node.querySelector('.admin-layout')?.getAttribute('data-theme')).toBe('light')
   })
-  it('retains the demo notice on unconnected account screens', async () => {
+  it('does not mark the connected customer directory as demo', async () => {
     await mount('/admin/accounts')
-    expect(node.querySelector('.ui-demo-notice')?.textContent).toContain('dữ liệu mẫu')
+    expect(node.querySelector('.ui-demo-notice')).toBeNull()
   })
   it('renders charts and a readable breakdown from the loaded orders only', async () => {
     vi.mocked(getShipments).mockResolvedValue(page([

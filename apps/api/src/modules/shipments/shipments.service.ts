@@ -4,7 +4,7 @@ import { ApiProblem } from '../../common/api-problem';
 import { UserRole } from '../auth/enums/user-role.enum';
 import type { BusinessUser } from '../users/entities/user.entity';
 import { invalidField, type CreateShipmentDto } from './dto/create-shipment.dto';
-import { parseDeliverShipment, parsePickupShipment } from './dto/driver-shipment-actions.dto';
+import { parseDeliverShipment, parseFailShipment, parsePickupShipment } from './dto/driver-shipment-actions.dto';
 import type { ShipmentResponseDto } from './dto/shipment-response.dto';
 import { shipmentIdentifiers } from './shipment-identifiers';
 import { ShipmentsRepository } from './shipments.repository';
@@ -59,6 +59,16 @@ export class ShipmentsService {
     const shipmentId = parseShipmentId(id);
     const notes = parseDeliverShipment(body);
     return this.shipments.deliver(actor.id, shipmentId, notes);
+  }
+
+  fail(actor: BusinessUser, id: string, body: unknown, query: Record<string, unknown>): Promise<ShipmentResponseDto> {
+    if (actor.role !== UserRole.DRIVER && actor.role !== UserRole.ADMIN) {
+      throw new ApiProblem(403, 'FORBIDDEN_RESOURCE', 'Không có quyền truy cập');
+    }
+    if (Object.keys(query).length) invalidField('query', 'Yêu cầu này không nhận tham số truy vấn');
+    const shipmentId = parseShipmentId(id);
+    const reason = parseFailShipment(body);
+    return this.shipments.fail(actor, shipmentId, reason);
   }
 
   async create(actor: BusinessUser, payload: CreateShipmentDto, key: string): Promise<ShipmentResponseDto> {

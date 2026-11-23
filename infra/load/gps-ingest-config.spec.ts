@@ -10,13 +10,21 @@ const token = (value: unknown) => `fixture.${Buffer.from(JSON.stringify(value)).
 describe('GPS ingest k6 configuration and contract', () => {
   it('uses a small default workload and explicit API/token input', () => {
     expect(readConfig(env)).toEqual({ baseUrl: 'http://127.0.0.1:3000/v1', drivers: 2,
-      intervalSeconds: 8, durationSeconds: 16, timeoutSeconds: 7,
+      intervalSeconds: 8, offeredEventsPerMinute: null, durationSeconds: 16, timeoutSeconds: 7,
       tokenFile: env.DRIVER_TOKENS_FILE, summaryPath: 'gps-ingest-summary.json' })
   })
 
   it('accepts explicit driver count and fractional send interval', () => {
     expect(readConfig({ ...env, DRIVERS: '3', SEND_INTERVAL_SECONDS: '.5', DURATION_SECONDS: '10', REQUEST_TIMEOUT_SECONDS: '2' }))
       .toMatchObject({ drivers: 3, intervalSeconds: .5, durationSeconds: 10, timeoutSeconds: 2 })
+  })
+
+  it('accepts a fixed arrival rate in events per minute', () => {
+    expect(readConfig({ ...env, OFFERED_EVENTS_PER_MINUTE: '3750' }).offeredEventsPerMinute).toBe(3750)
+  })
+
+  it.each(['', '0', '1.5'])('rejects invalid fixed arrival rates: %s', value => {
+    expect(() => readConfig({ ...env, OFFERED_EVENTS_PER_MINUTE: value })).toThrow(/OFFERED_EVENTS_PER_MINUTE/)
   })
 
   it.each(['', 'https://user:password@example.test/v1', 'ftp://example.test/v1',

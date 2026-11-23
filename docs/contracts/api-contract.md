@@ -23,8 +23,7 @@ lịch sử `statusHistory` của `GET /v1/shipments/:id` và `GET /v1/shipments
 - `pickup` chỉ chấp nhận body rỗng hoặc `{}`. `deliver` chấp nhận body rỗng, `{}`
   hoặc `{ proofOfDeliveryNotes?: string | null }` (trim khoảng trắng hai đầu,
   tối đa 255 ký tự Unicode, chuỗi rỗng sau trim chuẩn hóa thành `null`).
-- Chưa triển khai `POST /v1/shipments/:id/fail` và `GET /v1/shipments/:id/tracking`
-  (thuộc phạm vi Tuần 8–10). Chưa chạy nghiệm thu trên Cloud SQL.
+- `POST /v1/shipments/:id/fail` (`API07`, tuần 9) và `GET /v1/shipments/:id/tracking` (`API09`, tuần 8) đã được triển khai và kiểm thử local (`assignments.postgres`, `shipment-flow`, `tracking.postgres`). Chưa chạy nghiệm thu đầy đủ trên Cloud SQL.
 
 ## Tích hợp GPS — 02/11/2026
 

@@ -13,6 +13,7 @@ const binary = process.env.K6_BINARY || 'k6'
 const tokenFile = resolve(output, 'fixture.tokens.json')
 const configFile = resolve(output, 'k6-config.json')
 const run = promisify(execFile)
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
 const tokens = [1, 2].map(index => {
   const claims = { sub: `k6-fixture-driver-${index}`, role: 'DRIVER', exp: Math.floor(Date.now() / 1000) + 3600 }
   return ['fixture', Buffer.from(JSON.stringify(claims)).toString('base64url'), 'not-a-real-signature'].join('.')
@@ -29,12 +30,14 @@ async function runK6(name, duration = 1, extraEnv = {}) {
   const summaryPath = resolve(output, `${name}-summary.json`)
   let result
   try {
+    const runEnv = { ...process.env, BASE_URL: `${await app.getUrl()}/v1`, DRIVERS: '2',
+      SEND_INTERVAL_SECONDS: '1', DURATION_SECONDS: String(duration), REQUEST_TIMEOUT_SECONDS: '2',
+      DRIVER_TOKENS_FILE: tokenFile, SUMMARY_PATH: summaryPath }
+    delete runEnv.OFFERED_EVENTS_PER_MINUTE
     const completed = await run(binary, ['run', '--quiet', '--no-color', '--no-usage-report', '--http-debug-redact',
       '--config', configFile, resolve(repo, 'infra/load/gps-ingest.js')], {
       cwd: repo, timeout: 30_000, maxBuffer: 1024 * 1024,
-      env: { ...process.env, BASE_URL: `${await app.getUrl()}/v1`, DRIVERS: '2',
-        SEND_INTERVAL_SECONDS: '1', DURATION_SECONDS: String(duration), REQUEST_TIMEOUT_SECONDS: '2',
-        DRIVER_TOKENS_FILE: tokenFile, SUMMARY_PATH: summaryPath, ...extraEnv },
+      env: { ...runEnv, ...extraEnv },
       windowsHide: true,
     })
     result = { code: 0, stdout: completed.stdout, stderr: completed.stderr }
@@ -82,6 +85,7 @@ try {
     } }).compile()
   module.get(LocationService).setTopic({ publishMessage: async ({ data }) => {
     if (mode === 'broker-error') throw new Error('Isolated broker fixture error')
+    if (mode === 'slow-broker') await delay(350)
     const event = JSON.parse(data.toString('utf8'))
     assertGpsTelemetryEvent(event)
     events.push(event)
@@ -108,6 +112,12 @@ try {
   assert.equal(metrics.http_req_failed.values.rate, 0)
   assert.equal(metrics.checks.values.rate, 1)
   assert.equal(metrics.http_reqs.values.count, events.length)
+  assert.equal(summary.results.offered, events.length)
+  assert.equal(summary.results.accepted, events.length)
+  assert.equal(summary.results.errors, 0)
+  assert.equal(summary.results.incomplete, 0)
+  assert.equal(summary.results.droppedIterations, null)
+  assert.equal(summary.results.httpP95Ms, metrics.http_req_duration.values['p(95)'])
   for (const driverId of driverIds) {
     const samples = events.filter(event => event.driverId === driverId)
     assert.ok(samples.length >= 3)
@@ -125,7 +135,9 @@ try {
     httpLatencyMs: metrics.http_req_duration.values, summary: 'accepted-summary.json' })
   report.eventManifest = events.map(({ eventId, driverId, seq, clientTimestamp }) => ({ eventId, driverId, seq, clientTimestamp }))
 
-  for (const [nextMode, expectedCode] of [['broker-error', 99], ['malformed-acceptance', 99], ['unlinked', 108]]) {
+  for (const [nextMode, expectedCode, reason] of [
+    ['broker-error', 99, 'http_5xx'], ['malformed-acceptance', 99, 'invalid_202'], ['unlinked', 108, 'http_4xx'],
+  ]) {
     mode = nextMode
     const before = events.length
     const failure = await runK6(nextMode)
@@ -134,6 +146,7 @@ try {
     const rejected = JSON.parse(await readFile(failure.summaryPath, 'utf8'))
     assert.equal(rejected.summary.metrics.gps_accepted.values.count, 0)
     assert.ok(rejected.summary.metrics.gps_rejected.values.count > 0)
+    assert.equal(rejected.results.errorsByReason[reason], rejected.results.errors)
     report.checks.push({ name: nextMode, status: 'PASS', observedK6Exit: failure.code, summary: `${nextMode}-summary.json` })
   }
   const beforeConfigFailure = requests
@@ -142,6 +155,29 @@ try {
   assert.ok(invalidConfig.stderr.includes('DRIVER_TOKENS_FILE is required'))
   assert.equal(requests, beforeConfigFailure, 'bad init config must send no HTTP requests')
   report.checks.push({ name: 'missing token input fails before HTTP', status: 'PASS', observedK6Exit: invalidConfig.code })
+
+  mode = 'accepted'
+  const fixed = await runK6('fixed-rate', 3, { OFFERED_EVENTS_PER_MINUTE: '120' })
+  assert.equal(fixed.code, 0, 'a sustained fixed rate must pass')
+  const fixedSummary = JSON.parse(await readFile(fixed.summaryPath, 'utf8'))
+  assert.equal(fixedSummary.workload.nominalEventsPerSecond, 2)
+  assert.ok(Math.abs(fixedSummary.results.offered - 6) <= 1,
+    'allow one arrival at the scenario start/end boundary')
+  assert.equal(fixedSummary.results.accepted, fixedSummary.results.offered)
+  assert.equal(fixedSummary.results.droppedIterations, 0)
+  report.checks.push({ name: 'fixed rate 2 events/s', status: 'PASS',
+    results: fixedSummary.results, summary: 'fixed-rate-summary.json' })
+
+  mode = 'slow-broker'
+  const overloaded = await runK6('dropped-iterations', 1, { OFFERED_EVENTS_PER_MINUTE: '1800' })
+  assert.equal(overloaded.code, 99, 'missed arrivals must fail the fixed-rate threshold')
+  const dropped = JSON.parse(await readFile(overloaded.summaryPath, 'utf8')).results
+  assert.ok(dropped.droppedIterations > 0)
+  assert.ok(dropped.offered < 30)
+  assert.equal(dropped.accepted, dropped.offered)
+  assert.equal(dropped.errors, 0)
+  report.checks.push({ name: 'slow broker causes unsent scheduled arrivals', status: 'PASS',
+    results: dropped, observedK6Exit: overloaded.code, summary: 'dropped-iterations-summary.json' })
   const files = ['infra/load/gps-ingest.js', 'infra/load/gps-ingest-config.mjs', 'infra/load/gps-ingest-smoke.mjs']
   report.sourceRevision = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repo, encoding: 'utf8', windowsHide: true }).trim()
   report.uncommittedChanges = !!execFileSync('git', ['status', '--porcelain'], { cwd: repo, encoding: 'utf8', windowsHide: true }).trim()
