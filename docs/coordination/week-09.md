@@ -107,3 +107,25 @@ Mục lục: [Điều phối theo tuần](README.md)
   bằng 0 tại các điểm đo theo phút trước, trong và sau lượt. Worker nhận
   đủ 12 mẫu, đều đi theo nhánh history-only do clock skew. `int3326esql`
   đã về `Stopped` lúc 21:01:43 ICT. [Báo cáo Cloud](../evidence/gps-ingest-load/week-09-cloud.md).
+
+## Chốt tuần
+
+Chốt ngày 23/11/2026 (trễ 1 ngày) bằng PR `week/09` → `main`.
+
+**Checkpoint đạt:** đủ 8 use case bắt buộc chạy được trên Cloud. AC01–AC06 đạt ngày 20/11 ([regression tuần 8](../tv6/week-08.md)); AC07 báo giao thất bại và AC08 thông báo đạt ngày 23/11 ([kết quả TV6](../tv6/week-09.md)).
+
+**Đã xong trong tuần:**
+- TV1: API07 `POST /v1/shipments/{id}/fail` cho Driver hiện hành và Admin, thông báo cùng transaction, kiểm `isLate` (PR #51).
+- TV2: Worker đưa lỗi vĩnh viễn (`23503`, `23502`, `23514`, `23P01`) sang `gps-events-dlq` rồi mới ACK, publish DLQ lỗi thì NACK; tài liệu truy vấn vị trí cho ETA (PR #57).
+- TV3: trang Thông báo gọi API10, trang Tài khoản Admin gọi directory, nút báo giao thất bại của Driver, nhãn giao trễ (PR #56).
+- TV4: script k6 cho API08 và dry-run trên Cloud: 12/12 accepted, 0 lỗi, backlog 0 (PR #53, #54); giao diện Driver sáng/tối (PR #52).
+- TV5: deploy API, Worker, Hosting từ `develop` có đủ code tuần 9; thay key basemap CARTO (BUG-W8-02 đã đóng); tạo tài khoản Customer và Driver thứ hai.
+- TV6: review PR #51, kiểm Admin cơ bản (PR #55), kiểm AC07 và AC08 trên Cloud (PR #58), sửa PR #57.
+
+**Lỗi đã đóng:** BUG-W8-02 (nền bản đồ), BUG-W8-03 (trang Thông báo), Worker NACK lỗi khóa ngoại.
+
+## Chuyển sang tuần 10
+
+- **TV5:** GitHub Actions chạy `npm run check` trên mỗi PR (việc tuần 9 chưa làm); giới hạn domain key CARTO và xóa hai token `eyJh…` cũ; xác nhận Worker có quyền publish `gps-events-dlq`.
+- **TV6:** chạy ca Customer khác và tài xế khác sau gán lại mở đơn (AC10, 403) bằng tài khoản thứ hai.
+- Việc tuần 10 theo sheet: ETA cùng tracking (checkpoint tuần 10). Xem [nợ kỹ thuật](../tech-debt.md).
