@@ -44,6 +44,8 @@ Ca thử thêm theo TC10.1–10.3: đoán ID đơn của người khác (403, kh
 
 Đã có test: ma trận TC10 trên PostgreSQL thật trong `apps/api/src/qa/shipment-flow.postgres.spec.ts`, ca gán lại và tracking trong `apps/api/src/qa/tracking.postgres.spec.ts`. Trên Cloud 20/11 và 23/11 mới chạy được: không token 401, driver không được gán 403. Còn thiếu trên Cloud: Customer khác và Driver cũ sau gán lại, vì chưa có tài khoản thứ hai đăng nhập được (chờ TV5).
 
+23/11 tối: định chạy ca Driver cũ sau gán lại (chỉ cần Admin và Driver hiện có) nhưng `/v1/shipments` trả 503 vì Cloud SQL đang tắt. Chạy lại khi TV5 bật DB.
+
 ## Đã làm được
 
 - Auth đã có test 401/403 ở mức mock và Emulator (tuần 5).
