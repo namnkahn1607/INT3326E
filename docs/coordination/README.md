@@ -13,5 +13,5 @@ Quy ước chốt tuần:
 | [Week 5](week-05.md) | 19/10–25/10 | Customer đăng nhập, tạo và xem đơn trên Cloud SQL | #24 |
 | [Week 6](week-06.md) | 26/10–01/11 | Dispatcher gán tài xế; GPS test thấy trong Pub/Sub | #25 |
 | [Week 7](week-07.md) | 02/11–08/11 | Luồng tạo đơn đến giao hàng; GPS ghi qua Worker | #26 |
-| [Week 8](week-08.md) | 09/11–15/11 | Customer thấy vị trí tài xế gần real-time trên Cloud | #47 (chờ duyệt) |
-| [Week 9](week-09.md) | 16/11–22/11 | Đủ 8 use case bắt buộc | Chưa |
+| [Week 8](week-08.md) | 09/11–15/11 | Customer thấy vị trí tài xế gần real-time trên Cloud | #47 |
+| [Week 9](week-09.md) | 16/11–22/11 | Đủ 8 use case bắt buộc | `week/09` (chờ duyệt) |
