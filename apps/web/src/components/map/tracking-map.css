@@ -14,6 +14,19 @@
 .tracking-gps-state[data-gps=stale] { color: var(--dashboard-warning); }
 .tracking-message { padding-block: 12px; color: var(--dashboard-muted); font-size: 14px; }
 .tracking-message[role=alert] { color: var(--dashboard-danger); }
+.tracking-eta { min-width: 0; margin-bottom: 16px; }
+.tracking-eta h3 { margin: 0 0 12px; font-size: 15px; font-weight: 500; color: var(--dashboard-text); }
+.tracking-eta dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 24px; margin: 0; }
+.tracking-eta dt, .tracking-eta-note, .tracking-eta-unavailable { font-size: 14px; line-height: 1.6; color: var(--dashboard-muted); }
+.tracking-eta dd { margin: 4px 0 0; font-size: 20px; line-height: 1.5; font-weight: 500; color: var(--dashboard-text); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.tracking-eta .eta-minutes { font-size: 28px; line-height: 1.25; font-weight: 600; }
+.tracking-eta .eta-arrival dd { font-size: 16px; }
+.tracking-eta-note { margin: 12px 0 0; }
+.tracking-eta-unavailable { margin: 0; }
+@media (max-width: 600px) {
+  .tracking-eta dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tracking-eta .eta-arrival { grid-column: 1 / -1; }
+}
 .tracking-points { display: flex; gap: 16px 28px; flex-wrap: wrap; margin: 12px 0 0; font-size: 13px; }
 .tracking-points > div { display: grid; gap: 4px; }
 .tracking-points dt { color: var(--dashboard-muted); }

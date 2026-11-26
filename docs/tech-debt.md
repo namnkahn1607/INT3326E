@@ -4,6 +4,7 @@ Việc đã biết nhưng cố ý để sau. Thêm dòng khi hoãn một việc;
 
 | Ngày | Khu vực | Nợ | Lý do để sau | Rủi ro | Xem lại khi |
 | --- | --- | --- | --- | --- | --- |
+| 25/11/2026 | ETA/triển khai | Chưa nghiệm thu panel ETA mới trên Hosting/Cloud | TV3 đã kiểm local/mock; TV2 còn gom hàm/config tốc độ và cần deploy cùng SHA | Không suy rộng 17 integration/ảnh local thành checkpoint ETA Cloud | TV2/TV3 tích hợp, TV5 deploy, TV6 kiểm fresh/stale/null/terminal và quyền chéo, lưu revision; [bàn giao](features/tracking-eta-handoff.md) |
 | 23/11/2026 | Phân quyền | Chưa chạy trên Cloud ca Customer khác và tài xế khác sau gán lại mở đơn (AC10, 403) | Tài khoản thứ hai đăng nhập được mới có ngày 23/11 | Chưa có bằng chứng Cloud cho ranh giới quyền giữa hai Customer, hai Driver | Tuần 10 (TV6), cùng QA phân quyền chéo |
 | 23/11/2026 | Triển khai frontend | Key basemap CARTO chưa giới hạn domain; hai API Access Token `eyJh…` từng nằm trong bundle chưa xác nhận đã xóa | Key mới đã chạy trên Hosting 23/11 | Người khác dùng ké key; token cũ có quyền SQL API | Tuần 10 (TV5) |
 | 23/11/2026 | Worker/Cloud | Chưa xác nhận Worker có quyền publish lên `gps-events-dlq` | Code PR #57 đã deploy | Lỗi vĩnh viễn bị NACK tới hết 5 lần rồi mới vào DLQ, tốn lượt thử | Tuần 10 (TV5) |

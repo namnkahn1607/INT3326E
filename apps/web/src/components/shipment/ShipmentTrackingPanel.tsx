@@ -3,6 +3,7 @@ import { ApiError } from '../../api/client'
 import { usePollingTracking } from '../../hooks/usePollingTracking'
 import { useAuth } from '../../features/auth/useAuth'
 import { StatusBadge } from '../ui/StatusBadge'
+import { ShipmentEta } from './ShipmentEta'
 import { formatDateTime } from '../../utils'
 import type { TrackingPin } from '../map/TrackingMap'
 import type { ShipmentTrackingProps } from './ShipmentTracking'
@@ -63,6 +64,7 @@ export default function ShipmentTrackingPanel({ id, pickupLocation, dropoffLocat
         {tracking.updatedAt && <span>Đọc lúc {formatDateTime(new Date(tracking.updatedAt).toISOString())}</span>}
       </div>}
     </div>
+    {data && <ShipmentEta data={data} freshness={freshness} />}
     {pins.length > 0 && <>
       <Suspense fallback={<p role="status">Đang mở bản đồ…</p>}>
         <TrackingMap pins={pins} scope={JSON.stringify([user?.id, id])} />

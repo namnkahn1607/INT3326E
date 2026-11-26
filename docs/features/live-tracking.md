@@ -34,6 +34,32 @@ có nút thử lại.
 Không tự ghi lại trạng thái hoặc suy kết quả mutation từ marker.
 Không tính ETA, deadline, late hoặc tuyến đường trong frontend.
 
+## ETA trên Customer/Admin — tuần 10
+
+Panel chung hiển thị dữ liệu `eta` của API09 khi đơn `PICKED_UP`, GPS còn mới:
+`estimatedSeconds` đổi sang phút và làm tròn lên để trình bày; `distanceMeters`
+hiện mét hoặc km; giờ tới lấy nguyên `estimatedArrivalAt`, dùng formatter
+ngày/giờ hiện có. Giá trị 0 vẫn hiển thị 0, không suy thành đã giao hàng.
+Không tính Haversine/vận tốc/countdown hoặc thay `expectedDeliveryAt`.
+
+Chú thích đúng phạm vi: “Ước lượng đường chim bay, không phải hạn giao.”
+Khi chưa có ETA, hiện lý do bằng tiếng Việt:
+
+| `etaUnavailableReason` | Hiển thị |
+| --- | --- |
+| `NOT_PICKED_UP` | Chưa lấy hàng, chưa có ước tính thời gian tới |
+| `LOCATION_MISSING` | Chưa có GPS để ước tính thời gian tới |
+| `LOCATION_STALE` | GPS đã cũ, chưa thể ước tính thời gian tới |
+| `CONFIG_INVALID` | Tạm thời chưa có ước tính thời gian tới |
+
+Trong lúc chờ request, mẫu quá 30s theo freshness hiện có cũng ẩn ETA cũ.
+Loading/lỗi không dựng số ước tính; đổi scope xóa dữ liệu cũ. Khi refresh,
+snapshot cùng scope chỉ được giữ nếu GPS vẫn còn mới. Terminal ẩn ETA và
+dừng polling như trước. Component không thêm request hoặc timer riêng.
+
+Xem [bàn giao ETA frontend](tracking-eta-handoff.md) để biết mức mock/local,
+ảnh 390/1440px và phần nghiệm thu Cloud còn mở.
+
 ## Bản đồ tài xế Admin
 
 `/admin/live-map` dùng GET `/v1/drivers?limit=20&cursor=...`, giữ trang hiện tại

@@ -1,0 +1,66 @@
+{
+  "checkedAt": "2026-11-25T16:12:57.413Z",
+  "source": "develop@f88f263 plus local TV3 week10 changes",
+  "environment": "Chrome headless; real app/Leaflet; Auth/HTTP fixtures via CDP",
+  "cloudAcceptance": false,
+  "results": [
+    {
+      "area": "customer",
+      "width": 390,
+      "loadedTiles": 4,
+      "eta": true,
+      "nullReasons": 4,
+      "zero": true,
+      "errorRecovery": true,
+      "terminalHiddenAndStopped": true,
+      "sameMap": true,
+      "light": true,
+      "overflow": false
+    },
+    {
+      "area": "admin",
+      "width": 390,
+      "loadedTiles": 4,
+      "eta": true,
+      "nullReasons": 4,
+      "zero": true,
+      "errorRecovery": true,
+      "terminalHiddenAndStopped": true,
+      "sameMap": true,
+      "light": true,
+      "overflow": false
+    },
+    {
+      "area": "customer",
+      "width": 1440,
+      "loadedTiles": 18,
+      "eta": true,
+      "nullReasons": 4,
+      "zero": true,
+      "errorRecovery": true,
+      "terminalHiddenAndStopped": true,
+      "sameMap": true,
+      "light": true,
+      "overflow": false
+    },
+    {
+      "area": "admin",
+      "width": 1440,
+      "loadedTiles": 15,
+      "eta": true,
+      "nullReasons": 4,
+      "zero": true,
+      "errorRecovery": true,
+      "terminalHiddenAndStopped": true,
+      "sameMap": true,
+      "light": true,
+      "overflow": false
+    }
+  ],
+  "exceptions": [],
+  "sourceSha256": {
+    "apps/web/src/components/shipment/ShipmentEta.tsx": "367c493d24ea9e27d6bf3c39777a4f6fa712afccc2d8e3bee7a6b03365c18259",
+    "apps/web/src/components/shipment/ShipmentTrackingPanel.tsx": "63b09f3b29283e8ae93e3639a9a01ebe53f442a7c4a9de445606523163da555d",
+    "apps/web/src/components/map/tracking-map.css": "a212c7e5271a2ae3b5a10cd9df6b7ff8b2d7a811e14126ac92fae63a20749fc9"
+  }
+}
