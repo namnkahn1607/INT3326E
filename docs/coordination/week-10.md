@@ -70,4 +70,13 @@ Mục lục: [Điều phối theo tuần](README.md)
 
 ## Thực tế từng người
 
-(Cập nhật trong tuần.)
+- **TV3 (25/11):** lấy `develop@f88f263`, bổ sung ETA dùng chung cho tracking
+  Customer/Admin: phút còn lại, mét/km, giờ tới từ server và bốn lý do khi
+  chưa có ETA. GPS cũ quá 30s/lỗi/terminal không giữ số ước tính; không tính
+  Haversine hoặc đổi hạn giao ở frontend. Test liên quan 43/43, integration
+  Nest/PGlite 17/17, Chrome 390/1440px cho hai role và sáng/tối đã đạt.
+  `npm run check` cuối đã đạt: 198 Worker/shared/load, 2 health, 487 API,
+  635 web; 137 test cần môi trường riêng bị bỏ qua. Đã bỏ một import test thừa
+  từ develop; không sửa hoặc nới test backend. Chưa deploy;
+  checkpoint Cloud chờ TV2/TV5/TV6.
+  [Bàn giao và ảnh](../features/tracking-eta-handoff.md).

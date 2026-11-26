@@ -41,6 +41,7 @@
 | Lấy hàng, giao hàng | [shipment-pickup-deliver/](features/shipment-pickup-deliver/spec.md) | [shipment-pickup-deliver-handoff](features/shipment-pickup-deliver-handoff.md) |
 | Driver và GPS | [driver-dashboard-gps](features/driver-dashboard-gps.md), [driver-gps/](features/driver-gps/spec.md) | [driver-shipments-handoff](features/driver-shipments-handoff.md) |
 | Tracking | [live-tracking](features/live-tracking.md) | [live-tracking-handoff](features/live-tracking-handoff.md) |
+| ETA tracking tuần 10 | API09 / Customer và Admin | [Bàn giao và ảnh](features/tracking-eta-handoff.md) |
 | Tracking read dưới tải | [Phương pháp và lệnh đo](features/tracking-read-load.md) | [Kết quả local tuần 9](evidence/tracking-read-week9/report.md) |
 | Auth | [contracts/auth-rbac](contracts/auth-rbac.md) | [tv6/auth-rbac-handoff](tv6/auth-rbac-handoff.md) |
 

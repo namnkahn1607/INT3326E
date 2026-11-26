@@ -4,6 +4,13 @@ Mỗi dòng là một tiêu chí nghiệm thu (AC) của đặc tả v1.4. Chỉ
 
 Trạng thái: `chưa có` · `đang làm` · `local` (đạt trên máy, PostgreSQL thật hoặc mock như ghi chú) · `cloud` (đạt trên môi trường Cloud, kèm revision).
 
+TV3 tuần 10 (25/11/2026): panel Customer/Admin đã hiển thị ETA từ API09,
+null reasons, ẩn ETA stale/error/terminal, phân biệt hạn giao. Test liên quan
+43/43, integration Nest/PGlite 17/17 và browser hai role 390/1440px đã đạt;
+Auth/HTTP browser là mock. `npm run check` đạt: 198 Worker/shared/load,
+2 health, 487 API, 635 web; 137 ca cần môi trường riêng bị bỏ qua. Chưa deploy
+hoặc kết luận AC09/ETA Cloud. [Bàn giao và ảnh](features/tracking-eta-handoff.md).
+
 TV3 ngày 22/11/2026: frontend Thông báo nối API10 thật, Admin Accounts nối
 directory khách hàng; chi tiết Customer/Admin hiện cờ giao trễ từ server và
 Driver có form fail theo API07. Đạt local: check toàn repo (181/2/465/621;
@@ -52,9 +59,9 @@ health e2e 2); 116 ca PostgreSQL/Firebase emulator bỏ qua do thiếu cấu hì
 | AC04 | Driver gửi GPS; Worker ghi lịch sử và vị trí hiện tại, mẫu đầu tiên thắng, không lùi vị trí, ACK sau commit | API08, EVT01, DATA04, DATA05 | `npm test -- gps-writer gps-duplicate-order` (cần `WORKER_TEST_DATABASE_URL`, thiếu thì bị bỏ qua) | local; pipeline Cloud đã đối chiếu W707, chưa nghiệm thu toàn bộ AC04 |
 | AC05 | Customer chủ đơn xem vị trí tài xế gần real-time, ẩn hoặc hiện theo trạng thái, nhãn vị trí cũ | API09, UI01 | `npm test --workspace=@parcelflow/api -- assignments.postgres`, `npm run test:integration --workspace=@parcelflow/web`; web UI mock: `npm test --workspace=@parcelflow/web -- tracking` | local (API09 Nest/PGlite, bản đồ UI mock; Cloud chưa xác nhận) |
 | AC06 | Lịch sử trạng thái đúng thứ tự, đúng người thực hiện, đúng phạm vi quyền | API02, API03 | `npm test --workspace=@parcelflow/api -- shipment-flow` (TC06.1) | local |
-| AC07 | Báo giao thất bại sau khi lấy hàng; phát hiện giao trễ | API07 | Web: `npm test --workspace=@parcelflow/web -- DriverShipments AdminShipmentDetailPage ShipmentTrackingJourney` | frontend local/mock; API07 chờ PR #51 tích hợp và kiểm thật |
+| AC07 | Báo giao thất bại sau khi lấy hàng; phát hiện giao trễ | API07 | Web: `npm test --workspace=@parcelflow/web -- DriverShipments AdminShipmentDetailPage ShipmentTrackingJourney`; API: `npm test --workspace=@parcelflow/api -- assignments.postgres` | API07 đã tích hợp PR #51; đạt local, bằng chứng Cloud tuần 9 xem docs/tv6/week-09.md |
 | AC08 | Thông báo tạo cùng lúc đổi trạng thái; người dùng chỉ đọc thông báo của mình | API10, DATA06 | `npm test --workspace=@parcelflow/api -- notifications`; web: `npm run test:integration --workspace=@parcelflow/web` | local (frontend đã nối API10; Nest/PGlite, Firebase mock; Cloud chưa kiểm UI mới) |
-| AC09 | ETA Haversine 20 km/h khi đơn đang giao và vị trí còn mới; không sửa hạn giao | ETA01, API09 | `npm test --workspace=@parcelflow/api -- assignments.postgres` và `npm test -- eta` | local (Cloud chưa xác nhận) |
+| AC09 | ETA Haversine 20 km/h khi đơn đang giao và vị trí còn mới; không sửa hạn giao | ETA01, API09 | API: `npm test --workspace=@parcelflow/api -- assignments.postgres`; web: `npm test --workspace=@parcelflow/web -- ShipmentEta`, `npm run test:integration --workspace=@parcelflow/web` | local: UI đã hiển thị ETA qua Nest/PGlite; Cloud tuần 10 chưa kiểm |
 | AC10 | Phân quyền 3 role; sai quyền 403, chưa liên kết user 409, không token 401 | AUTH01 | `npm test --workspace=@parcelflow/api -- auth shipment-flow` (TC10.x) | local |
 
 Phần client AC04/UI02: emitter lọc mẫu sai/cũ/accuracy, buffer RAM có giới hạn,
