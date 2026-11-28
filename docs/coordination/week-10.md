@@ -70,6 +70,15 @@ Mục lục: [Điều phối theo tuần](README.md)
 
 ## Thực tế từng người
 
+- **TV4 (28/11):** đã kiểm profile LT01 local, 51 test config/hợp đồng, 9 smoke
+  k6/Nest với Firebase, lookup và Pub/Sub mock, `npm run check` đạt (137 ca
+  môi trường riêng bỏ qua). Bật DB cho dry-run độc lập theo trao đổi với người
+  dùng. Một Driver demo gửi 12 request, 12 accepted, 0 lỗi, p95 HTTP 805,96251 ms,
+  backlog 0 tại các điểm đo. API `backend-service-00041-g24`, Worker
+  `worker-service-00033-jlq`. File token tạm đã xóa. Chưa có 500 tài khoản Driver
+  test và chưa chạy baseline Cloud để kết luận NF05.
+  [Báo cáo dry-run](../evidence/gps-ingest-load/week-10-cloud.md).
+
 - **TV3 (25/11):** lấy `develop@f88f263`, bổ sung ETA dùng chung cho tracking
   Customer/Admin: phút còn lại, mét/km, giờ tới từ server và bốn lý do khi
   chưa có ETA. GPS cũ quá 30s/lỗi/terminal không giữ số ước tính; không tính
