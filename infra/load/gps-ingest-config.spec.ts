@@ -1,5 +1,5 @@
 import { assertGpsLocationRequest } from '../../packages/types/src/gps'
-import { createSample, isAccepted, readConfig, selectTokens } from './gps-ingest-config.mjs'
+import { createSample, driverForArrival, isAccepted, readConfig, selectTokens } from './gps-ingest-config.mjs'
 
 const env = { BASE_URL: 'http://127.0.0.1:3000/v1/', DRIVER_TOKENS_FILE: '/private/driver-tokens.json' }
 const now = Date.parse('2026-11-15T01:00:00.000Z')
@@ -9,9 +9,34 @@ const token = (value: unknown) => `fixture.${Buffer.from(JSON.stringify(value)).
 
 describe('GPS ingest k6 configuration and contract', () => {
   it('uses a small default workload and explicit API/token input', () => {
-    expect(readConfig(env)).toEqual({ baseUrl: 'http://127.0.0.1:3000/v1', drivers: 2,
-      intervalSeconds: 8, offeredEventsPerMinute: null, durationSeconds: 16, timeoutSeconds: 7,
+    expect(readConfig(env)).toEqual({ profile: null, baseUrl: 'http://127.0.0.1:3000/v1', drivers: 2,
+      intervalSeconds: 8, offeredEventsPerMinute: null, warmupSeconds: 0, durationSeconds: 16, timeoutSeconds: 7,
+      httpP95LimitMs: null,
       tokenFile: env.DRIVER_TOKENS_FILE, summaryPath: 'gps-ingest-summary.json' })
+  })
+
+  it('locks LT01 to 500 Drivers, 62.5/s, 120s of warmup and 600s under NF05', () => {
+    const lt01Env = { ...env, GPS_LOAD_PROFILE: 'LT01' }
+    expect(readConfig(lt01Env)).toMatchObject({ profile: 'LT01', drivers: 500, offeredEventsPerMinute: 3750,
+      warmupSeconds: 120, durationSeconds: 600, httpP95LimitMs: 150, timeoutSeconds: 7 })
+    expect(() => readConfig({ ...lt01Env, DURATION_SECONDS: '90' })).toThrow('LT01 requires DURATION_SECONDS=600')
+  })
+
+  it('rotates through each Driver once per 500 arrivals, including in the measurement window', () => {
+    const measurementStartsAt = 3750 * 2
+    const identities = Array.from({ length: 500 }, (_, offset) => driverForArrival(measurementStartsAt + offset, 500))
+    expect(new Set(identities.map(({ index }) => index)).size).toBe(500)
+    expect(identities.every(({ seq }) => seq === 16)).toBe(true)
+    expect(driverForArrival(measurementStartsAt + 500, 500)).toEqual({ index: 0, seq: 17 })
+  })
+
+  it('requires all 500 unique Driver tokens with enough lifetime for both LT01 phases', () => {
+    const config = readConfig({ ...env, GPS_LOAD_PROFILE: 'LT01' })
+    const tokens = Array.from({ length: 500 }, (_, index) => token(claims(`driver-${index}`)))
+    expect(selectTokens(tokens, config, decode, now)).toHaveLength(500)
+    expect(() => selectTokens(tokens.slice(1), config, decode, now)).toThrow(/at least DRIVERS/)
+    tokens[499] = token(claims('driver-499', { exp: now / 1000 + 757 }))
+    expect(() => selectTokens(tokens, config, decode, now)).toThrow(/entry 500 expires/)
   })
 
   it('accepts explicit driver count and fractional send interval', () => {

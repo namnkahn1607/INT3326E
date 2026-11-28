@@ -47,7 +47,7 @@ exit code, sự kiện publish và số liệu báo cáo. `K6_SMOKE_OUTPUT` tùy
 Mỗi Driver phải có Firebase ID token với claim `role=DRIVER`, `sub` khác nhau
 và `users.firebaseUid` liên kết đúng tài khoản nghiệp vụ. Dùng tài khoản test
 do nhóm chuẩn bị. Script không đăng nhập, tạo user, cấp role hoặc refresh token.
-Token phải còn hạn đủ duration + request timeout + 30 giây. Giải mã JWT chỉ
+Token phải còn hạn đủ warm-up + duration + request timeout + 30 giây. Giải mã JWT chỉ
 giúp bắt cấu hình sai, API vẫn xác minh chữ ký/quyền và linkage.
 
 1. Tạo thư mục `.vitest/gps-ingest`, copy `driver-tokens.example.json` vào đó
@@ -75,16 +75,45 @@ $env:SUMMARY_PATH = Join-Path (Resolve-Path '.vitest/gps-ingest').Path 'summary.
 | --- | --- |
 | BASE_URL | Bắt buộc, base HTTP(S) kết thúc `/v1`; không query/fragment/credentials |
 | DRIVER_TOKENS_FILE | Bắt buộc, nên dùng đường dẫn tuyệt đối tới mảng ID token |
+| GPS_LOAD_PROFILE | Không đặt để chạy tùy chọn. Đặt `LT01` để dùng cấu hình baseline bên dưới |
 | DRIVERS | Số Driver/VU, số nguyên dương; mặc định 2, không vượt số token |
 | SEND_INTERVAL_SECONDS | Chu kỳ mỗi Driver; mặc định 8, tối thiểu 0.001 giây |
 | OFFERED_EVENTS_PER_MINUTE | Nếu đặt, số lượt gửi lên lịch mỗi phút trên toàn bộ VU; số nguyên dương. Dùng thay cho `SEND_INTERVAL_SECONDS` để chạy tải cố định |
-| DURATION_SECONDS | Thời gian chạy, số nguyên giây dương; mặc định 16 |
+| WARMUP_SECONDS | Giây chạy warm-up trước khi đo; mặc định 0 khi biến không được đặt |
+| DURATION_SECONDS | Thời gian đo, số nguyên giây dương; mặc định 16 |
 | REQUEST_TIMEOUT_SECONDS | Timeout từng HTTP request; mặc định 7 giây |
+| HTTP_P95_LIMIT_MS | Nếu đặt, k6 yêu cầu p95 HTTP thấp hơn ngưỡng này, tính bằng ms |
 | SUMMARY_PATH | File JSON đầu ra; mặc định `gps-ingest-summary.json` ở cwd, được ignore; thư mục cha phải tồn tại |
 
 Dùng các biến trên để đổi tải, giữ nguyên scenario. Không ghi đè bằng `--vus`,
 `--iterations`, `--duration`, K6_VUS/K6_DURATION hoặc config k6 riêng vì sẽ đổi
 mapping/pacing. Không bật HTTP debug khi dùng token thật.
+
+## Baseline LT01 và NF05
+
+`GPS_LOAD_PROFILE=LT01` lên lịch 3.750 lượt/phút (62,5 event/s) liên tục trong
+2 phút warm-up và 10 phút đo. Script luân phiên 500 danh tính Driver theo thứ
+tự lượt gửi, mỗi Driver cách danh nghĩa 8 giây. Lịch đo có 37.500 lượt.
+HTTP timeout là 7 giây. Profile từ chối biến môi trường xung đột với các giá
+trị đã khóa. Dùng một tiến trình k6 local với file token của 500 Driver test
+khác nhau. Mỗi token phải còn hạn hơn 757 giây lúc k6 bắt đầu.
+
+```powershell
+$env:GPS_LOAD_PROFILE = 'LT01'
+# Đặt BASE_URL, DRIVER_TOKENS_FILE và SUMMARY_PATH như phần trên.
+# Xóa các biến DRIVERS, OFFERED_EVENTS_PER_MINUTE, WARMUP_SECONDS,
+# DURATION_SECONDS, REQUEST_TIMEOUT_SECONDS và HTTP_P95_LIMIT_MS nếu đã đặt cho lượt khác.
+k6 inspect --include-system-env-vars --execution-requirements infra/load/gps-ingest.js
+# Chỉ chạy bước dưới trong cửa sổ benchmark đã thống nhất với TV5.
+k6 run --no-usage-report --http-debug-redact infra/load/gps-ingest.js
+```
+
+`measuredResults` có offered, accepted, lỗi và p95 của request bắt đầu trong
+10 phút đo, kể cả phản hồi đến khi k6 đợi request cuối hoàn tất. `results` có
+số liệu cả lượt, gồm warm-up và lượt gửi bị bỏ. Ngưỡng NF05 là
+`http_req_duration{phase:measure}: p(95)<150` ms. Lỗi request hoặc lượt gửi bị
+bỏ ở bất kỳ giai đoạn nào đều làm k6 báo lỗi. Khi dry-run ở tải nhỏ, bỏ
+`GPS_LOAD_PROFILE` để chỉ thu số liệu quan sát.
 
 ## Đọc kết quả và giới hạn
 
@@ -118,7 +147,7 @@ baseline và peak sau này. Số VU/token phụ thuộc latency và tải dự k
 manifest, nhưng chỉ chạy Map trong process. Không dùng throughput của script
 đó hoặc lượt smoke mock để kết luận Pub/Sub/Worker/Cloud đạt hiệu năng.
 
-## Dry-run Cloud tuần 9
+## Dry-run Cloud tải nhỏ
 
 Sau khi TV5 bật `int3326esql` và xác nhận Worker đang nhận từ subscription
 GPS, lấy URL HTTPS của API đang chạy, revision API/Worker và tên subscription
@@ -135,8 +164,8 @@ $env:DRIVERS = '1'
 $env:SEND_INTERVAL_SECONDS = '8'
 $env:DURATION_SECONDS = '90'
 $env:REQUEST_TIMEOUT_SECONDS = '7'
-$env:SUMMARY_PATH = Join-Path (Resolve-Path '.vitest/gps-ingest').Path 'cloud-week9-summary.json'
-Remove-Item Env:OFFERED_EVENTS_PER_MINUTE -ErrorAction SilentlyContinue
+$env:SUMMARY_PATH = Join-Path (Resolve-Path '.vitest/gps-ingest').Path 'cloud-dry-run-summary.json'
+Remove-Item Env:GPS_LOAD_PROFILE,Env:OFFERED_EVENTS_PER_MINUTE,Env:WARMUP_SECONDS,Env:HTTP_P95_LIMIT_MS -ErrorAction SilentlyContinue
 $runStartedUtc = [DateTime]::UtcNow.ToString('o')
 k6 run --no-usage-report --http-debug-redact infra/load/gps-ingest.js
 $runExitCode = $LASTEXITCODE
@@ -153,7 +182,7 @@ lượt và sau lượt. Lấy mẫu theo phút và chờ điểm đo hiển th�
 đo, ghi `không có dữ liệu` tại mốc đó. Subscription dùng chung có thể chứa
 traffic ngoài k6. [Danh mục metric Pub/Sub](https://docs.cloud.google.com/monitoring/api/metrics_gcp_p_z#pubsub).
 
-Ghi vào mục TV4 của [điều phối tuần 9](../../docs/coordination/week-09.md)
+Ghi vào mục TV4 của [điều phối tuần](../../docs/coordination/README.md)
 hoặc liên kết báo cáo từ đó. Ghi cửa sổ UTC, API URL, revision API/Worker,
 subscription, tham số chạy, exit code, offered, accepted, lỗi theo nhóm,
 p95 HTTP và các mốc backlog. Giữ token ngoài báo cáo và chỉ lưu phần số liệu

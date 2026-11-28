@@ -4,6 +4,14 @@ Mỗi dòng là một tiêu chí nghiệm thu (AC) của đặc tả v1.4. Chỉ
 
 Trạng thái: `chưa có` · `đang làm` · `local` (đạt trên máy, PostgreSQL thật hoặc mock như ghi chú) · `cloud` (đạt trên môi trường Cloud, kèm revision).
 
+TV4 tuần 10 (28/11/2026): profile LT01 đã kiểm local ở 62,5 event/s, 500 Driver,
+warm-up 2 phút, đo 10 phút với ngưỡng p95 HTTP dưới 150 ms. Đạt 51 test config,
+9 smoke k6/Nest với Firebase, lookup và Pub/Sub mock, và `npm run check`.
+Dry-run Cloud API `backend-service-00041-g24`: 12 offered, 12 accepted, 0 lỗi,
+p95 805,96251 ms, backlog 0 ở các mốc lấy mẫu. Worker nhận 12 mẫu history-only
+do lệch đồng hồ. LT01/NF05 Cloud chờ pool 500 Driver test và lượt đo đủ tải.
+[Báo cáo tuần 10](evidence/gps-ingest-load/week-10-cloud.md).
+
 TV3 tuần 10 (25/11/2026): panel Customer/Admin đã hiển thị ETA từ API09,
 null reasons, ẩn ETA stale/error/terminal, phân biệt hạn giao. Test liên quan
 43/43, integration Nest/PGlite 17/17 và browser hai role 390/1440px đã đạt;

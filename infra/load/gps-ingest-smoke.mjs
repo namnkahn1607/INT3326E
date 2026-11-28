@@ -24,6 +24,7 @@ const report = { status: 'RUNNING', generatedAt: new Date().toISOString(),
 let app
 let mode = 'accepted'
 let requests = 0
+let slowThroughRequest = 0
 const events = []
 
 async function runK6(name, duration = 1, extraEnv = {}) {
@@ -34,6 +35,9 @@ async function runK6(name, duration = 1, extraEnv = {}) {
       SEND_INTERVAL_SECONDS: '1', DURATION_SECONDS: String(duration), REQUEST_TIMEOUT_SECONDS: '2',
       DRIVER_TOKENS_FILE: tokenFile, SUMMARY_PATH: summaryPath }
     delete runEnv.OFFERED_EVENTS_PER_MINUTE
+    delete runEnv.GPS_LOAD_PROFILE
+    delete runEnv.WARMUP_SECONDS
+    delete runEnv.HTTP_P95_LIMIT_MS
     const completed = await run(binary, ['run', '--quiet', '--no-color', '--no-usage-report', '--http-debug-redact',
       '--config', configFile, resolve(repo, 'infra/load/gps-ingest.js')], {
       cwd: repo, timeout: 30_000, maxBuffer: 1024 * 1024,
@@ -85,7 +89,7 @@ try {
     } }).compile()
   module.get(LocationService).setTopic({ publishMessage: async ({ data }) => {
     if (mode === 'broker-error') throw new Error('Isolated broker fixture error')
-    if (mode === 'slow-broker') await delay(350)
+    if (mode === 'slow-broker' || (mode === 'slow-warmup' && requests <= slowThroughRequest)) await delay(350)
     const event = JSON.parse(data.toString('utf8'))
     assertGpsTelemetryEvent(event)
     events.push(event)
@@ -168,7 +172,29 @@ try {
   report.checks.push({ name: 'fixed rate 2 events/s', status: 'PASS',
     results: fixedSummary.results, summary: 'fixed-rate-summary.json' })
 
+  const phasedEnv = { OFFERED_EVENTS_PER_MINUTE: '120', WARMUP_SECONDS: '2', HTTP_P95_LIMIT_MS: '150' }
+  mode = 'slow-warmup'
+  slowThroughRequest = requests + 2
+  const warmup = await runK6('slow-warmup', 2, phasedEnv)
+  assert.equal(warmup.code, 0, 'slow warmup must not fail the measurement threshold')
+  const warmupSummary = JSON.parse(await readFile(warmup.summaryPath, 'utf8'))
+  assert.ok(warmupSummary.results.httpP95Ms >= 150)
+  assert.ok(warmupSummary.measuredResults.httpP95Ms < 150)
+  assert.ok(warmupSummary.measuredResults.offered < warmupSummary.results.offered)
+  assert.equal(warmupSummary.measuredResults.offered, warmupSummary.measuredResults.accepted)
+  report.checks.push({ name: 'warmup is excluded from measured HTTP p95 and counts', status: 'PASS',
+    results: warmupSummary.measuredResults, summary: 'slow-warmup-summary.json' })
+
   mode = 'slow-broker'
+  const slow = await runK6('slow-measurement', 2, phasedEnv)
+  assert.equal(slow.code, 99, 'measured p95 above the limit must fail k6 even when every request is accepted')
+  const slowSummary = JSON.parse(await readFile(slow.summaryPath, 'utf8'))
+  assert.ok(slowSummary.measuredResults.httpP95Ms >= 150)
+  assert.equal(slowSummary.measuredResults.offered, slowSummary.measuredResults.accepted)
+  assert.equal(slowSummary.results.droppedIterations, 0)
+  report.checks.push({ name: 'measured HTTP p95 threshold fails with slow accepted responses', status: 'PASS',
+    results: slowSummary.measuredResults, summary: 'slow-measurement-summary.json' })
+
   const overloaded = await runK6('dropped-iterations', 1, { OFFERED_EVENTS_PER_MINUTE: '1800' })
   assert.equal(overloaded.code, 99, 'missed arrivals must fail the fixed-rate threshold')
   const dropped = JSON.parse(await readFile(overloaded.summaryPath, 'utf8')).results
